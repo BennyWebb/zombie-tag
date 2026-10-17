@@ -28,7 +28,7 @@ Each player makes their own hero, and two players share one keyboard on a split 
 **Character creator** (at the start of a new game)
 
 - Type a name (up to 12 letters).
-- Pick skin coloa ur, hair style, hair colour and starting outfit colour from big picture buttons.
+- Pick skin colour, hair style, hair colour and starting outfit colour from big picture buttons.
 - In 2-player mode, Player 1 creates first, then Player 2.
 - Outfits bought later in the shop are worn on top. You see your own hands and weapon in first person; you see your sister's whole hero on her side of the screen.
 
