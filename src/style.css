@@ -101,10 +101,114 @@ kbd {
   transition: opacity 0.3s;
   pointer-events: none;
   text-align: center;
+  white-space: nowrap;
 }
 #toast.show { opacity: 1; }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
+}
+
+/* ---------- Tag Bux ---------- */
+.coin {
+  display: inline-block;
+  width: 1.15em; height: 1.15em;
+  line-height: 1.05em;
+  border-radius: 50%;
+  background: #ffd23f;
+  border: 0.12em solid #e09b00;
+  color: #e09b00;
+  font-size: 0.9em;
+  text-align: center;
+  text-shadow: none;
+  vertical-align: -0.12em;
+}
+
+#bux { top: 18px; right: 18px; font-size: 36px; color: #ffe066; }
+#bux.bump { animation: bump 0.3s ease-out; }
+@keyframes bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- The shop menu ---------- */
+.shop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 30%, #ff6fae, #4b1e8a);
+}
+
+.shop-top { display: flex; align-items: center; gap: 40px; }
+.shop h2 {
+  margin: 0;
+  font-size: clamp(40px, 6vw, 72px);
+  color: #ffe066;
+  text-shadow: 5px 5px 0 #4b1e8a;
+}
+.shop-bux {
+  padding: 8px 24px;
+  border-radius: 999px;
+  background: rgba(40, 20, 80, 0.6);
+  font-size: 40px;
+  font-weight: bold;
+  color: #ffe066;
+}
+
+.shop .rows { display: flex; flex-direction: column; gap: 10px; width: min(900px, 100%); }
+.shop .row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 22px;
+  border-radius: 22px;
+  background: rgba(40, 20, 80, 0.5);
+  border: 4px solid transparent;
+  font-size: 32px;
+  font-weight: bold;
+}
+.shop .row.selected {
+  background: #fff;
+  color: #4b1e8a;
+  border-color: #ffe066;
+  transform: scale(1.04);
+  box-shadow: 0 6px 0 #b9a6e0;
+}
+.shop .row.selected::before { content: '▶'; color: #ff4f8b; animation: nudge 0.6s ease-in-out infinite; }
+.shop .icon { font-size: 44px; width: 1.2em; text-align: center; }
+.shop .name { flex: 1; display: flex; flex-direction: column; }
+.shop .name small { font-size: 20px; font-weight: normal; opacity: 0.85; }
+.shop .price { white-space: nowrap; color: #ffe066; }
+.shop .row.selected .price { color: #e05a00; }
+.shop .row.dear .price { color: #ff9a9a; }
+.shop .row.selected.dear .price { color: #d0304a; }
+.shop .row.holding .price, .shop .row.selected.holding .price { color: #4caf50; }
+.shop .row.locked .price { font-size: 20px; opacity: 0.8; }
+.shop .row.leave .price { font-size: 22px; opacity: 0.8; }
+
+.shop-msg { min-height: 48px; font-size: 34px; font-weight: bold; text-shadow: 3px 3px 0 #4b1e8a; animation: pop 0.35s ease-out; }
+.shop-msg.good { color: #9cff57; }
+.shop-msg.bad { color: #ffb3b3; animation: shake 0.4s; }
+.shop-help { font-size: 26px; }
+
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
 }

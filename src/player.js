@@ -2,28 +2,10 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { isDown, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
+import { WEAPON_MODELS } from './weapons.js';
 
 const skinMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
 const sleeveMat = new THREE.MeshLambertMaterial({ color: 0xff6fae });
-
-function makeSpikyStick() {
-  const stick = new THREE.Group();
-  const wood = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
-  const spikeMat = new THREE.MeshLambertMaterial({ color: 0xd9c27a });
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.9, 8), wood);
-  pole.position.y = 0.45;
-  stick.add(pole);
-  // spikes round the top end
-  for (let i = 0; i < 10; i++) {
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.12, 6), spikeMat);
-    const a = i * 2.4;
-    const y = 0.6 + (i / 10) * 0.3;
-    spike.position.set(Math.cos(a) * 0.05, y, Math.sin(a) * 0.05);
-    spike.rotation.set(Math.sin(a) * Math.PI / 2, 0, -Math.cos(a) * Math.PI / 2);
-    stick.add(spike);
-  }
-  return stick;
-}
 
 export class Player {
   constructor(keys, scene) {
@@ -46,14 +28,30 @@ export class Player {
     sleeve.rotation.x = Math.PI / 2;
     sleeve.position.set(0.02, -0.03, 0.22);
     this.hand.add(fist, sleeve);
-    this.stickMesh = makeSpikyStick();
-    this.stickMesh.position.y = -0.15;
-    this.stickMesh.rotation.x = -0.25;
-    this.hand.add(this.stickMesh);
+    this.models = {};
+    for (const [id, make] of Object.entries(WEAPON_MODELS)) {
+      const model = make();
+      if (CONFIG.weapons[id].kind === 'swing') {
+        model.position.y = -0.15;
+        model.rotation.x = -0.25;
+      }
+      model.visible = false;
+      this.hand.add(model);
+      this.models[id] = model;
+    }
     this.camera.add(this.hand);
 
     this.swing = 0; // counts down while swinging
     this.swingHit = false;
+    this.cooldown = 0; // time until the blaster can squirt again
+    this.recoil = 0;
+
+    // kept between levels and when you play again
+    this.tagBux = 0;
+    this.weapons = []; // every weapon you own, newest last
+    this.weapon = null; // the one in your hand
+    this.inShop = false;
+    this.giveStick();
   }
 
   get moveSpeed() {
@@ -69,14 +67,33 @@ export class Player {
     this.yaw = start.yaw;
     this.swing = 0;
     this.attackQueued = false;
+    this.cooldown = 0;
+    this.inShop = false;
     this.hand.rotation.set(0, 0, 0);
-    this.giveStick();
+  }
+
+  owns(id) {
+    return this.weapons.some((w) => w.id === id);
+  }
+
+  // A new weapon goes straight into your hand.
+  addWeapon(id) {
+    const w = { id, ...CONFIG.weapons[id] };
+    if (w.maxHits) w.hitsLeft = w.maxHits;
+    this.weapons.push(w);
+    this.hold(id);
   }
 
   giveStick() {
-    this.weapon = { ...CONFIG.weapons.spikyStick, hitsLeft: CONFIG.weapons.spikyStick.maxHits };
+    this.addWeapon('spikyStick');
+  }
+
+  hold(id) {
+    this.weapon = this.weapons.find((w) => w.id === id) || null;
     this.attackQueued = false;
-    this.stickMesh.visible = true;
+    this.swing = 0;
+    this.hand.rotation.set(0, 0, 0);
+    for (const [key, model] of Object.entries(this.models)) model.visible = key === id;
   }
 
   get forward() {
@@ -102,8 +119,8 @@ export class Player {
     return best;
   }
 
-  // Returns the zombie that got bonked this frame, if any.
-  update(dt, world, zombies) {
+  // Returns the hits landed this frame: [{ zombie, weapon, by, push }]
+  update(dt, world, zombies, squirts) {
     const k = this.keys;
     let turn = 0;
     if (isDown(k.left)) turn += 1;
@@ -136,23 +153,46 @@ export class Player {
     this.camera.rotation.set(0, this.yaw, 0);
 
     // ---- attack ----
-    let bonked = null;
+    const hits = [];
+    const w = this.weapon;
     // a press during a swing is remembered, so mashing Space never feels ignored
     if (wasPressed(k.attack)) this.attackQueued = true;
-    if (this.attackQueued && this.weapon && this.swing <= 0) {
+    this.cooldown -= dt;
+    this.recoil = Math.max(0, this.recoil - dt * 8);
+
+    if (w && w.kind === 'shoot') {
+      // hold Space to keep squirting
+      if ((this.attackQueued || isDown(k.attack)) && this.cooldown <= 0) {
+        this.attackQueued = false;
+        this.cooldown = w.fireInterval;
+        this.recoil = 1;
+        const fwd = this.forward;
+        const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+        const from = this.pos.clone().addScaledVector(fwd, 0.9).addScaledVector(right, 0.3).setY(1.2);
+        const target = this.findTarget(zombies);
+        const dir = target ? target.centre.sub(from).normalize() : fwd.clone();
+        squirts.fire(from, dir, w, this);
+      }
+      this.hand.rotation.set(this.recoil * 0.15 + Math.sin(this.walkPhase * 0.5) * 0.03 * (move ? 1 : 0), 0, 0);
+      this.hand.position.z = -0.65 + this.recoil * 0.06;
+      return hits;
+    }
+    this.hand.position.z = -0.65;
+
+    if (this.attackQueued && w && this.swing <= 0) {
       this.attackQueued = false;
-      this.swing = this.weapon.swingTime;
+      this.swing = w.swingTime;
       this.swingHit = false;
     }
     if (this.swing > 0) {
       this.swing -= dt;
-      const t = 1 - Math.max(0, this.swing) / this.weapon.swingTime; // 0 → 1
+      const t = 1 - Math.max(0, this.swing) / w.swingTime; // 0 → 1
       if (!this.swingHit && t >= 0.45) {
         this.swingHit = true;
         const target = this.findTarget(zombies);
         if (target) {
-          bonked = target;
-          this.weapon.hitsLeft -= 1;
+          hits.push({ zombie: target, weapon: w, by: this, push: this.forward });
+          if (w.maxHits) w.hitsLeft -= 1;
         }
       }
       // wind up, chop down towards the middle of the screen, then come back up
@@ -173,15 +213,17 @@ export class Player {
       this.hand.rotation.set(x, 0, z);
       if (this.swing <= 0) {
         this.hand.rotation.set(0, 0, 0);
-        if (this.weapon.hitsLeft <= 0) {
-          this.weapon = null;
-          this.stickMesh.visible = false;
+        if (w.maxHits && w.hitsLeft <= 0) {
+          // it broke: hold your newest other weapon, if you have one
+          this.weapons = this.weapons.filter((o) => o !== w);
+          const next = this.weapons[this.weapons.length - 1];
+          this.hold(next ? next.id : null);
           this.justBroke = true;
         }
       }
     } else {
       this.hand.rotation.set(Math.sin(this.walkPhase * 0.5) * 0.04 * (move ? 1 : 0), 0, 0);
     }
-    return bonked;
+    return hits;
   }
 }

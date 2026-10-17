@@ -94,57 +94,122 @@ function makeCloud(rand) {
   return cloud;
 }
 
-// A barrel full of free Spiky Sticks, with a tall glowing star so you can always find it.
-function makeStickBarrel() {
-  const g = new THREE.Group();
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.6, 1.1, 16), mat(0xa0522d));
-  barrel.position.y = 0.55;
-  const band = mat(0x6b3a1a);
-  for (const y of [0.25, 0.85]) {
-    const b = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.05, 6, 20), band);
-    b.rotation.x = Math.PI / 2;
-    b.position.y = y;
-    g.add(b);
-  }
-  g.add(barrel);
-  // sticks poking out of the top
-  const stickMat = mat(0x8b5a2b);
-  for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.2, 6), stickMat);
-    const a = (i / 5) * Math.PI * 2;
-    s.position.set(Math.cos(a) * 0.3, 1.3, Math.sin(a) * 0.3);
-    s.rotation.set(Math.sin(a) * 0.3, 0, Math.cos(a) * 0.3);
-    g.add(s);
-  }
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 6, 8), mat(0xffffff));
-  pole.position.set(0.9, 3, 0);
-  g.add(pole);
+// Draws text onto a canvas so it can be painted on the shop front.
+function textMaterial(text, width, height, bg, fg) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+  ctx.font = `bold ${height * 0.7}px "Fredoka", "Comic Sans MS", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = height * 0.1;
+  ctx.strokeStyle = '#4b1e8a';
+  ctx.strokeText(text, width / 2, height / 2);
+  ctx.fillStyle = fg;
+  ctx.fillText(text, width / 2, height / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshBasicMaterial({ map: tex });
+}
 
-  const starShape = new THREE.Shape();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? 0.9 : 0.4;
-    const a = (i / 10) * Math.PI * 2 + Math.PI / 2;
-    if (i === 0) starShape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-    else starShape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-  }
-  const star = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(starShape, { depth: 0.2, bevelEnabled: false }),
-    new THREE.MeshBasicMaterial({ color: 0xffe066 }),
+// A big glowing shopping bag, drawn without fog so it shines across the whole park.
+function makeBagSign() {
+  const bag = new THREE.Group();
+  const pink = new THREE.MeshBasicMaterial({ color: 0xff4f8b, fog: false });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.6, 1.0), pink);
+  bag.add(body);
+  const fold = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 0.3, 1.1),
+    new THREE.MeshBasicMaterial({ color: 0xffb3d1, fog: false }),
   );
-  star.position.set(0.9, 6.6, 0);
-  g.add(star);
-  const glow = new THREE.PointLight(0xffe066, 8, 10);
-  glow.position.copy(star.position);
+  fold.position.y = 1.2;
+  bag.add(fold);
+  const handleMat = new THREE.MeshBasicMaterial({ color: 0xffe066, fog: false });
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.12, 8, 20, Math.PI), handleMat);
+  handle.position.y = 1.35;
+  bag.add(handle);
+  // a coin on each side of the bag
+  const coinMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, fog: false });
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.2, 24), coinMat);
+  coin.rotation.x = Math.PI / 2;
+  bag.add(coin);
+  return bag;
+}
+
+// The shop: a safe building where you spend Tag Bux. The door is on the +z side.
+function makeShop() {
+  const g = new THREE.Group();
+  const w = 8;
+  const d = 6;
+  const h = 4.8;
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(0xffa8cc));
+  walls.position.y = h / 2;
+  g.add(walls);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.4, d + 0.6), mat(0x8e5bd6));
+  roof.position.y = h + 0.2;
+  g.add(roof);
+
+  const front = d / 2;
+  // doorway with a glowing inside, so it's obvious where to walk in
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.0, 0.2), mat(0x8e5bd6));
+  frame.position.set(0, 1.5, front + 0.05);
+  const doorway = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.6, 2.7),
+    new THREE.MeshBasicMaterial({ color: 0xfff1a8 }),
+  );
+  doorway.position.set(0, 1.35, front + 0.16);
+  g.add(frame, doorway);
+  const mat2 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 1.4), mat(0x4fc3f7));
+  mat2.position.set(0, 0.04, front + 0.8);
+  g.add(mat2);
+
+  // windows either side of the door
+  const glass = new THREE.MeshBasicMaterial({ color: 0xbfeaff });
+  for (const x of [-2.7, 2.7]) {
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), glass);
+    win.position.set(x, 1.9, front + 0.02);
+    g.add(win);
+  }
+
+  // stripy awning
+  for (let i = 0; i < 8; i++) {
+    const stripe = new THREE.Mesh(
+      new THREE.BoxGeometry(w / 8, 0.12, 1.3),
+      mat(i % 2 ? 0xffffff : 0xff4f8b, { emissive: i % 2 ? 0x555555 : 0x661a38 }),
+    );
+    stripe.position.set(-w / 2 + w / 16 + (i * w) / 8, 3.25, front + 0.6);
+    stripe.rotation.x = 0.25;
+    g.add(stripe);
+  }
+
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.85), textMaterial('SHOP', 512, 100, '#ffe066', '#ff4f8b'));
+  sign.position.set(0, 4.2, front + 0.02);
+  g.add(sign);
+
+  // tall pole with the glowing bag on top, high above the trees
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 7, 8), mat(0xffffff));
+  pole.position.y = h + 3.5;
+  g.add(pole);
+  const bag = makeBagSign();
+  bag.scale.setScalar(1.6);
+  bag.position.y = h + 9.2;
+  g.add(bag);
+  const glow = new THREE.PointLight(0xff4f8b, 25, 16);
+  glow.position.y = h + 9.2;
   g.add(glow);
 
   shadows(g);
-  return { group: g, star };
+  bag.traverse((o) => { o.castShadow = false; });
+  return { group: g, bag, halfW: w / 2, halfD: d / 2 };
 }
 
 export function buildWorld(scene, level) {
   const rand = makeRandom(1234);
   const half = level.size / 2;
-  const colliders = []; // circles that block walking: { x, z, r }
+  const colliders = []; // circles { x, z, r } and boxes { x, z, hw, hd } that block walking
 
   scene.background = new THREE.Color(0x87ceeb);
   scene.fog = new THREE.Fog(0x87ceeb, 40, 110);
@@ -212,6 +277,21 @@ export function buildWorld(scene, level) {
     scene.add(shadows(h));
   }
 
+  // the shop, in sight of the start (its sign is up and to the left when you begin)
+  const shopMesh = makeShop();
+  const shopX = -25;
+  const shopZ = 11;
+  shopMesh.group.position.set(shopX, 0, shopZ);
+  scene.add(shopMesh.group);
+  colliders.push({ x: shopX, z: shopZ, hw: shopMesh.halfW, hd: shopMesh.halfD });
+  const door = { x: shopX, z: shopZ + shopMesh.halfD };
+  const shop = {
+    door,
+    // where you stand when you walk back out, facing away from the shop
+    outside: { x: door.x, z: door.z + 2.4, yaw: Math.PI },
+    bag: shopMesh.bag,
+  };
+
   // keep things off the paths, the pond and the start
   const onPath = (x, z) => {
     const r = Math.hypot(x, z);
@@ -223,7 +303,8 @@ export function buildWorld(scene, level) {
       const z = (rand() - 0.5) * (level.size - 8);
       if (onPath(x, z)) continue;
       if (Math.hypot(x - 0, z - (half - 6)) < 8) continue; // the start
-      if (colliders.some((c) => Math.hypot(c.x - x, c.z - z) < c.r + minGap)) continue;
+      if (Math.hypot(x - door.x, z - (door.z + 3)) < 5) continue; // in front of the shop door
+      if (colliders.some((c) => distanceTo(c, x, z) < minGap)) continue;
       return { x, z };
     }
     return null;
@@ -270,27 +351,34 @@ export function buildWorld(scene, level) {
   }
 
   const playerStart = { x: 0, z: half - 6, yaw: 0 }; // yaw 0 faces the middle of the park
-  const barrel = makeStickBarrel();
-  barrel.group.position.set(3.5, 0, half - 5);
-  scene.add(barrel.group);
-  const stickBarrel = { x: 3.5, z: half - 5, r: 0.8, star: barrel.star };
-  colliders.push({ x: stickBarrel.x, z: stickBarrel.z, r: stickBarrel.r });
 
   return {
     colliders,
     bounds: half - 1.5,
     playerStart,
-    stickBarrel,
-    // spot is clear of the pond, trees and the hedge
+    shop,
+    // spot is clear of the pond, trees, the shop and the hedge
     isClear: (x, z, r) =>
       Math.abs(x) < half - 2 && Math.abs(z) < half - 2 &&
-      !colliders.some((c) => Math.hypot(c.x - x, c.z - z) < c.r + r),
+      !colliders.some((c) => distanceTo(c, x, z) < r),
   };
+}
+
+// How far a point is from the edge of a collider (negative when inside it).
+function distanceTo(c, x, z) {
+  if (c.r !== undefined) return Math.hypot(c.x - x, c.z - z) - c.r;
+  const dx = Math.max(Math.abs(x - c.x) - c.hw, 0);
+  const dz = Math.max(Math.abs(z - c.z) - c.hd, 0);
+  return Math.hypot(dx, dz);
 }
 
 // Pushes a circle out of anything solid and keeps it inside the hedge.
 export function resolveCollisions(pos, radius, world) {
   for (const c of world.colliders) {
+    if (c.r === undefined) {
+      pushOutOfBox(pos, radius, c);
+      continue;
+    }
     const dx = pos.x - c.x;
     const dz = pos.z - c.z;
     const dist = Math.hypot(dx, dz);
@@ -303,4 +391,24 @@ export function resolveCollisions(pos, radius, world) {
   const b = world.bounds - radius;
   pos.x = Math.max(-b, Math.min(b, pos.x));
   pos.z = Math.max(-b, Math.min(b, pos.z));
+}
+
+function pushOutOfBox(pos, radius, c) {
+  const nx = Math.max(c.x - c.hw, Math.min(c.x + c.hw, pos.x));
+  const nz = Math.max(c.z - c.hd, Math.min(c.z + c.hd, pos.z));
+  const dx = pos.x - nx;
+  const dz = pos.z - nz;
+  const dist = Math.hypot(dx, dz);
+  if (dist > 0.0001) {
+    if (dist < radius) {
+      pos.x = nx + (dx / dist) * radius;
+      pos.z = nz + (dz / dist) * radius;
+    }
+    return;
+  }
+  // the middle is inside the box: push out through the nearest side
+  const px = c.hw - Math.abs(pos.x - c.x);
+  const pz = c.hd - Math.abs(pos.z - c.z);
+  if (px < pz) pos.x = c.x + Math.sign(pos.x - c.x || 1) * (c.hw + radius);
+  else pos.z = c.z + Math.sign(pos.z - c.z || 1) * (c.hd + radius);
 }

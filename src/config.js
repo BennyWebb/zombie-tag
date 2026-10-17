@@ -14,15 +14,56 @@ export const CONFIG = {
     startStrength: 1,
   },
 
+  // The shop sells these in this order. Damage is before the Strength bonus.
   weapons: {
     spikyStick: {
       name: 'Spiky Stick',
+      icon: '🪵',
+      about: 'Breaks after 4 hits',
+      price: 0, // free whenever you have no weapon
+      kind: 'swing',
       damage: 1,
       maxHits: 4, // breaks after this many hits
       range: 3.2, // how far it reaches
       aimAngle: 60, // degrees either side of straight ahead that lock on
       swingTime: 0.35, // seconds
     },
+    noodleBat: {
+      name: 'Foam Noodle Bat',
+      icon: '🏏',
+      about: 'Never breaks. Bonks zombies back!',
+      price: 25,
+      kind: 'swing',
+      damage: 2,
+      range: 3.4,
+      aimAngle: 60,
+      swingTime: 0.4,
+      knockback: 9, // how hard it bonks zombies back (about 1.5 steps)
+    },
+    waterBlaster: {
+      name: 'Squirty Water Blaster',
+      icon: '💦',
+      about: 'Shoots super fast. Pushes zombies away!',
+      price: 60,
+      kind: 'shoot',
+      damage: 1,
+      range: 14,
+      aimAngle: 25,
+      fireInterval: 0.13, // seconds between squirts while Space is held
+      shotSpeed: 26,
+      knockback: 4, // every squirt pushes a bit
+    },
+  },
+
+  tagBux: {
+    coinValue: 1, // each coin is worth this; a zombie drops its tagBux as separate coins
+    pickupDistance: 0.7, // walk this close to grab a coin
+    magnetDistance: 2.5, // coins fly to you from this close
+    magnetSpeed: 12,
+  },
+
+  shop: {
+    enterDistance: 1.4, // how close to the door you walk to go in
   },
 
   zombies: {
@@ -33,7 +74,7 @@ export const CONFIG = {
       chaseSpeed: 3.4,
       noticeDistance: 15,
       radius: 0.55,
-      tagBux: 5, // used from build step 2
+      tagBux: 5,
     },
   },
 

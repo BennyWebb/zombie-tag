@@ -1,14 +1,14 @@
 # Zombie Tag
 
 A silly, cartoony 3D first-person game invented by Chloe and Naomi.
-Bonk goofy zombies with your Spiky Stick and pop them into confetti!
+Bonk goofy zombies, pop them into confetti and Tag Bux, and spend your Tag Bux at the shop!
 
 The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small steps, play-testing after each one.
 
 ## Build steps
 
 - [x] **1. Walk and bonk:** walk around Sunny Park and pop Shufflers into confetti.
-- [ ] 2. Tag Bux and the shop
+- [x] **2. Tag Bux and the shop:** collect coins from popped zombies and buy the Foam Noodle Bat and Water Blaster.
 - [ ] 3. Hearts
 - [ ] 4. The gym
 - [ ] 5. All the weapons and armour
@@ -23,12 +23,27 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 | --- | --- |
 | Walk forward / back | W / S |
 | Turn left / right | A / D |
-| Bonk! | Space |
+| Bonk! (hold it down to keep squirting the Water Blaster) | Space |
+| Shop: choose / buy | W / S, then Space |
 | Pause | Esc |
 
-You don't need to aim exactly: the stick bonks the nearest zombie in front of you.
-The Spiky Stick breaks after 4 hits. Walk back to the barrel with the yellow star
-(next to where you start) for a free new one.
+You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
+
+Popped zombies burst into spinning **Tag Bux** coins. Walk over them to collect them;
+your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns 40.
+
+Look for the **glowing pink shopping bag** above the trees and walk in through the shop door.
+Zombies can't get in. In the shop:
+
+| Weapon | Price | Power | What's special |
+| --- | --- | --- | --- |
+| 🪵 Spiky Stick | Free | 1 | Breaks after 4 hits. Get a free one any time you have no weapon. |
+| 🏏 Foam Noodle Bat | 25 | 2 | Never breaks. Bonks zombies back. |
+| 💦 Squirty Water Blaster | 60 | 1 | Shoots super fast. Pushes zombies away. |
+
+A new weapon goes straight into your hand. You keep every weapon you buy and can swap
+which one you hold in the shop. Choose **Leave** to go back outside.
+When you play again, you keep your Tag Bux and weapons, so after two clears you can afford the Water Blaster.
 
 ## Running it on a Windows PC
 
@@ -50,5 +65,5 @@ close it when you've finished.
 
 ## Changing the numbers
 
-Speeds, damage, zombie health and level settings are all in [`src/config.js`](src/config.js).
+Speeds, damage, prices, zombie health and level settings are all in [`src/config.js`](src/config.js).
 Edit a number, save, and the game reloads by itself.

@@ -107,6 +107,7 @@ export class Zombie {
     this.spawnPop = 0; // grows out of the ground when it arrives
     this.time = Math.random() * 10;
     this.alive = true;
+    this.knockVel = new THREE.Vector3(); // set when a weapon bonks or squirts it backwards
     Object.assign(this, makeShufflerMesh());
     this.root.position.copy(this.pos);
   }
@@ -124,6 +125,10 @@ export class Zombie {
     this.barFill.position.x = -0.47 * (1 - this.barFill.scale.x);
     if (this.health <= 0.0001) this.alive = false;
     return !this.alive;
+  }
+
+  knock(dir, amount) {
+    this.knockVel.addScaledVector(dir, amount);
   }
 
   update(dt, player, world, others, camera) {
@@ -158,6 +163,14 @@ export class Zombie {
         dir = toTarget.normalize();
         speed = this.type.wanderSpeed;
       }
+    }
+
+    // being knocked back slides it away and stops it walking for a moment
+    const knocked = this.knockVel.length();
+    if (knocked > 0.05) {
+      this.pos.addScaledVector(this.knockVel, dt);
+      this.knockVel.multiplyScalar(Math.exp(-6 * dt));
+      speed *= Math.max(0, 1 - knocked / 3);
     }
 
     if (dir) {

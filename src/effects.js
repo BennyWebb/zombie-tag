@@ -6,6 +6,10 @@ const confettiMats = CONFETTI_COLOURS.map(
   (c) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }),
 );
 
+const splashMats = [0x4fc3f7, 0xbfeaff, 0xffffff].map(
+  (c) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }),
+);
+
 const textTextures = new Map();
 function textTexture(text, colour) {
   const key = text + colour;
@@ -14,7 +18,12 @@ function textTexture(text, colour) {
     canvas.width = 256;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.font = 'bold 84px "Fredoka", "Comic Sans MS", sans-serif';
+    // shrink long words so they fit
+    let px = 84;
+    do {
+      ctx.font = `bold ${px}px "Fredoka", "Comic Sans MS", sans-serif`;
+      px -= 4;
+    } while (ctx.measureText(text).width > 230 && px > 30);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 14;
@@ -49,6 +58,23 @@ export class Effects {
         vel: new THREE.Vector3(Math.cos(a) * s, 3 + Math.random() * 5, Math.sin(a) * s),
         spin: new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10),
         life: 1.6 + Math.random() * 0.8,
+      });
+    }
+  }
+
+  // a little burst of water drops where a squirt lands
+  splash(pos, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(confettiGeo, splashMats[i % splashMats.length]);
+      m.position.copy(pos);
+      const a = Math.random() * Math.PI * 2;
+      const s = 1 + Math.random() * 2;
+      this.scene.add(m);
+      this.bits.push({
+        mesh: m,
+        vel: new THREE.Vector3(Math.cos(a) * s, 1 + Math.random() * 3, Math.sin(a) * s),
+        spin: new THREE.Vector3(Math.random() * 10, Math.random() * 10, 0),
+        life: 0.4 + Math.random() * 0.3,
       });
     }
   }

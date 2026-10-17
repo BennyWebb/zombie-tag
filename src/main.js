@@ -5,6 +5,9 @@ import { buildWorld } from './world.js';
 import { Zombie } from './zombie.js';
 import { Player } from './player.js';
 import { Effects } from './effects.js';
+import { Coins } from './coins.js';
+import { Squirts } from './weapons.js';
+import { ShopMenu } from './shop.js';
 
 const level = CONFIG.levels[0];
 
@@ -17,7 +20,10 @@ document.getElementById('game').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const world = buildWorld(scene, level);
 const effects = new Effects(scene);
+const coins = new Coins(scene);
+const squirts = new Squirts(scene);
 const player = new Player(CONFIG.keys.p1, scene);
+const shop = new ShopMenu(document.getElementById('hud'), player);
 
 const $ = (id) => document.getElementById(id);
 const screens = { title: $('title'), paused: $('paused'), won: $('won') };
@@ -33,7 +39,7 @@ function show(name) {
   state = name;
   for (const [key, el] of Object.entries(screens)) el.classList.toggle('hidden', key !== name);
   $('hud').classList.toggle('hidden', name === 'title');
-  player.hand.visible = name === 'playing' || name === 'paused';
+  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inShop;
   if (name !== 'playing') {
     toastTimer = 0;
     $('toast').classList.remove('show');
@@ -52,9 +58,14 @@ function startLevel() {
   spawned = 0;
   popped = 0;
   wonTimer = 0;
+  coins.clear();
+  squirts.clear();
+  if (player.inShop) shop.close(world);
+  // Tag Bux and weapons are kept when you play again
   player.reset(world.playerStart);
+  if (!player.weapon) player.giveStick();
   show('playing');
-  toast('Bonk all the zombies!');
+  toast('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop');
 }
 
 function spawnWave() {
@@ -80,11 +91,40 @@ function updateHud() {
   $('zombies-left').textContent = left === 1 ? '1 zombie left' : `${left} zombies left`;
   $('stat-speed').textContent = player.speedLevel;
   $('stat-strength').textContent = player.strengthLevel;
+  if ($('bux-count').textContent !== String(player.tagBux)) $('bux-count').textContent = player.tagBux;
   const w = player.weapon;
+  $('weapon').classList.toggle('hidden', player.inShop);
   $('weapon').classList.toggle('empty', !w);
-  $('weapon').innerHTML = w
-    ? `🪵 ${w.name} · ${w.hitsLeft} ${w.hitsLeft === 1 ? 'hit' : 'hits'} left`
-    : 'No stick! Get a free one from the ⭐ barrel';
+  let text = 'No weapon! Get a free Spiky Stick at the 🛍️ shop';
+  if (w) text = `${w.icon} ${w.name}`;
+  if (w && w.maxHits) text += ` · ${w.hitsLeft} ${w.hitsLeft === 1 ? 'hit' : 'hits'} left`;
+  if ($('weapon').innerHTML !== text) $('weapon').innerHTML = text;
+}
+
+// Makes the Tag Bux counter jump when coins go in.
+function bumpBux() {
+  const el = $('bux');
+  el.classList.remove('bump');
+  void el.offsetWidth; // restart the animation
+  el.classList.add('bump');
+}
+
+function hitZombie({ zombie, weapon, by, push }) {
+  if (!zombie.alive) return;
+  if (weapon.knockback && push) zombie.knock(push, weapon.knockback);
+  const popping = zombie.hit(weapon.damage * by.damageMultiplier);
+  if (popping) {
+    effects.confetti(zombie.centre);
+    effects.floatText(zombie.centre.add(new THREE.Vector3(0, 1, 0)), 'POP!', '#9cff57', 1.4);
+    coins.burst(zombie.centre, zombie.type.tagBux);
+    scene.remove(zombie.root);
+    popped++;
+  } else if (weapon.kind !== 'shoot' || !(zombie.splashTime > clock.elapsedTime - 0.6)) {
+    // the blaster squirts so fast that it only says SPLOSH now and then
+    if (weapon.kind === 'shoot') zombie.splashTime = clock.elapsedTime;
+    const word = weapon.kind === 'shoot' ? 'SPLOSH!' : 'BONK!';
+    effects.floatText(zombie.centre.add(new THREE.Vector3(0, 0.8, 0)), word, '#ffe066', 1.1);
+  }
 }
 
 function update(dt) {
@@ -101,36 +141,45 @@ function update(dt) {
   const alive = zombies.filter((z) => z.alive).length;
   if (spawned < level.zombies && alive <= level.nextWaveWhenLeft) spawnWave();
 
-  const bonked = player.update(dt, world, zombies);
-  if (bonked) {
-    const popping = bonked.hit(player.weapon ? player.weapon.damage * player.damageMultiplier : 1);
-    if (popping) {
-      effects.confetti(bonked.centre);
-      effects.floatText(bonked.centre.add(new THREE.Vector3(0, 1, 0)), 'POP!', '#9cff57', 1.4);
-      scene.remove(bonked.root);
-      popped++;
-    } else {
-      effects.floatText(bonked.centre.add(new THREE.Vector3(0, 0.8, 0)), 'BONK!', '#ffe066', 1.1);
+  if (player.inShop) {
+    if (shop.update(dt)) {
+      shop.close(world);
+      toast('See you soon! 👋', 1.5);
+    }
+  } else {
+    for (const hit of player.update(dt, world, zombies, squirts)) hitZombie(hit);
+    if (player.justBroke) {
+      player.justBroke = false;
+      toast(player.weapon
+        ? `Your stick broke! 🪵💥<br>Now holding the ${player.weapon.name}`
+        : 'Your stick broke! 🪵💥<br>Get a free one at the 🛍️ shop');
+    }
+    // walk through the shop door to go in
+    const door = world.shop.door;
+    if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) < player.radius + CONFIG.shop.enterDistance) {
+      shop.open();
+      toastTimer = 0;
+      $('toast').classList.remove('show');
     }
   }
-  if (player.justBroke) {
-    player.justBroke = false;
-    toast('Your stick broke! 🪵💥<br>Get a free one from the ⭐ barrel at the start');
+  for (const hit of squirts.update(dt, zombies)) {
+    effects.splash(hit.at);
+    hitZombie(hit);
   }
 
-  // walk up to the barrel to grab a new stick
-  const b = world.stickBarrel;
-  if (!player.weapon && Math.hypot(player.pos.x - b.x, player.pos.z - b.z) < b.r + player.radius + 0.6) {
-    player.giveStick();
-    toast('New Spiky Stick! 🪵');
-  }
+  const cleared = popped >= level.zombies;
+  if (coins.update(dt, [player], world, cleared).length) bumpBux();
 
   for (const z of zombies) if (z.alive) z.update(dt, player, world, zombies, player.camera);
   zombies = zombies.filter((z) => z.alive);
 
-  if (popped >= level.zombies) {
+  if (cleared) {
+    // wait for the last coins to fly into your pocket
     wonTimer += dt;
-    if (wonTimer > 1.5) show('won');
+    if ((wonTimer > 1.5 && coins.list.length === 0) || wonTimer > 5) {
+      $('won-bux').innerHTML = `You've got <span class="coin">T</span> ${player.tagBux} Tag Bux to spend at the shop!`;
+      show('won');
+    }
   }
 }
 
@@ -139,7 +188,8 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   update(dt);
   if (state !== 'paused') effects.update(dt);
-  world.stickBarrel.star.rotation.y += dt * 1.5;
+  shop.el.classList.toggle('hidden', !player.inShop || state !== 'playing');
+  world.shop.bag.rotation.y += dt * 1.2;
 
   if (toastTimer > 0) {
     toastTimer -= dt;
@@ -170,4 +220,8 @@ player.reset(world.playerStart);
 frame();
 
 // handy for testing from the browser console
-window.game = { player, get zombies() { return zombies; }, get state() { return state; } };
+window.game = {
+  player, world, shop, coins,
+  get zombies() { return zombies; },
+  get state() { return state; },
+};
