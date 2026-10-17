@@ -16,6 +16,7 @@ export const CONFIG = {
     safeTime: 2, // seconds you flash and can't be hurt after a zombie touch
     leaveShopSafeTime: 2, // and after walking out of the shop, in case zombies are waiting
     taggedTime: 3, // seconds of "TAGGED!" before you're back at the start
+    taggedTimeTwoPlayers: 10, // with 2 players you wait longer, while your sister carries on
     touchDistance: 0.3, // how close a zombie gets (past touching skin) to tag you
   },
 
@@ -243,11 +244,19 @@ export const CONFIG = {
     },
   ],
 
+  // How each hero looks for now (the character creator comes later).
+  heroes: [
+    { label: 'P1', skin: 0xf1c27d, hair: 0x6b3a1a, outfit: 0xff6fae, trousers: 0x5a4a8a, tagColour: '#ff4f8b' },
+    { label: 'P2', skin: 0xe0ac69, hair: 0x2a1a10, outfit: 0x4fc3f7, trousers: 0x3a5a8a, tagColour: '#1e6fd6' },
+  ],
+  twoPlayerZombies: 1.5, // 50% more zombies with 2 players, so you both earn enough Tag Bux
+  giveTagBux: 10, // how many Tag Bux "Give" in the shop hands to your sister
+
   keys: {
     p1: { forward: ['KeyW'], back: ['KeyS'], left: ['KeyA'], right: ['KeyD'], attack: ['Space'] },
     p2: {
       forward: ['ArrowUp'], back: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
-      attack: ['Numpad0', 'Enter', 'NumpadEnter'],
+      attack: ['Enter', 'Numpad0', 'NumpadEnter'], // Enter for laptops without a number pad
     },
   },
 };

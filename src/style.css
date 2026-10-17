@@ -17,6 +17,29 @@ html, body {
 /* ---------- On-screen display ---------- */
 #hud { position: fixed; inset: 0; pointer-events: none; }
 
+/* one view per player: the whole screen, or half of it in 2-player mode */
+.view { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; overflow: hidden; }
+.view .inner { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+#hud.split .view { width: 50%; }
+#hud.split .view.p2 { left: 50%; }
+/* everything shrinks a bit to fit half the screen */
+#hud.split .view .inner { width: calc(100% / 0.7); height: calc(100% / 0.7); transform: scale(0.7); transform-origin: 0 0; }
+#hud.split .view.p1 { border-right: 3px solid #fff; }
+.who { top: 92px; right: 18px; font-size: 22px; padding: 4px 16px; display: none; }
+#hud.split .who { display: block; }
+.p1 .who { background: #ff4f8b; }
+.p2 .who { background: #1e6fd6; }
+
+/* Tag Bux flying from one sister to the other */
+.coin.flying {
+  position: fixed;
+  z-index: 10;
+  font-size: 40px;
+  margin: -0.6em 0 0 -0.6em;
+  transition: transform 0.7s ease-in;
+  pointer-events: none;
+}
+
 .pill {
   position: absolute;
   padding: 10px 22px;
@@ -28,21 +51,21 @@ html, body {
   white-space: nowrap;
 }
 
-#zombies-left { top: 18px; left: 50%; transform: translateX(-50%); }
+.zombies-left { top: 18px; left: 50%; transform: translateX(-50%); }
 
-#weapon { bottom: 22px; left: 50%; transform: translateX(-50%); }
-#weapon.empty { background: rgba(200, 60, 40, 0.75); }
+.weapon { bottom: 22px; left: 50%; transform: translateX(-50%); }
+.weapon.empty { background: rgba(200, 60, 40, 0.75); }
 
-#top-left { position: absolute; top: 14px; left: 18px; display: flex; flex-direction: column; gap: 8px; }
-#stats { display: flex; gap: 10px; }
+.top-left { position: absolute; top: 14px; left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.stats { display: flex; gap: 10px; }
 
 /* hearts: full ones are red, lost ones are faded white */
 .heart::before { content: '❤️'; }
 .heart.empty::before { content: '🤍'; opacity: 0.45; }
-#hearts { font-size: 46px; line-height: 1; display: flex; gap: 6px; filter: drop-shadow(2px 3px 0 rgba(75, 30, 138, 0.6)); }
-#hearts .heart { display: inline-block; }
-#hearts .heart.lost { animation: heart-lost 0.6s ease-out; }
-#hearts.blink { animation: blink 0.25s step-end infinite; }
+.hearts { font-size: 46px; line-height: 1; display: flex; gap: 6px; filter: drop-shadow(2px 3px 0 rgba(75, 30, 138, 0.6)); }
+.hearts .heart { display: inline-block; }
+.hearts .heart.lost { animation: heart-lost 0.6s ease-out; }
+.hearts.blink { animation: blink 0.25s step-end infinite; }
 @keyframes heart-lost {
   0% { transform: scale(1.8) rotate(-15deg); }
   100% { transform: scale(1) rotate(0); }
@@ -50,16 +73,16 @@ html, body {
 @keyframes blink { 50% { opacity: 0.3; } }
 
 /* the screen edges flash pink when a zombie tags you */
-#hurt {
+.hurt {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 40, 100, 0.65));
   opacity: 0;
   transition: opacity 0.5s;
 }
-#hurt.show { opacity: 1; transition: none; }
+.hurt.show { opacity: 1; transition: none; }
 
-#tagged {
+.tagged {
   position: absolute;
   inset: 0;
   display: flex;
@@ -70,15 +93,15 @@ html, body {
   background: rgba(150, 30, 90, 0.6);
   text-align: center;
 }
-#tagged h1 {
+.tagged h1 {
   margin: 0;
   font-size: clamp(60px, 10vw, 130px);
   color: #ffe066;
   text-shadow: 6px 6px 0 #4b1e8a;
   animation: pop 0.4s ease-out;
 }
-#tagged .sub { margin: 0; font-size: 34px; }
-#tagged b { color: #ffe066; font-size: 1.3em; }
+.tagged .sub { margin: 0; font-size: 34px; }
+.tagged b { color: #ffe066; font-size: 1.3em; }
 .badge {
   padding: 6px 14px;
   border-radius: 14px;
@@ -87,7 +110,7 @@ html, body {
 }
 .badge b { color: #ffe066; }
 
-#crosshair {
+.crosshair {
   position: absolute;
   top: 50%; left: 50%;
   width: 14px; height: 14px;
@@ -134,8 +157,8 @@ kbd {
   font-weight: bold;
 }
 
-#toast {
-  position: fixed;
+.toast {
+  position: absolute;
   left: 50%; top: 28%;
   transform: translateX(-50%);
   font-size: 40px;
@@ -148,7 +171,7 @@ kbd {
   text-align: center;
   white-space: nowrap;
 }
-#toast.show { opacity: 1; }
+.toast.show { opacity: 1; }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
@@ -170,8 +193,8 @@ kbd {
   vertical-align: -0.12em;
 }
 
-#bux { top: 18px; right: 18px; font-size: 36px; color: #ffe066; }
-#bux.bump { animation: bump 0.3s ease-out; }
+.bux { top: 18px; right: 18px; font-size: 36px; color: #ffe066; }
+.bux.bump { animation: bump 0.3s ease-out; }
 @keyframes bump {
   0% { transform: scale(1); }
   40% { transform: scale(1.25); }
@@ -362,9 +385,22 @@ kbd.tap { animation: pop 0.2s ease-out; }
   clip-path: polygon(50% 0, 100% 15%, 92% 62%, 50% 100%, 8% 62%, 0 15%);
 }
 .shield.empty { background: rgba(255, 255, 255, 0.35); }
-#hearts .shield.lost { animation: heart-lost 0.6s ease-out; }
-#hurt.shield { background: radial-gradient(ellipse at center, transparent 45%, rgba(60, 150, 255, 0.65)); }
+.hearts .shield.lost { animation: heart-lost 0.6s ease-out; }
+.hurt.shield { background: radial-gradient(ellipse at center, transparent 45%, rgba(60, 150, 255, 0.65)); }
 
 /* the shop list scrolls; these show there's more above or below */
 .shop .more { text-align: center; font-size: 20px; font-weight: bold; color: #ffe066; height: 20px; line-height: 20px; }
 .shop .more.none { visibility: hidden; }
+
+/* ---------- Title: 1 or 2 players ---------- */
+.choices { display: flex; gap: 24px; margin: 10px 0; }
+.choice {
+  padding: 14px 34px;
+  border-radius: 24px;
+  background: rgba(40, 20, 80, 0.55);
+  border: 5px solid transparent;
+  font-size: 40px;
+  font-weight: bold;
+}
+.choice.selected { background: #fff; color: #4b1e8a; border-color: #ffe066; transform: scale(1.08); box-shadow: 0 6px 0 #b9a6e0; }
+.who-keys { font-weight: bold; color: #ffe066; }

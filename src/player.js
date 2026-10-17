@@ -3,13 +3,19 @@ import { CONFIG } from './config.js';
 import { isDown, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
 import { Beam, WEAPON_MODELS } from './weapons.js';
+import { makeHeroBody } from './hero.js';
 
-const skinMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
-const sleeveMat = new THREE.MeshLambertMaterial({ color: 0xff6fae });
+// Each player's camera sees the world (layer 0), their own hand (layer 1 or 2)
+// and the other player's body (layer 3 or 4), but never their own body.
+const HAND_LAYER = 1;
+const BODY_LAYER = 3;
 
 export class Player {
-  constructor(keys, scene) {
+  constructor(keys, scene, look, index) {
     this.keys = keys;
+    this.index = index;
+    this.name = `Player ${index + 1}`; // the character creator will let you type a name
+    this.taggedTime = CONFIG.player.taggedTime; // main sets the 2-player time
     this.radius = CONFIG.player.radius;
     this.speedLevel = CONFIG.player.startSpeed;
     this.strengthLevel = CONFIG.player.startStrength;
@@ -23,8 +29,11 @@ export class Player {
     // first-person hand holding the weapon, fixed to the camera
     this.hand = new THREE.Group();
     this.hand.position.set(0.38, -0.42, -0.65);
-    const fist = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), skinMat);
-    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.4, 10), sleeveMat);
+    const fist = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), new THREE.MeshLambertMaterial({ color: look.skin }));
+    const sleeve = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.1, 0.4, 10),
+      new THREE.MeshLambertMaterial({ color: look.outfit }),
+    );
     sleeve.rotation.x = Math.PI / 2;
     sleeve.position.set(0.02, -0.03, 0.22);
     this.hand.add(fist, sleeve);
@@ -40,6 +49,16 @@ export class Player {
       this.models[id] = model;
     }
     this.camera.add(this.hand);
+    this.hand.traverse((o) => o.layers.set(HAND_LAYER + index));
+    this.camera.layers.enable(HAND_LAYER + index);
+    this.camera.layers.enable(BODY_LAYER + (1 - index));
+
+    // your whole body, which only the other player sees
+    this.body = makeHeroBody(look);
+    this.body.root.traverse((o) => o.layers.set(BODY_LAYER + index));
+    this.body.root.visible = false;
+    scene.add(this.body.root);
+    this.lastPos = new THREE.Vector3();
 
     this.swing = 0; // counts down while swinging
     this.swingHit = false;
@@ -76,7 +95,7 @@ export class Player {
     }
     this.hearts = Math.max(0, this.hearts - amount);
     if (this.hearts === 0) {
-      this.tagged = CONFIG.player.taggedTime;
+      this.tagged = this.taggedTime;
       this.hand.visible = false;
     }
     return 'heart';
@@ -115,6 +134,23 @@ export class Player {
 
   get damageMultiplier() {
     return 1 + CONFIG.player.strengthPerLevel * (this.strengthLevel - 1);
+  }
+
+  // Moves and animates your body for the other player to see.
+  updateBody(dt, show) {
+    const b = this.body;
+    b.root.visible = show && !this.inside && !this.tagged;
+    if (!b.root.visible) return;
+    const moved = Math.hypot(this.pos.x - this.lastPos.x, this.pos.z - this.lastPos.z) / Math.max(dt, 0.001);
+    this.lastPos.copy(this.pos);
+    b.root.position.set(this.pos.x, 0, this.pos.z);
+    b.root.rotation.y = this.yaw;
+    const swing = moved > 0.5 ? Math.sin(this.walkPhase) * 0.6 : 0;
+    b.legs[0].rotation.x = swing;
+    b.legs[1].rotation.x = -swing;
+    b.arms[0].rotation.x = -swing * 0.7;
+    // the weapon arm chops down when you attack
+    b.arms[1].rotation.x = this.swing > 0 || this.recoil > 0.3 ? -1.4 : swing * 0.7;
   }
 
   reset(start) {

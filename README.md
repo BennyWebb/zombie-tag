@@ -12,27 +12,40 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **3. Hearts:** zombie touches cost hearts, Heart Medicine in the shop, and getting tagged sends you back to the start.
 - [x] **4. The gym:** treadmill and weights mini-games that raise Speed and Strength.
 - [x] **5. All the weapons and armour:** ten weapons up to the Sparkle Star Laser Gun, and three kinds of armour.
-- [ ] 6. Two players
+- [x] **6. Two players:** split screen, a second set of keys, separate wallets and giving Tag Bux.
 - [ ] 7. Character creator and outfits
 - [ ] 8. Levels 1 to 10
 - [ ] 9. Polish
 
 ## How to play
 
-| Action | Keys |
-| --- | --- |
-| Walk forward / back | W / S |
-| Turn left / right | A / D |
-| Attack (hold it down for shooting weapons and the laser) | Space |
-| Shop and gym: choose / go | W / S, then Space |
-| Treadmill | A, D, A, D… as fast as you can |
-| Weights | tap Space as fast as you can |
-| Pause | Esc |
+On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space.
+With 2 players the screen splits down the middle: Player 1 on the left, Player 2 on the right.
+
+| Action | Player 1 | Player 2 |
+| --- | --- | --- |
+| Walk forward / back | W / S | ↑ / ↓ |
+| Turn left / right | A / D | ← / → |
+| Attack (hold it down for shooting weapons and the laser) | Space | Enter (or Numpad 0) |
+| Shop and gym: choose / go | W / S, then Space | ↑ / ↓, then Enter |
+| Treadmill | A, D, A, D… as fast as you can | ←, →, ←, →… |
+| Weights | tap Space as fast as you can | tap Enter |
+| Pause (then Q to go back to the start screen) | Esc | Esc |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
 
 Popped zombies burst into spinning **Tag Bux** coins. Walk over them to collect them;
 your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns 40.
+
+### Playing together
+
+Each sister has her own hearts, Tag Bux, weapons, armour and training. Coins go to whoever touches them
+first. In the shop you can **🎁 Give 10 Tag Bux** to your sister as many times as you like, and the coins
+fly across the screen into her counter. There are 50% more zombies with two players (12 in Sunny Park),
+and zombies chase whichever hero is nearest. If one of you gets tagged, she's back at the start after
+10 seconds while the other keeps playing.
+
+### Hearts
 
 You have **3 hearts** (top left). A zombie touch costs 1 heart, then you blink for 2 seconds and
 can't be hurt, so run away! Lose all 3 and you're **TAGGED**: after a 3-second countdown you're back

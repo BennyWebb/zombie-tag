@@ -21,12 +21,18 @@ export class ShopMenu {
     this.el = document.createElement('div');
     this.el.className = 'shop hidden';
     root.appendChild(this.el);
-    this.ids = [...Object.keys(CONFIG.weapons), ...Object.keys(CONFIG.items), ...Object.keys(CONFIG.armour), 'leave'];
+    this.partner = null; // your sister, in 2-player mode, so you can give her Tag Bux
+    this.onGive = null; // called after giving, to show the coins flying across
     this.cursor = 0;
     this.scroll = 0; // the first row shown
     this.message = '';
     this.messageKind = '';
     this.drawn = '';
+  }
+
+  get ids() {
+    const give = this.partner ? ['give'] : [];
+    return [...Object.keys(CONFIG.weapons), ...Object.keys(CONFIG.items), ...Object.keys(CONFIG.armour), ...give, 'leave'];
   }
 
   open() {
@@ -35,7 +41,7 @@ export class ShopMenu {
     p.hand.visible = false;
     // start on something useful: a free stick if you need one, medicine if you're hurt,
     // else the next weapon or armour to buy (the dearest you can afford, or the cheapest you can't yet)
-    const upgrades = this.ids.filter((id) => ['buy', 'dear'].includes(this.status(id).kind) && !thing(id).hearts)
+    const upgrades = this.ids.filter((id) => thing(id) && ['buy', 'dear'].includes(this.status(id).kind) && !thing(id).hearts)
       .sort((a, b) => thing(a).price - thing(b).price);
     const affordable = upgrades.filter((id) => thing(id).price <= p.tagBux);
     const hurt = p.hearts < CONFIG.player.hearts && CONFIG.items.medicine.price <= p.tagBux;
@@ -66,6 +72,10 @@ export class ShopMenu {
   status(id) {
     const p = this.player;
     if (id === 'leave') return { label: 'Back outside', ok: true };
+    if (id === 'give') {
+      const ok = p.tagBux >= CONFIG.giveTagBux;
+      return { label: `${coin} ${CONFIG.giveTagBux}`, ok, kind: ok ? 'buy' : 'dear' };
+    }
     const w = thing(id);
     if (w.hearts && p.hearts >= CONFIG.player.hearts) return { label: 'Hearts full', ok: false, kind: 'full' };
     if (w.blocks) {
@@ -102,8 +112,20 @@ export class ShopMenu {
     const p = this.player;
     const id = this.ids[this.cursor];
     if (id === 'leave') return true;
-    const w = thing(id);
     const s = this.status(id);
+    this.drawn = ''; // redraw so the message animation plays again
+    if (id === 'give') {
+      const amount = CONFIG.giveTagBux;
+      if (s.kind === 'dear') this.say(`You need ${amount} Tag Bux to give`, 'bad');
+      else {
+        p.tagBux -= amount;
+        this.partner.tagBux += amount;
+        this.say(`You gave ${amount} Tag Bux to ${this.partner.name}! 🎁`, 'good');
+        if (this.onGive) this.onGive(p, this.partner);
+      }
+      return false;
+    }
+    const w = thing(id);
     if (s.kind === 'holding') this.say(`You're already ${w.blocks ? 'wearing' : 'holding'} the ${w.name}!`, '');
     else if (s.kind === 'owned') {
       p.hold(id);
@@ -146,6 +168,11 @@ export class ShopMenu {
       const i = j + this.scroll;
       const s = this.status(id);
       const sel = i === this.cursor ? ' selected' : '';
+      if (id === 'give') {
+        return `<div class="row ${s.kind}${sel}"><span class="icon">🎁</span>`
+          + `<span class="name">Give ${CONFIG.giveTagBux} Tag Bux to ${this.partner.name}<small>As many times as you like</small></span>`
+          + `<span class="price">${s.label}</span></div>`;
+      }
       if (id === 'leave') {
         return `<div class="row leave${sel}"><span class="icon">🚪</span><span class="name">Leave</span>`
           + `<span class="price">${s.label}</span></div>`;

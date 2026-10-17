@@ -9,6 +9,7 @@ import { Coins } from './coins.js';
 import { SPLASH_COLOURS, Shots } from './weapons.js';
 import { ShopMenu } from './shop.js';
 import { GymMenu } from './gym.js';
+import { Hud } from './hud.js';
 
 const level = CONFIG.levels[0];
 
@@ -16,46 +17,62 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false; // drawn once a frame, even when the screen is split
 document.getElementById('game').appendChild(renderer.domElement);
+
+const $ = (id) => document.getElementById(id);
+const screens = { title: $('title'), paused: $('paused'), won: $('won') };
 
 const scene = new THREE.Scene();
 const world = buildWorld(scene, level);
 const effects = new Effects(scene);
 const coins = new Coins(scene);
 const shots = new Shots(scene);
-const player = new Player(CONFIG.keys.p1, scene);
-const shop = new ShopMenu(document.getElementById('hud'), player, world.shop);
-const gym = new GymMenu(document.getElementById('hud'), player, world.gym);
-// walk through a door to go in
-const buildings = [{ door: world.shop.door, menu: shop }, { door: world.gym.door, menu: gym }];
 
-const $ = (id) => document.getElementById(id);
-const screens = { title: $('title'), paused: $('paused'), won: $('won') };
+// Both heroes always exist; in 1-player mode only the first one plays.
+const players = CONFIG.heroes.map((look, i) => new Player(i === 0 ? CONFIG.keys.p1 : CONFIG.keys.p2, scene, look, i));
+const huds = players.map((p, i) => new Hud($('hud'), p, i + 1));
+const menus = players.map((p, i) => ({
+  shop: new ShopMenu(huds[i].inner, p, world.shop),
+  gym: new GymMenu(huds[i].inner, p, world.gym),
+}));
+for (const m of menus) m.shop.onGive = flyCoins;
+// walk through a door to go in
+const buildings = [{ door: world.shop.door, menu: 'shop' }, { door: world.gym.door, menu: 'gym' }];
 
 let state = 'title';
+let playerCount = 1;
+let titleChoice = 0; // 0: 1 player, 1: 2 players
+let active = [players[0]]; // the heroes playing right now
 let zombies = [];
+let levelZombies = level.zombies;
 let spawned = 0;
 let popped = 0;
 let wonTimer = 0;
-let toastTimer = 0;
-let heartsShown = -1;
-let shieldsShown = '';
 
 function show(name) {
   state = name;
   for (const [key, el] of Object.entries(screens)) el.classList.toggle('hidden', key !== name);
   $('hud').classList.toggle('hidden', name === 'title');
-  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inside && !player.tagged;
-  if (name !== 'playing') {
-    toastTimer = 0;
-    $('toast').classList.remove('show');
+  for (const p of active) {
+    p.hand.visible = (name === 'playing' || name === 'paused') && !p.inside && !p.tagged;
   }
+  if (name !== 'playing') huds.forEach((h) => h.clearToast());
+  if (name === 'title') drawTitle();
 }
 
-function toast(text, seconds = 2.5) {
-  $('toast').innerHTML = text;
-  $('toast').classList.add('show');
-  toastTimer = seconds;
+const toastAll = (text, seconds) => active.forEach((p) => huds[p.index].toast(text, seconds));
+
+function drawTitle() {
+  document.querySelectorAll('#title .choice').forEach((el, i) => el.classList.toggle('selected', i === titleChoice));
+  $('p2-keys').classList.toggle('hidden', titleChoice === 0);
+}
+
+// Where each hero begins: side by side in 2-player mode.
+function startFor(p) {
+  const s = world.playerStart;
+  const side = playerCount === 2 ? (p.index === 0 ? -1.5 : 1.5) : 0;
+  return { x: s.x + side, z: s.z, yaw: s.yaw };
 }
 
 function startLevel() {
@@ -66,22 +83,33 @@ function startLevel() {
   wonTimer = 0;
   coins.clear();
   shots.clear();
-  if (player.inside) player.menu.close();
-  // Tag Bux and weapons are kept when you play again
-  player.respawn(world.playerStart);
-  $('tagged').classList.add('hidden');
-  if (!player.weapon) player.giveStick();
+  for (const p of players) if (p.inside) p.menu.close();
+
+  const two = playerCount === 2;
+  active = players.slice(0, playerCount);
+  levelZombies = Math.round(level.zombies * (two ? CONFIG.twoPlayerZombies : 1));
+  $('hud').classList.toggle('split', two);
+  huds[1].el.classList.toggle('hidden', !two);
+  for (const p of active) {
+    // Tag Bux, weapons, armour and training are all kept when you play again
+    p.taggedTime = two ? CONFIG.player.taggedTimeTwoPlayers : CONFIG.player.taggedTime;
+    p.respawn(startFor(p));
+    huds[p.index].showTagged(false);
+    if (!p.weapon) p.giveStick();
+    menus[p.index].shop.partner = two ? players[1 - p.index] : null;
+  }
   show('playing');
-  toast('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop<br>Get strong at the 💪 gym', 3.5);
+  toastAll('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop<br>Get strong at the 💪 gym', 3.5);
 }
 
 function spawnWave() {
-  const count = Math.min(level.waveSize, level.zombies - spawned);
+  const count = Math.min(level.waveSize, levelZombies - spawned);
   for (let i = 0; i < count; i++) {
     for (let tries = 0; tries < 100; tries++) {
       const x = (Math.random() - 0.5) * (level.size - 6);
       const z = (Math.random() - 0.5) * (level.size - 6);
-      if (Math.hypot(x - player.pos.x, z - player.pos.z) < 22) continue; // not too close to the hero
+      // not too close to any hero
+      if (active.some((p) => Math.hypot(x - p.pos.x, z - p.pos.z) < 22)) continue;
       if (!world.isClear(x, z, 1)) continue;
       const type = CONFIG.zombies[level.zombieTypes[0]];
       const zombie = new Zombie(type, level.healthMultiplier, x, z);
@@ -93,61 +121,26 @@ function spawnWave() {
   }
 }
 
-function updateHud() {
-  const left = level.zombies - popped;
-  $('zombies-left').textContent = left === 1 ? '1 zombie left' : `${left} zombies left`;
-  $('stat-speed').textContent = player.speedLevel;
-  $('stat-strength').textContent = player.strengthLevel;
-  if (player.statUp && !player.inside) {
-    // the badge for the stat you just trained does a little jump
-    const el = $(`stat-${player.statUp}`).parentElement;
-    el.classList.remove('bump');
-    void el.offsetWidth;
-    el.classList.add('bump');
-    player.statUp = null;
+// Coins fly across the screen from the giver's shop to her sister's Tag Bux counter.
+function flyCoins(giver, receiver) {
+  const from = huds[giver.index].q('.shop-bux').getBoundingClientRect();
+  const to = huds[receiver.index].q('.bux').getBoundingClientRect();
+  for (let i = 0; i < 5; i++) {
+    const c = document.createElement('span');
+    c.className = 'coin flying';
+    c.textContent = 'T';
+    c.style.left = `${from.left + from.width / 2}px`;
+    c.style.top = `${from.top + from.height / 2}px`;
+    document.body.appendChild(c);
+    setTimeout(() => {
+      c.style.transform = `translate(${to.left + to.width / 2 - from.left - from.width / 2}px, `
+        + `${to.top + to.height / 2 - from.top - from.height / 2}px)`;
+    }, 30 + i * 90);
+    setTimeout(() => {
+      c.remove();
+      huds[receiver.index].bumpBux();
+    }, 30 + i * 90 + 800);
   }
-  if ($('bux-count').textContent !== String(player.tagBux)) $('bux-count').textContent = player.tagBux;
-  if (player.hearts !== heartsShown) {
-    // the heart you just lost (or got back) does a little jump
-    const changed = player.hearts < heartsShown ? player.hearts : heartsShown;
-    let html = '';
-    for (let i = 0; i < CONFIG.player.hearts; i++) {
-      const jump = heartsShown >= 0 && i === changed ? ' lost' : '';
-      html += `<span class="heart${i < player.hearts ? '' : ' empty'}${jump}"></span>`;
-    }
-    $('hearts').innerHTML = html;
-    heartsShown = player.hearts;
-    shieldsShown = '';
-  }
-  // blue armour shields go after the hearts
-  const armour = player.bestArmour;
-  const shieldKey = `${player.shields}/${armour ? armour.blocks : 0}`;
-  if (shieldKey !== shieldsShown) {
-    const old = shieldsShown ? Number(shieldsShown.split('/')[0]) : player.shields;
-    $('hearts').querySelectorAll('.shield').forEach((el) => el.remove());
-    for (let i = 0; i < (armour ? armour.blocks : 0); i++) {
-      const el = document.createElement('span');
-      el.className = `shield${i < player.shields ? '' : ' empty'}${i === player.shields && old > player.shields ? ' lost' : ''}`;
-      $('hearts').appendChild(el);
-    }
-    shieldsShown = shieldKey;
-  }
-  $('hearts').classList.toggle('blink', player.safe > 0 && !player.tagged && !player.inside);
-  const w = player.weapon;
-  $('weapon').classList.toggle('hidden', player.inside || player.tagged > 0);
-  $('weapon').classList.toggle('empty', !w);
-  let text = 'No weapon! Get a free Spiky Stick at the 🛍️ shop';
-  if (w) text = `${w.icon} ${w.name}`;
-  if (w && w.maxHits) text += ` · ${w.hitsLeft} ${w.hitsLeft === 1 ? 'hit' : 'hits'} left`;
-  if ($('weapon').innerHTML !== text) $('weapon').innerHTML = text;
-}
-
-// Makes the Tag Bux counter jump when coins go in.
-function bumpBux() {
-  const el = $('bux');
-  el.classList.remove('bump');
-  void el.offsetWidth; // restart the animation
-  el.classList.add('bump');
 }
 
 function hitZombie({ zombie, weapon, by, push, at, splat }) {
@@ -180,26 +173,55 @@ function hitZombie({ zombie, weapon, by, push, at, splat }) {
   }
 }
 
-// A zombie touched you: lose a heart, flash, and bump the zombie back.
-function zombieTouch(zombie) {
-  const hurt = player.hurt(zombie.type.touchHearts);
+// A zombie touched a hero: lose a shield or a heart, flash, and bump the zombie back.
+function zombieTouch(zombie, p) {
+  const hurt = p.hurt(zombie.type.touchHearts);
   if (!hurt) return;
-  const away = new THREE.Vector3(zombie.pos.x - player.pos.x, 0, zombie.pos.z - player.pos.z).normalize();
+  const hud = huds[p.index];
+  const away = new THREE.Vector3(zombie.pos.x - p.pos.x, 0, zombie.pos.z - p.pos.z).normalize();
   zombie.knock(away, zombie.type.bounceBack);
   zombie.dizzy = zombie.type.dizzyTime;
-  const el = $('hurt');
-  el.classList.toggle('shield', hurt === 'shield'); // blue for armour, pink for a lost heart
-  el.classList.add('show');
-  void el.offsetWidth;
-  el.classList.remove('show'); // fades back out
-  if (player.tagged) {
-    $('tagged').classList.remove('hidden');
-    toastTimer = 0;
-    $('toast').classList.remove('show');
-  } else if (hurt === 'shield') {
-    toast('Your armour blocked it! 🛡️<br>Run away!', 1.5);
+  hud.flash(hurt);
+  if (p.tagged) hud.showTagged(true);
+  else if (hurt === 'shield') hud.toast('Your armour blocked it! 🛡️<br>Run away!', 1.5);
+  else hud.toast(p.hearts === 1 ? 'Ouch! Last heart! 💔<br>Run away!' : 'Ouch! 💔 Run away!', 1.5);
+}
+
+// One hero's turn: counting down when tagged, using a menu inside, or out in the park.
+function updatePlayer(p, dt) {
+  const hud = huds[p.index];
+  if (p.tagged || p.inside) {
+    // no laser while you're tagged or inside, but let its stars fade away
+    p.beam.hide();
+    p.beam.update(dt, 0);
+  }
+  if (p.tagged) {
+    p.tagged -= dt;
+    if (p.tagged <= 0) {
+      p.respawn(startFor(p));
+      hud.showTagged(false);
+      hud.toast('Back at the start with 3 hearts! ❤️❤️❤️', 2);
+    }
+  } else if (p.inside) {
+    if (p.menu.update(dt)) {
+      p.menu.close();
+      hud.toast('See you soon! 👋', 1.5);
+    }
   } else {
-    toast(player.hearts === 1 ? 'Ouch! Last heart! 💔<br>Run away!' : 'Ouch! 💔 Run away!', 1.5);
+    for (const hit of p.update(dt, world, zombies, shots)) hitZombie(hit);
+    if (p.justBroke) {
+      p.justBroke = false;
+      hud.toast(p.weapon
+        ? `Your stick broke! 🪵💥<br>Now holding the ${p.weapon.name}`
+        : 'Your stick broke! 🪵💥<br>Get a free one at the 🛍️ shop');
+    }
+    for (const { door, menu } of buildings) {
+      if (Math.hypot(p.pos.x - door.x, p.pos.z - door.z) < p.radius + CONFIG.shop.enterDistance) {
+        p.menu = menus[p.index][menu];
+        p.menu.open();
+        hud.clearToast();
+      }
+    }
   }
 }
 
@@ -208,68 +230,74 @@ function update(dt) {
     show(state === 'playing' ? 'paused' : 'playing');
     return;
   }
-  if (state === 'title' || state === 'won') {
-    if (wasPressed(CONFIG.keys.p1.attack) || wasPressed(['Enter'])) startLevel();
+  if (state === 'paused' && wasPressed(['KeyQ'])) {
+    for (const p of players) if (p.inside) p.menu.close();
+    show('title');
+    return;
+  }
+  if (state === 'title') {
+    // choose 1 or 2 players with W/S or the arrows (or just press 1 or 2)
+    const k = CONFIG.keys;
+    if (wasPressed([...k.p1.forward, ...k.p2.forward, ...k.p1.left, ...k.p2.left])) titleChoice = 0;
+    if (wasPressed([...k.p1.back, ...k.p2.back, ...k.p1.right, ...k.p2.right])) titleChoice = 1;
+    if (wasPressed(['Digit1', 'Numpad1'])) titleChoice = 0;
+    if (wasPressed(['Digit2', 'Numpad2'])) titleChoice = 1;
+    drawTitle();
+    if (wasPressed(['Space', 'Enter', 'NumpadEnter', 'Digit1', 'Digit2', 'Numpad1', 'Numpad2'])) {
+      playerCount = titleChoice + 1;
+      startLevel();
+    }
+    return;
+  }
+  if (state === 'won') {
+    if (wasPressed(['Space', 'Enter', 'NumpadEnter'])) startLevel();
     return;
   }
   if (state !== 'playing') return;
 
   const alive = zombies.filter((z) => z.alive).length;
-  if (spawned < level.zombies && alive <= level.nextWaveWhenLeft) spawnWave();
+  if (spawned < levelZombies && alive <= level.nextWaveWhenLeft) spawnWave();
 
-  if (player.tagged || player.inside) {
-    // no laser while you're tagged or inside, but let its stars fade away
-    player.beam.hide();
-    player.beam.update(dt, 0);
-  }
-  if (player.tagged) {
-    player.tagged -= dt;
-    $('tagged-count').textContent = Math.max(1, Math.ceil(player.tagged));
-    if (player.tagged <= 0) {
-      player.respawn(world.playerStart);
-      $('tagged').classList.add('hidden');
-      toast('Back at the start with 3 hearts! ❤️❤️❤️', 2);
-    }
-  } else if (player.inside) {
-    if (player.menu.update(dt)) {
-      player.menu.close();
-      toast('See you soon! 👋', 1.5);
-    }
-  } else {
-    for (const hit of player.update(dt, world, zombies, shots)) hitZombie(hit);
-    if (player.justBroke) {
-      player.justBroke = false;
-      toast(player.weapon
-        ? `Your stick broke! 🪵💥<br>Now holding the ${player.weapon.name}`
-        : 'Your stick broke! 🪵💥<br>Get a free one at the 🛍️ shop');
-    }
-    for (const { door, menu } of buildings) {
-      if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) < player.radius + CONFIG.shop.enterDistance) {
-        player.menu = menu;
-        menu.open();
-        toastTimer = 0;
-        $('toast').classList.remove('show');
-      }
-    }
-  }
+  for (const p of active) updatePlayer(p, dt);
   for (const hit of shots.update(dt, zombies)) hitZombie(hit);
 
-  const cleared = popped >= level.zombies;
-  if (coins.update(dt, [player], world, cleared).length) bumpBux();
+  const cleared = popped >= levelZombies;
+  for (const { player } of coins.update(dt, active, world, cleared)) huds[player.index].bumpBux();
 
   for (const z of zombies) {
     if (!z.alive) continue;
-    z.update(dt, player, world, zombies, player.camera);
-    const d = Math.hypot(z.pos.x - player.pos.x, z.pos.z - player.pos.z);
-    if (z.canTag && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
+    z.update(dt, active, world, zombies);
+    for (const p of active) {
+      const d = Math.hypot(z.pos.x - p.pos.x, z.pos.z - p.pos.z);
+      if (z.canTag && d < z.radius + p.radius + CONFIG.player.touchDistance) zombieTouch(z, p);
+    }
   }
   zombies = zombies.filter((z) => z.alive);
 
+  // sisters can't walk through each other
+  if (active.length === 2 && !active.some((p) => p.inside || p.tagged)) {
+    const [a, b] = active;
+    const dx = b.pos.x - a.pos.x;
+    const dz = b.pos.z - a.pos.z;
+    const d = Math.hypot(dx, dz);
+    const min = a.radius + b.radius;
+    if (d < min && d > 0.0001) {
+      const push = (min - d) / 2;
+      a.pos.x -= (dx / d) * push;
+      a.pos.z -= (dz / d) * push;
+      b.pos.x += (dx / d) * push;
+      b.pos.z += (dz / d) * push;
+    }
+  }
+
   if (cleared) {
-    // wait for the last coins to fly into your pocket
+    // wait for the last coins to fly into your pockets
     wonTimer += dt;
     if ((wonTimer > 1.5 && coins.list.length === 0) || wonTimer > 5) {
-      $('won-bux').innerHTML = `You've got <span class="coin">T</span> ${player.tagBux} Tag Bux to spend at the shop!`;
+      const coin = '<span class="coin">T</span>';
+      $('won-bux').innerHTML = playerCount === 1
+        ? `You've got ${coin} ${players[0].tagBux} Tag Bux to spend at the shop!`
+        : active.map((p) => `${p.name}: ${coin} ${p.tagBux}`).join(' &nbsp; ');
       show('won');
     }
   }
@@ -280,43 +308,54 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   update(dt);
   if (state !== 'paused') effects.update(dt);
-  for (const { menu } of buildings) {
-    menu.el.classList.toggle('hidden', !player.inside || player.menu !== menu || state !== 'playing');
+  for (const p of players) {
+    const m = menus[p.index];
+    for (const menu of [m.shop, m.gym]) {
+      menu.el.classList.toggle('hidden', !p.inside || p.menu !== menu || state !== 'playing');
+    }
+    p.updateBody(dt, state !== 'title' && playerCount === 2 && active.includes(p));
   }
   world.shop.sign.rotation.y += dt * 1.2;
   world.gym.sign.rotation.y += dt * 1.2;
-
-  if (toastTimer > 0) {
-    toastTimer -= dt;
-    if (toastTimer <= 0) $('toast').classList.remove('show');
-  }
-  updateHud();
+  for (const p of active) huds[p.index].update(dt, levelZombies - popped);
 
   // The title screen shows the park slowly turning behind it.
+  const views = state === 'title' ? [players[0]] : active;
   if (state === 'title') {
     const t = clock.elapsedTime * 0.08;
-    player.camera.position.set(Math.sin(t) * 30, 8, Math.cos(t) * 30);
-    player.camera.lookAt(0, 2, 0);
+    players[0].camera.position.set(Math.sin(t) * 30, 8, Math.cos(t) * 30);
+    players[0].camera.lookAt(0, 2, 0);
   }
 
+  // draw the world once for each player, side by side
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h, false);
-  player.camera.aspect = w / h;
-  player.camera.updateProjectionMatrix();
-  renderer.render(scene, player.camera);
+  renderer.shadowMap.needsUpdate = true;
+  renderer.setScissorTest(views.length > 1);
+  const vw = w / views.length;
+  views.forEach((p, i) => {
+    p.camera.aspect = vw / h;
+    p.camera.updateProjectionMatrix();
+    for (const z of zombies) z.updateBar(p.camera);
+    renderer.setViewport(i * vw, 0, vw, h);
+    renderer.setScissor(i * vw, 0, vw, h);
+    renderer.render(scene, p.camera);
+  });
 
   endFrame();
   requestAnimationFrame(frame);
 }
 
 show('title');
-player.reset(world.playerStart);
+for (const p of players) p.reset(world.playerStart);
 frame();
 
 // handy for testing from the browser console
 window.game = {
-  player, world, shop, gym, coins, shots,
+  players, huds, menus, world, coins, shots,
+  player: players[0], shop: menus[0].shop, gym: menus[0].gym,
+  get active() { return active; },
   get zombies() { return zombies; },
   get state() { return state; },
 };

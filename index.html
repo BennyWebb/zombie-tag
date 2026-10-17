@@ -10,40 +10,35 @@
   <body>
     <div id="game"></div>
 
-    <div id="hud" class="hidden">
-      <div id="zombies-left" class="pill"></div>
-      <div id="top-left">
-        <div id="hearts"></div>
-        <div id="stats">
-          <span class="badge">Speed <b id="stat-speed"></b></span>
-          <span class="badge">Strength <b id="stat-strength"></b></span>
-        </div>
-      </div>
-      <div id="bux" class="pill"><span class="coin">T</span> <span id="bux-count">0</span></div>
-      <div id="weapon" class="pill"></div>
-      <div id="crosshair"></div>
-      <div id="hurt"></div>
-      <div id="tagged" class="hidden">
-        <h1>TAGGED!</h1>
-        <p class="sub">Back to the start in <b id="tagged-count">3</b>…</p>
-        <p class="sub">You keep your Tag Bux and weapons</p>
-      </div>
-    </div>
+    <!-- each player's on-screen display is added here by hud.js -->
+    <div id="hud" class="hidden"></div>
 
     <div id="title" class="screen">
       <h1>ZOMBIE TAG</h1>
       <p class="sub">Sunny Park</p>
+      <div class="choices">
+        <div class="choice selected">🧒 1 Player</div>
+        <div class="choice">🧒🧒 2 Players</div>
+      </div>
       <div class="keys">
+        <div class="who-keys">Player 1</div>
         <div><kbd>W</kbd> <kbd>S</kbd> walk</div>
         <div><kbd>A</kbd> <kbd>D</kbd> turn</div>
         <div><kbd>Space</kbd> bonk!</div>
       </div>
-      <p class="go">Press <kbd>Space</kbd> to play</p>
+      <div class="keys hidden" id="p2-keys">
+        <div class="who-keys">Player 2</div>
+        <div><kbd>↑</kbd> <kbd>↓</kbd> walk</div>
+        <div><kbd>←</kbd> <kbd>→</kbd> turn</div>
+        <div><kbd>Enter</kbd> or <kbd>0</kbd> bonk!</div>
+      </div>
+      <p class="go"><kbd>W</kbd> <kbd>S</kbd> to choose, <kbd>Space</kbd> to play</p>
     </div>
 
     <div id="paused" class="screen hidden">
       <h1>Paused</h1>
       <p class="go">Press <kbd>Esc</kbd> to keep playing</p>
+      <p class="sub">Press <kbd>Q</kbd> to go back to the start screen</p>
     </div>
 
     <div id="won" class="screen hidden">
@@ -52,8 +47,6 @@
       <p class="sub" id="won-bux"></p>
       <p class="go">Press <kbd>Space</kbd> to play again</p>
     </div>
-
-    <div id="toast"></div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

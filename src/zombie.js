@@ -197,7 +197,7 @@ export class Zombie {
     return this.spawnPop >= 1 && !this.stuck;
   }
 
-  update(dt, player, world, others, camera) {
+  update(dt, players, world, others) {
     this.time += dt;
     this.spawnPop = Math.min(1, this.spawnPop + dt * 2);
     this.dizzy = Math.max(0, this.dizzy - dt);
@@ -205,14 +205,22 @@ export class Zombie {
     this.bubbleTime = Math.max(0, this.bubbleTime - dt);
     this.frozenTime = Math.max(0, this.frozenTime - dt);
 
-    const toPlayer = new THREE.Vector3(player.pos.x - this.pos.x, 0, player.pos.z - this.pos.z);
+    // go for the nearest hero who isn't tagged
+    let player = null;
+    for (const p of players) {
+      if (p.tagged) continue;
+      if (!player || this.pos.distanceTo(p.pos) < this.pos.distanceTo(player.pos)) player = p;
+    }
+    const toPlayer = player
+      ? new THREE.Vector3(player.pos.x - this.pos.x, 0, player.pos.z - this.pos.z)
+      : new THREE.Vector3(999, 0, 0);
     const dist = toPlayer.length();
     let speed = 0;
     let dir = null;
 
     if (this.stuck) {
       // seeing stars, bubbled or frozen: stay put
-    } else if (dist < this.type.noticeDistance && !player.tagged) {
+    } else if (player && dist < this.type.noticeDistance) {
       // chase, and stop once touching the hero (the touch costs them a heart)
       const touching = this.radius + player.radius + 0.15;
       if (dist > touching) {
@@ -284,7 +292,6 @@ export class Zombie {
       // frozen solid: no wobbling at all
       this.flash = Math.max(0, this.flash - dt);
       for (const m of this.flashMats) m.emissive.copy(this.flash > 0 ? glowWhite : glowIce);
-      this.updateBar(camera);
       return;
     }
     const walk = speed > 0 ? this.time * (speed > 2 ? 7 : 4) : 0;
@@ -308,10 +315,9 @@ export class Zombie {
     this.flash = Math.max(0, this.flash - dt);
     const glow = this.flash > 0 ? glowWhite : this.slowTime > 0 ? glowSlime : glowNone;
     for (const m of this.flashMats) m.emissive.copy(glow);
-    this.updateBar(camera);
   }
 
-  // The health bar always faces the camera.
+  // The health bar always faces the camera (called before drawing each player's view).
   updateBar(camera) {
     if (this.bar.visible) this.bar.quaternion.copy(camera.quaternion).premultiply(
       new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -this.yaw),
