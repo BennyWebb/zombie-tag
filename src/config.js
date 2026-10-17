@@ -244,11 +244,43 @@ export const CONFIG = {
     },
   ],
 
-  // How each hero looks for now (the character creator comes later).
+  // How each hero starts out, before the character creator.
   heroes: [
-    { label: 'P1', skin: 0xf1c27d, hair: 0x6b3a1a, outfit: 0xff6fae, trousers: 0x5a4a8a, tagColour: '#ff4f8b' },
-    { label: 'P2', skin: 0xe0ac69, hair: 0x2a1a10, outfit: 0x4fc3f7, trousers: 0x3a5a8a, tagColour: '#1e6fd6' },
+    {
+      name: 'Player 1', skin: 0xf1c27d, hairStyle: 'ponytail', hair: 0x6b3a1a, outfit: 0xff6fae,
+      trousers: 0x5a4a8a, tagColour: '#ff4f8b',
+    },
+    {
+      name: 'Player 2', skin: 0xe0ac69, hairStyle: 'pigtails', hair: 0x2a1a10, outfit: 0x4fc3f7,
+      trousers: 0x3a5a8a, tagColour: '#1e6fd6',
+    },
   ],
+
+  // The big picture buttons in the character creator.
+  creator: {
+    maxNameLength: 12,
+    skins: [0xffdbc4, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a21],
+    hairStyles: [
+      { id: 'short', name: 'Short' },
+      { id: 'long', name: 'Long' },
+      { id: 'ponytail', name: 'Ponytail' },
+      { id: 'pigtails', name: 'Pigtails' },
+      { id: 'bun', name: 'Bun' },
+      { id: 'curly', name: 'Curly' },
+    ],
+    hairColours: [0x2a1a10, 0x6b3a1a, 0xc68a3a, 0xf3d36b, 0xd2552b, 0xff6fae, 0x8e5bd6, 0x4fc3f7],
+    outfitColours: [0xff6fae, 0x4fc3f7, 0x8e5bd6, 0x4caf50, 0xffd23f, 0xff8a3d, 0xe53935, 0xffffff],
+  },
+
+  // Cool outfits: just for looks, no powers. Wearing one takes off anything in the same place.
+  outfits: {
+    pirateHat: { name: 'Pirate Hat', icon: '🏴‍☠️', price: 40, covers: ['head'] },
+    superheroCape: { name: 'Superhero Cape', icon: '🦸', price: 50, covers: ['back'] },
+    unicornOnesie: { name: 'Unicorn Onesie', icon: '🦄', price: 80, covers: ['body', 'head'] },
+    dancerOutfit: { name: 'Sparkly Dancer Outfit', icon: '🩰', price: 100, covers: ['body'] },
+    astronautSuit: { name: 'Astronaut Suit', icon: '🧑‍🚀', price: 150, covers: ['body', 'head', 'back'] },
+    goldenCrown: { name: 'Golden Crown', icon: '👑', price: 300, covers: ['head'] },
+  },
   twoPlayerZombies: 1.5, // 50% more zombies with 2 players, so you both earn enough Tag Bux
   giveTagBux: 10, // how many Tag Bux "Give" in the shop hands to your sister
 

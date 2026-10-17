@@ -3,7 +3,7 @@ import { CONFIG } from './config.js';
 import { isDown, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
 import { Beam, WEAPON_MODELS } from './weapons.js';
-import { makeHeroBody } from './hero.js';
+import { clothesColour, makeHeroBody } from './hero.js';
 
 // Each player's camera sees the world (layer 0), their own hand (layer 1 or 2)
 // and the other player's body (layer 3 or 4), but never their own body.
@@ -14,7 +14,11 @@ export class Player {
   constructor(keys, scene, look, index) {
     this.keys = keys;
     this.index = index;
-    this.name = `Player ${index + 1}`; // the character creator will let you type a name
+    this.scene = scene;
+    this.look = { ...look }; // name, skin, hair and clothes colour, from the character creator
+    this.outfits = []; // cool outfits you own
+    this.wearing = []; // the ones you have on
+    this.created = false; // true once you've been through the character creator
     this.taggedTime = CONFIG.player.taggedTime; // main sets the 2-player time
     this.radius = CONFIG.player.radius;
     this.speedLevel = CONFIG.player.startSpeed;
@@ -29,11 +33,10 @@ export class Player {
     // first-person hand holding the weapon, fixed to the camera
     this.hand = new THREE.Group();
     this.hand.position.set(0.38, -0.42, -0.65);
-    const fist = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), new THREE.MeshLambertMaterial({ color: look.skin }));
-    const sleeve = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.1, 0.4, 10),
-      new THREE.MeshLambertMaterial({ color: look.outfit }),
-    );
+    this.skinMat = new THREE.MeshLambertMaterial();
+    this.sleeveMat = new THREE.MeshLambertMaterial();
+    const fist = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), this.skinMat);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.4, 10), this.sleeveMat);
     sleeve.rotation.x = Math.PI / 2;
     sleeve.position.set(0.02, -0.03, 0.22);
     this.hand.add(fist, sleeve);
@@ -54,10 +57,8 @@ export class Player {
     this.camera.layers.enable(BODY_LAYER + (1 - index));
 
     // your whole body, which only the other player sees
-    this.body = makeHeroBody(look);
-    this.body.root.traverse((o) => o.layers.set(BODY_LAYER + index));
-    this.body.root.visible = false;
-    scene.add(this.body.root);
+    this.body = null;
+    this.rebuildBody();
     this.lastPos = new THREE.Vector3();
 
     this.swing = 0; // counts down while swinging
@@ -136,6 +137,40 @@ export class Player {
     return 1 + CONFIG.player.strengthPerLevel * (this.strengthLevel - 1);
   }
 
+  get name() {
+    return this.look.name;
+  }
+
+  // Makes your body (and the hand you see) match your look and outfits.
+  rebuildBody() {
+    const visible = this.body ? this.body.root.visible : false;
+    if (this.body) this.scene.remove(this.body.root);
+    this.body = makeHeroBody(this.look, this.wearing);
+    this.body.root.traverse((o) => o.layers.set(BODY_LAYER + this.index));
+    this.body.root.visible = visible;
+    this.scene.add(this.body.root);
+    this.skinMat.color.set(this.look.skin);
+    this.sleeveMat.color.set(clothesColour(this.look, this.wearing));
+  }
+
+  setLook(look) {
+    this.look = { ...this.look, ...look };
+    this.rebuildBody();
+  }
+
+  // Put on an outfit you own, taking off anything it covers.
+  wear(id) {
+    const covers = CONFIG.outfits[id].covers;
+    this.wearing = this.wearing.filter((w) => !CONFIG.outfits[w].covers.some((c) => covers.includes(c)));
+    this.wearing.push(id);
+    this.rebuildBody();
+  }
+
+  takeOff(id) {
+    this.wearing = this.wearing.filter((w) => w !== id);
+    this.rebuildBody();
+  }
+
   // Moves and animates your body for the other player to see.
   updateBody(dt, show) {
     const b = this.body;
@@ -151,6 +186,7 @@ export class Player {
     b.arms[0].rotation.x = -swing * 0.7;
     // the weapon arm chops down when you attack
     b.arms[1].rotation.x = this.swing > 0 || this.recoil > 0.3 ? -1.4 : swing * 0.7;
+    if (b.cape) b.cape.rotation.x = -0.12 - Math.min(0.6, moved * 0.08) - Math.sin(performance.now() / 150) * 0.05;
   }
 
   reset(start) {

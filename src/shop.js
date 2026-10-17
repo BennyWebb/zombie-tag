@@ -5,7 +5,7 @@ import { keyName, wasPressed } from './input.js';
 // It builds itself inside `root`, so each player can have their own later on.
 
 const coin = '<span class="coin">T</span>';
-const thing = (id) => CONFIG.weapons[id] || CONFIG.items[id] || CONFIG.armour[id];
+const thing = (id) => CONFIG.weapons[id] || CONFIG.items[id] || CONFIG.armour[id] || CONFIG.outfits[id];
 const ROWS_SHOWN = 5; // the list scrolls to show this many rows at a time
 
 // Power as little bangs, or a number for the really strong weapons.
@@ -32,7 +32,10 @@ export class ShopMenu {
 
   get ids() {
     const give = this.partner ? ['give'] : [];
-    return [...Object.keys(CONFIG.weapons), ...Object.keys(CONFIG.items), ...Object.keys(CONFIG.armour), ...give, 'leave'];
+    return [
+      ...Object.keys(CONFIG.weapons), ...Object.keys(CONFIG.items), ...Object.keys(CONFIG.armour),
+      ...Object.keys(CONFIG.outfits), ...give, 'leave',
+    ];
   }
 
   open() {
@@ -41,7 +44,7 @@ export class ShopMenu {
     p.hand.visible = false;
     // start on something useful: a free stick if you need one, medicine if you're hurt,
     // else the next weapon or armour to buy (the dearest you can afford, or the cheapest you can't yet)
-    const upgrades = this.ids.filter((id) => thing(id) && ['buy', 'dear'].includes(this.status(id).kind) && !thing(id).hearts)
+    const upgrades = this.ids.filter((id) => thing(id) && ['buy', 'dear'].includes(this.status(id).kind) && !thing(id).hearts && !thing(id).covers)
       .sort((a, b) => thing(a).price - thing(b).price);
     const affordable = upgrades.filter((id) => thing(id).price <= p.tagBux);
     const hurt = p.hearts < CONFIG.player.hearts && CONFIG.items.medicine.price <= p.tagBux;
@@ -78,6 +81,11 @@ export class ShopMenu {
     }
     const w = thing(id);
     if (w.hearts && p.hearts >= CONFIG.player.hearts) return { label: 'Hearts full', ok: false, kind: 'full' };
+    if (w.covers) {
+      if (p.wearing.includes(id)) return { label: '✔ Wearing', ok: true, kind: 'wearing' };
+      if (p.outfits.includes(id)) return { label: 'Wear it', ok: true, kind: 'owned' };
+      return { label: `${coin} ${w.price}`, ok: p.tagBux >= w.price, kind: p.tagBux >= w.price ? 'buy' : 'dear' };
+    }
     if (w.blocks) {
       const best = p.bestArmour;
       if (best && best.id === id) return { label: '✔ Wearing', ok: false, kind: 'holding' };
@@ -127,7 +135,13 @@ export class ShopMenu {
     }
     const w = thing(id);
     if (s.kind === 'holding') this.say(`You're already ${w.blocks ? 'wearing' : 'holding'} the ${w.name}!`, '');
-    else if (s.kind === 'owned') {
+    else if (s.kind === 'wearing') {
+      p.takeOff(id);
+      this.say(`You took off the ${w.name}`, '');
+    } else if (s.kind === 'owned' && w.covers) {
+      p.wear(id);
+      this.say(`Looking good in the ${w.name}! ${w.icon}`, 'good');
+    } else if (s.kind === 'owned') {
       p.hold(id);
       this.say(`Now you're holding the ${w.name} ${w.icon}`, 'good');
     } else if (s.kind === 'free') {
@@ -140,6 +154,11 @@ export class ShopMenu {
     } else if (s.kind === 'dear') {
       const need = w.price - p.tagBux;
       this.say(`You need ${need} more Tag Bux. Go pop some zombies!`, 'bad');
+    } else if (w.covers) {
+      p.tagBux -= w.price;
+      p.outfits.push(id);
+      p.wear(id);
+      this.say(`Ka-ching! You're wearing the ${w.name}! ${w.icon}`, 'good');
     } else if (w.blocks) {
       p.tagBux -= w.price;
       p.addArmour(id);
@@ -181,6 +200,10 @@ export class ShopMenu {
       let about = w.about;
       if (w.damage) about = `Power ${power(w.damage)} · ${w.about}`;
       if (w.blocks) about = `Blocks ${w.blocks} ${w.blocks === 1 ? 'hit' : 'hits'} every level`;
+      if (w.covers) {
+        about = this.partner ? `Just for looks. ${this.partner.name} will see it!` : 'Just for looks!';
+        if (s.kind === 'wearing') about += ` (${keyName(p.keys.attack[0])} takes it off)`;
+      }
       return `<div class="row ${s.kind}${sel}"><span class="icon">${w.icon}</span>`
         + `<span class="name">${w.name}<small>${about}</small></span>`
         + `<span class="price">${s.label}</span></div>`;

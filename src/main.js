@@ -10,6 +10,7 @@ import { SPLASH_COLOURS, Shots } from './weapons.js';
 import { ShopMenu } from './shop.js';
 import { GymMenu } from './gym.js';
 import { Hud } from './hud.js';
+import { Creator } from './creator.js';
 
 const level = CONFIG.levels[0];
 
@@ -21,7 +22,7 @@ renderer.shadowMap.autoUpdate = false; // drawn once a frame, even when the scre
 document.getElementById('game').appendChild(renderer.domElement);
 
 const $ = (id) => document.getElementById(id);
-const screens = { title: $('title'), paused: $('paused'), won: $('won') };
+const screens = { title: $('title'), create: $('creator'), paused: $('paused'), won: $('won') };
 
 const scene = new THREE.Scene();
 const world = buildWorld(scene, level);
@@ -37,6 +38,11 @@ const menus = players.map((p, i) => ({
   gym: new GymMenu(huds[i].inner, p, world.gym),
 }));
 for (const m of menus) m.shop.onGive = flyCoins;
+const creator = new Creator($('creator'));
+// the character creator's close-up of the hero, who stands at the start
+const previewCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+previewCamera.layers.enable(3);
+previewCamera.layers.enable(4);
 // walk through a door to go in
 const buildings = [{ door: world.shop.door, menu: 'shop' }, { door: world.gym.door, menu: 'gym' }];
 
@@ -53,7 +59,7 @@ let wonTimer = 0;
 function show(name) {
   state = name;
   for (const [key, el] of Object.entries(screens)) el.classList.toggle('hidden', key !== name);
-  $('hud').classList.toggle('hidden', name === 'title');
+  $('hud').classList.toggle('hidden', name === 'title' || name === 'create');
   for (const p of active) {
     p.hand.visible = (name === 'playing' || name === 'paused') && !p.inside && !p.tagged;
   }
@@ -73,6 +79,18 @@ function startFor(p) {
   const s = world.playerStart;
   const side = playerCount === 2 ? (p.index === 0 ? -1.5 : 1.5) : 0;
   return { x: s.x + side, z: s.z, yaw: s.yaw };
+}
+
+// After choosing 1 or 2 players: make any heroes who haven't been made yet, then play.
+// `everyone` (the C key) lets heroes who already exist change how they look.
+function beginGame(everyone) {
+  const heroes = players.slice(0, playerCount).filter((p) => everyone || !p.created);
+  if (!heroes.length) {
+    startLevel();
+    return;
+  }
+  show('create');
+  creator.start(heroes, startLevel);
 }
 
 function startLevel() {
@@ -243,10 +261,14 @@ function update(dt) {
     if (wasPressed(['Digit1', 'Numpad1'])) titleChoice = 0;
     if (wasPressed(['Digit2', 'Numpad2'])) titleChoice = 1;
     drawTitle();
-    if (wasPressed(['Space', 'Enter', 'NumpadEnter', 'Digit1', 'Digit2', 'Numpad1', 'Numpad2'])) {
+    if (wasPressed(['Space', 'Enter', 'NumpadEnter', 'Digit1', 'Digit2', 'Numpad1', 'Numpad2', 'KeyC'])) {
       playerCount = titleChoice + 1;
-      startLevel();
+      beginGame(wasPressed(['KeyC']));
     }
+    return;
+  }
+  if (state === 'create') {
+    creator.update(dt);
     return;
   }
   if (state === 'won') {
@@ -313,14 +335,25 @@ function frame() {
     for (const menu of [m.shop, m.gym]) {
       menu.el.classList.toggle('hidden', !p.inside || p.menu !== menu || state !== 'playing');
     }
-    p.updateBody(dt, state !== 'title' && playerCount === 2 && active.includes(p));
+    p.updateBody(dt, state !== 'title' && state !== 'create' && playerCount === 2 && active.includes(p));
+  }
+  if (state === 'create' && creator.player) {
+    // the hero being made turns from side to side to show off
+    const s = world.playerStart;
+    const body = creator.player.body.root;
+    body.visible = true;
+    body.position.set(s.x, 0, s.z);
+    body.rotation.y = Math.sin(clock.elapsedTime * 0.8) * 0.7;
+    // looking back at the hero from in front, offset so she stands in the right half of the screen
+    previewCamera.position.set(s.x + 1.6, 1.5, s.z - 5);
+    previewCamera.lookAt(s.x + 1.6, 1.25, s.z);
   }
   world.shop.sign.rotation.y += dt * 1.2;
   world.gym.sign.rotation.y += dt * 1.2;
   for (const p of active) huds[p.index].update(dt, levelZombies - popped);
 
   // The title screen shows the park slowly turning behind it.
-  const views = state === 'title' ? [players[0]] : active;
+  const views = state === 'title' || state === 'create' ? [players[0]] : active;
   if (state === 'title') {
     const t = clock.elapsedTime * 0.08;
     players[0].camera.position.set(Math.sin(t) * 30, 8, Math.cos(t) * 30);
@@ -335,12 +368,13 @@ function frame() {
   renderer.setScissorTest(views.length > 1);
   const vw = w / views.length;
   views.forEach((p, i) => {
-    p.camera.aspect = vw / h;
-    p.camera.updateProjectionMatrix();
-    for (const z of zombies) z.updateBar(p.camera);
+    const camera = state === 'create' ? previewCamera : p.camera;
+    camera.aspect = vw / h;
+    camera.updateProjectionMatrix();
+    for (const z of zombies) z.updateBar(camera);
     renderer.setViewport(i * vw, 0, vw, h);
     renderer.setScissor(i * vw, 0, vw, h);
-    renderer.render(scene, p.camera);
+    renderer.render(scene, camera);
   });
 
   endFrame();
@@ -358,4 +392,5 @@ window.game = {
   get active() { return active; },
   get zombies() { return zombies; },
   get state() { return state; },
+  creator,
 };

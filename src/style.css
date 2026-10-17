@@ -404,3 +404,50 @@ kbd.tap { animation: pop 0.2s ease-out; }
 }
 .choice.selected { background: #fff; color: #4b1e8a; border-color: #ffe066; transform: scale(1.08); box-shadow: 0 6px 0 #b9a6e0; }
 .who-keys { font-weight: bold; color: #ffe066; }
+
+/* ---------- Character creator ---------- */
+#creator { position: fixed; inset: 0; }
+#creator .panel {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: min(60%, 760px);
+  padding: 24px 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(60, 20, 110, 0.92) 70%, rgba(60, 20, 110, 0));
+}
+#creator h2 { margin: 0; font-size: clamp(36px, 5vw, 60px); color: #9cff57; text-shadow: 4px 4px 0 #4b1e8a; }
+#creator .hint { margin: 6px 0 0; font-size: 24px; }
+.who-badge { align-self: flex-start; padding: 4px 18px; border-radius: 999px; font-size: 24px; font-weight: bold; }
+.who-badge.p1 { background: #ff4f8b; }
+.who-badge.p2 { background: #1e6fd6; }
+.name-box {
+  width: 100%;
+  max-width: 520px;
+  padding: 10px 22px;
+  border-radius: 22px;
+  border: 5px solid #ffe066;
+  font: bold 52px "Fredoka", "Comic Sans MS", sans-serif;
+  color: #4b1e8a;
+  outline: none;
+}
+.crow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 4px solid transparent;
+}
+.crow.current { background: rgba(255, 255, 255, 0.15); border-color: #ffe066; }
+.crow .label { width: 140px; flex-shrink: 0; font-size: 26px; font-weight: bold; }
+.crow .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { width: 46px; height: 46px; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.4); }
+.opt.text { width: auto; height: auto; padding: 5px 11px; border-radius: 16px; font-size: 20px; background: rgba(40, 20, 80, 0.6); }
+.opt.on { border-color: #fff; transform: scale(1.2); box-shadow: 0 0 0 4px #ffe066; }
+.opt.text.on { background: #fff; color: #4b1e8a; }
+.crow.done { justify-content: center; font-size: 34px; font-weight: bold; background: rgba(76, 175, 80, 0.5); }
+.crow.done.current { background: #4caf50; }
+.screen .sub.small { font-size: 24px; }
