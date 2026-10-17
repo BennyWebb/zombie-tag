@@ -188,6 +188,7 @@ export const CONFIG = {
   // Training is free. Filling the bar raises a stat by 1, up to maxLevel.
   gym: {
     maxLevel: 10,
+    upgradesPerLevel: 1, // each place lets you raise Speed and Strength this many times each
     treadmill: {
       time: 15, // seconds to fill the bar
       presses: 20, // good presses (left, right, left...) needed to go from Speed 1 to 2
@@ -355,9 +356,30 @@ export const CONFIG = {
     {
       name: 'Zombie King\'s Castle', icon: '🏰', theme: 'castle', zombies: 30, healthMultiplier: 4.5,
       mix: { shuffler: 2, speedySid: 2, bouncyBob: 2, bigBertha: 1, slimeZombie: 2 },
-      boss: 'zombieKing', bossAfter: 20, // the King arrives once this many zombies are popped
+      boss: 'zombieKing', // the King arrives for the final battle once every other zombie is popped
     },
   ],
+
+  // Chosen before picking a level. Easy is how the game started out.
+  // loseItems: getting tagged takes your weapons and armour (you get a new Spiky Stick).
+  // oneLife: getting tagged is game over: weapons, armour and Tag Bux are all gone.
+  // king: changes to the Zombie King (health is before the level's healthMultiplier).
+  difficulties: {
+    easy: { name: 'Easy', icon: '🙂', about: 'Get tagged and you keep everything' },
+    hard: {
+      name: 'Hard', icon: '😬', about: 'Get tagged and you lose your weapons and armour',
+      loseItems: true,
+      king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+    },
+    hardcore: {
+      name: 'Hardcore', icon: '💀', about: 'Only 1 life! Get tagged and you lose your weapons, armour and Tag Bux',
+      loseItems: true,
+      oneLife: true,
+      king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+    },
+  },
+
+  maxProfiles: 8, // heroes that can be saved on the "Who's playing?" screen
 
   // Starting volumes (0 to 10); they can be changed in the pause menu.
   sound: { music: 6, sounds: 8 },

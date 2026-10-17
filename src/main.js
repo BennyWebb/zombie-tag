@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { endFrame, wasPressed } from './input.js';
+import { endFrame, keyName, wasPressed } from './input.js';
 import { buildWorld } from './world.js';
 import { THEMES } from './themes.js';
 import { Zombie } from './zombie.js';
@@ -12,7 +12,7 @@ import { ShopMenu } from './shop.js';
 import { GymMenu } from './gym.js';
 import { Hud } from './hud.js';
 import { Creator } from './creator.js';
-import { clearSave, loadSave, writeSave } from './save.js';
+import { loadSave, writeSave } from './save.js';
 import { getVolumes, loudness, music, setVolume, sfx } from './audio.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -24,8 +24,8 @@ document.getElementById('game').appendChild(renderer.domElement);
 
 const $ = (id) => document.getElementById(id);
 const screens = {
-  title: $('title'), create: $('creator'), levels: $('levels'), newgame: $('newgame'),
-  paused: $('paused'), won: $('won'), party: $('party'),
+  title: $('title'), who: $('who'), remove: $('remove'), create: $('creator'), difficulty: $('difficulty'),
+  levels: $('levels'), paused: $('paused'), won: $('won'), party: $('party'), gameover: $('gameover'),
 };
 
 const scene = new THREE.Scene();
@@ -55,8 +55,15 @@ let state = 'title';
 let playerCount = 1;
 let titleChoice = 0; // 0: 1 player, 1: 2 players
 let levelChoice = 0; // the level picked on the level select screen
-let unlocked = 1; // how many levels you can play
-let finished = new Set(); // levels you've finished
+let profiles = []; // every saved hero, from the "Who's playing?" screen
+let chosen = []; // the profile id playing as Player 1 and Player 2 last time
+let whoSlot = 0; // which player is choosing on "Who's playing?"
+let whoChoice = 0; // the row she's on
+let editLooks = false; // pressing C on the start screen lets heroes change how they look
+let removing = null; // the profile the "Delete?" screen is asking about
+const difficultyIds = Object.keys(CONFIG.difficulties);
+let difficultyId = 'easy';
+let gameOverIn = 0; // Hardcore: counts down to the game over screen once everyone is tagged
 let active = [players[0]]; // the heroes playing right now
 let zombies = [];
 let regulars = 0; // zombies that arrive in waves this level
@@ -82,9 +89,12 @@ function show(name) {
   }
   if (name !== 'playing') huds.forEach((h) => h.clearToast());
   if (name === 'title') drawTitle();
+  if (name === 'who') drawWho();
+  if (name === 'remove') drawRemove();
+  if (name === 'difficulty') drawDifficulty();
   if (name === 'levels') drawLevels();
   if (name === 'paused') drawVolume();
-  if (['title', 'levels', 'create'].includes(name)) music('title');
+  if (['title', 'who', 'remove', 'difficulty', 'levels', 'create', 'gameover'].includes(name)) music('title');
 }
 
 // The pause menu's music and sound volume bars.
@@ -100,22 +110,40 @@ const toastAll = (text, seconds) => active.forEach((p) => huds[p.index].toast(te
 
 // ---------- saving ----------
 
+const difficulty = () => CONFIG.difficulties[difficultyId];
+
+// Each hero playing is saved into her own profile.
 function saveGame() {
-  writeSave({ unlocked, finished: [...finished], playerCount, players: players.map((p) => p.toSave()) });
+  for (const p of active) {
+    if (!p.created || !p.profileId) continue;
+    const i = profiles.findIndex((d) => d.id === p.profileId);
+    if (i >= 0) profiles[i] = p.toSave();
+    else profiles.push(p.toSave());
+  }
+  chosen = active.map((p) => p.profileId);
+  writeSave({ profiles, chosen, playerCount, difficulty: difficultyId });
 }
 
 function restoreSave() {
   const data = loadSave();
   if (!data) return;
-  unlocked = Math.min(CONFIG.levels.length, data.unlocked || 1);
-  finished = new Set(data.finished || []);
+  profiles = (data.profiles || []).filter((d) => d && d.id && d.created);
+  chosen = data.chosen || [];
   playerCount = data.playerCount || 1;
   titleChoice = playerCount - 1;
-  data.players.forEach((d, i) => players[i] && d && players[i].fromSave(d));
-  const names = players.filter((p) => p.created).map((p) => p.name);
+  if (CONFIG.difficulties[data.difficulty]) difficultyId = data.difficulty;
+  // put last time's heroes back in their slots
+  chosen.forEach((id, i) => {
+    const d = profiles.find((x) => x.id === id);
+    if (d && players[i]) players[i].fromSave(d);
+  });
+  const names = chosen.map((id) => profiles.find((d) => d.id === id)).filter(Boolean).map((d) => d.look.name);
   if (names.length) $('welcome').textContent = `Welcome back, ${names.join(' and ')}!`;
-  levelChoice = Math.min(unlocked, CONFIG.levels.length) - 1;
 }
+
+// The levels the heroes playing can pick: in 2-player mode, the furthest either has reached.
+const unlockedNow = () => Math.max(1, ...active.map((p) => p.unlocked));
+const finishedNow = (i) => active.some((p) => p.finished.has(i));
 
 // ---------- the start screen and level select ----------
 
@@ -125,28 +153,103 @@ function drawTitle() {
 }
 
 function drawLevels() {
+  const d = difficulty();
+  $('levels-mode').textContent = `${d.icon} ${d.name}`;
   $('levels').querySelector('.level-grid').innerHTML = CONFIG.levels.map((l, i) => {
-    const locked = i >= unlocked;
+    const locked = i >= unlockedNow();
     return `<div class="tile${locked ? ' locked' : ''}${i === levelChoice ? ' selected' : ''}">`
-      + `${finished.has(i) ? '<span class="badge-done">⭐</span>' : ''}`
+      + `${finishedNow(i) ? '<span class="badge-done">⭐</span>' : ''}`
       + `<div class="big">${locked ? '🔒' : l.icon}</div><div class="num">Level ${i + 1}</div>`
       + `<div class="nm">${l.name}</div></div>`;
   }).join('');
 }
 
-// After choosing 1 or 2 players: make any heroes who haven't been made yet, then pick a level.
+// ---------- who's playing, the character creator and difficulty ----------
+
+// After choosing 1 or 2 players, each picks her saved hero (or a new one) in turn.
 // `everyone` (the C key) lets heroes who already exist change how they look.
 function beginGame(everyone) {
-  const heroes = players.slice(0, playerCount).filter((p) => everyone || !p.created);
+  editLooks = everyone;
+  active = players.slice(0, playerCount);
+  startWho(0);
+}
+
+function startWho(slot) {
+  whoSlot = slot;
+  const rows = whoRows();
+  // start on the hero who played in this slot last time
+  whoChoice = Math.max(0, rows.findIndex((r) => r.profile && r.profile.id === chosen[slot] && !r.taken));
+  if (rows[whoChoice].taken) whoChoice = Math.max(0, rows.findIndex((r) => !r.taken));
+  show('who');
+}
+
+// Every saved hero, then "New hero" if there's room.
+function whoRows() {
+  const takenBy = players.slice(0, whoSlot).map((p) => p.profileId);
+  const rows = profiles.map((profile) => ({ profile, taken: takenBy.includes(profile.id) }));
+  if (profiles.length + whoSlot < CONFIG.maxProfiles) rows.push({ newHero: true });
+  return rows;
+}
+
+function drawWho() {
+  const p = players[whoSlot];
+  const k = p.keys;
+  const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
+  const badge = $('who').querySelector('.who-badge');
+  badge.className = `who-badge p${whoSlot + 1}`;
+  badge.textContent = playerCount === 2 ? `Player ${whoSlot + 1}` : '';
+  badge.classList.toggle('hidden', playerCount === 1);
+  $('who').querySelector('.hero-list').innerHTML = whoRows().map((r, i) => {
+    const sel = i === whoChoice ? ' selected' : '';
+    if (r.newHero) return `<div class="hero-card new${sel}"><span class="dot">➕</span><b>New hero</b></div>`;
+    const d = r.profile;
+    const stars = (d.finished || []).length;
+    return `<div class="hero-card${sel}${r.taken ? ' taken' : ''}">`
+      + `<span class="dot" style="background:${hex(d.look.outfit)}"></span><b>${d.look.name}</b>`
+      + `<small>${r.taken ? 'Playing as Player 1' : `⭐ ${stars} &nbsp; <span class="coin">T</span> ${d.tagBux}`}</small></div>`;
+  }).join('');
+  $('who-keys').innerHTML = `<kbd>${keyName(k.forward[0])}</kbd> <kbd>${keyName(k.back[0])}</kbd> choose,`
+    + ` <kbd>${keyName(k.attack[0])}</kbd> play`;
+}
+
+function chooseWho() {
+  const rows = whoRows();
+  const r = rows[whoChoice];
+  const p = players[whoSlot];
+  if (r.taken) {
+    sfx('nope');
+    return;
+  }
+  sfx('select');
+  if (r.newHero) p.blank(`hero${Date.now().toString(36)}${whoSlot}`);
+  else p.fromSave(r.profile);
+  if (whoSlot + 1 < playerCount) {
+    startWho(whoSlot + 1);
+    return;
+  }
+  // make any new heroes (or let everyone change how they look), then pick how hard
+  const heroes = active.filter((h) => editLooks || !h.created);
+  const next = () => {
+    saveGame();
+    show('difficulty');
+  };
   if (!heroes.length) {
-    show('levels');
+    next();
     return;
   }
   show('create');
-  creator.start(heroes, () => {
-    saveGame();
-    show('levels');
-  });
+  creator.start(heroes, next);
+}
+
+function drawRemove() {
+  $('remove-name').textContent = `Delete ${removing.look.name}?`;
+}
+
+function drawDifficulty() {
+  const d = CONFIG.difficulties;
+  $('difficulty').querySelector('.choices').innerHTML = difficultyIds.map((id) => (
+    `<div class="choice mode${id === difficultyId ? ' selected' : ''}"><b>${d[id].icon} ${d[id].name}</b><small>${d[id].about}</small></div>`
+  )).join('');
 }
 
 // ---------- levels ----------
@@ -166,6 +269,7 @@ function loadLevel(i) {
   for (const m of menus) {
     m.shop.building = world.shop;
     m.gym.building = world.gym;
+    m.gym.levelIndex = i;
   }
 }
 
@@ -192,6 +296,7 @@ function startLevel(i) {
   boss = null;
   coins.clear();
   shots.clear();
+  gameOverIn = 0;
 
   const two = playerCount === 2;
   active = players.slice(0, playerCount);
@@ -210,7 +315,9 @@ function startLevel(i) {
   saveGame(); // progress saves at the start of each level
   show('playing');
   music(level.theme);
-  toastAll(`Level ${level.number}: ${level.name} ${level.icon}<br>Pop all the zombies, then find the exit gate!`, 4);
+  const d = difficulty();
+  toastAll(`Level ${level.number}: ${level.name} ${level.icon} &nbsp; ${d.icon} ${d.name}`
+    + '<br>Pop all the zombies, then find the exit gate!', 4);
 }
 
 function addZombie(kind, x, z) {
@@ -254,11 +361,20 @@ function spawnWave() {
   }
 }
 
-// The Zombie King arrives at the exit gate end of his castle.
+// The final battle: once every other zombie is popped, the Zombie King arrives at the exit gate
+// end of his castle. On Hard and Hardcore he's tougher, faster and tags you in one go.
 function spawnBoss() {
   boss = addZombie(level.boss, world.gate.x, world.gate.z + 8);
+  const king = difficulty().king;
+  if (king) {
+    boss.type = { ...boss.type, ...king };
+    boss.maxHealth = king.health * level.healthMultiplier;
+    boss.health = boss.maxHealth;
+  }
   sfx('king');
-  toastAll('👑 The Zombie King is here!<br>He keeps calling Shufflers to help him!', 4);
+  toastAll(king && king.instantTag
+    ? '👑 THE ZOMBIE KING IS HERE! 👑<br>Don\'t let him touch you, he tags you in one go!'
+    : '👑 The Zombie King is here! The final battle!<br>He keeps calling Shufflers to help him!', 4);
 }
 
 // The King calls in a few Shufflers. They count as zombies to pop.
@@ -360,7 +476,8 @@ function popZombie(zombie) {
 
 // A zombie touched a hero: lose a shield or a heart, flash, and bump the zombie back.
 function zombieTouch(zombie, p) {
-  const hurt = p.hurt(zombie.type.touchHearts);
+  const instant = zombie.type.instantTag; // the Zombie King on Hard and Hardcore
+  const hurt = p.hurt(instant ? CONFIG.player.hearts : zombie.type.touchHearts, instant);
   if (!hurt) return;
   const hud = huds[p.index];
   const away = new THREE.Vector3(zombie.pos.x - p.pos.x, 0, zombie.pos.z - p.pos.z).normalize();
@@ -368,10 +485,24 @@ function zombieTouch(zombie, p) {
   zombie.dizzy = zombie.type.dizzyTime;
   hud.flash(hurt);
   sfx(p.tagged ? 'tagged' : hurt === 'shield' ? 'clang' : 'ouch');
-  if (p.tagged) hud.showTagged(true);
+  if (p.tagged) gotTagged(p);
   else if (hurt === 'shield') hud.toast('Your armour blocked it! 🛡️<br>Run away!', 1.5);
   else if (zombie.type.touchHearts > 1) hud.toast(`${zombie.type.name} took ${zombie.type.touchHearts} hearts! 💔<br>Run away!`, 1.5);
   else hud.toast(p.hearts === 1 ? 'Ouch! Last heart! 💔<br>Run away!' : 'Ouch! 💔 Run away!', 1.5);
+}
+
+// Out of hearts. Easy keeps everything; Hard takes your weapons and armour; Hardcore is game over
+// and takes your Tag Bux too. Saved straight away, so reloading the page doesn't undo it.
+function gotTagged(p) {
+  const d = difficulty();
+  if (d.oneLife) {
+    p.out = true;
+    p.tagged = Infinity; // out until the level ends; zombies leave her alone
+    if (active.every((h) => h.out)) gameOverIn = 3;
+  }
+  if (d.loseItems) p.loseItems(!!d.oneLife);
+  huds[p.index].showTagged(true, d);
+  saveGame();
 }
 
 // One hero's turn: counting down when tagged, using a menu inside, or out in the park.
@@ -418,8 +549,10 @@ function updatePlayer(p, dt) {
 // ---------- finishing a level, and the party ----------
 
 function levelDone() {
-  finished.add(levelIndex);
-  unlocked = Math.max(unlocked, Math.min(CONFIG.levels.length, levelIndex + 2));
+  for (const p of active) {
+    p.finished.add(levelIndex);
+    p.unlocked = Math.max(p.unlocked, Math.min(CONFIG.levels.length, levelIndex + 2));
+  }
   levelChoice = Math.min(levelIndex + 1, CONFIG.levels.length - 1);
   saveGame();
   sfx('fanfare');
@@ -531,15 +664,64 @@ function update(dt) {
       playerCount = titleChoice + 1;
       beginGame(wasPressed(['KeyC']));
     }
-    if (wasPressed(['KeyN'])) show('newgame');
     return;
   }
-  if (state === 'newgame') {
+  if (state === 'who') {
+    // the hero choosing uses her own keys
+    const pk = players[whoSlot].keys;
+    const n = whoRows().length;
+    const before = whoChoice;
+    if (wasPressed([...pk.forward, ...pk.left])) whoChoice = (whoChoice + n - 1) % n;
+    if (wasPressed([...pk.back, ...pk.right])) whoChoice = (whoChoice + 1) % n;
+    if (whoChoice !== before) {
+      sfx('tick');
+      drawWho();
+    }
+    if (wasPressed(pk.attack)) chooseWho();
+    else if (wasPressed(['KeyX', 'Delete'])) {
+      const r = whoRows()[whoChoice];
+      if (r.profile && !r.taken) {
+        removing = r.profile;
+        show('remove');
+      } else sfx('nope');
+    } else if (wasPressed(['Escape'])) {
+      if (whoSlot > 0) startWho(whoSlot - 1);
+      else show('title');
+    }
+    return;
+  }
+  if (state === 'remove') {
     if (wasPressed(['KeyY'])) {
-      clearSave();
-      window.location.reload();
+      sfx('select');
+      profiles = profiles.filter((d) => d !== removing);
+      chosen = chosen.map((id) => (id === removing.id ? null : id));
+      for (const p of players) if (p.profileId === removing.id) p.blank(null);
+      writeSave({ profiles, chosen, playerCount, difficulty: difficultyId });
+      startWho(whoSlot);
+    } else if (wasPressed(['KeyN', 'Escape'])) startWho(whoSlot);
+    return;
+  }
+  if (state === 'difficulty') {
+    const before = difficultyId;
+    let i = difficultyIds.indexOf(difficultyId);
+    if (wasPressed([...k.p1.left, ...k.p2.left, ...k.p1.forward, ...k.p2.forward])) i = Math.max(0, i - 1);
+    if (wasPressed([...k.p1.right, ...k.p2.right, ...k.p1.back, ...k.p2.back])) i = Math.min(difficultyIds.length - 1, i + 1);
+    difficultyId = difficultyIds[i];
+    if (difficultyId !== before) {
+      sfx('tick');
+      drawDifficulty();
+    }
+    if (wasPressed(go)) {
+      sfx('select');
+      saveGame();
+      levelChoice = Math.min(unlockedNow(), CONFIG.levels.length) - 1;
+      show('levels');
     }
     if (wasPressed(['Escape'])) show('title');
+    return;
+  }
+  if (state === 'gameover') {
+    if (wasPressed(go)) show('levels');
     return;
   }
   if (state === 'create') {
@@ -559,10 +741,10 @@ function update(dt) {
       sfx('tick');
     }
     if (wasPressed(go)) {
-      sfx(levelChoice < unlocked ? 'select' : 'nope');
-      if (levelChoice < unlocked) startLevel(levelChoice);
+      sfx(levelChoice < unlockedNow() ? 'select' : 'nope');
+      if (levelChoice < unlockedNow()) startLevel(levelChoice);
     }
-    if (wasPressed(['Escape'])) show('title');
+    if (wasPressed(['Escape'])) show('difficulty');
     return;
   }
   if (state === 'won') {
@@ -579,8 +761,14 @@ function update(dt) {
 
   const alive = zombies.filter((z) => z.alive).length;
   if (spawned < regulars && alive <= CONFIG.arena.nextWaveWhenLeft) spawnWave();
-  if (level.boss && !boss && popped >= Math.round(level.bossAfter * (playerCount === 2 ? CONFIG.twoPlayerZombies : 1))) {
-    spawnBoss();
+  if (level.boss && !boss && spawned >= regulars && !zombies.some((z) => z.alive)) spawnBoss();
+  if (gameOverIn > 0) {
+    gameOverIn -= dt;
+    if (gameOverIn <= 0) {
+      sfx('tagged');
+      show('gameover');
+      return;
+    }
   }
 
   for (const p of active) updatePlayer(p, dt);
@@ -707,7 +895,8 @@ function frame() {
 }
 
 restoreSave();
-loadLevel(Math.max(0, unlocked - 1)); // the start screen shows the furthest level you've reached
+// the start screen shows the furthest level last time's heroes reached
+loadLevel(Math.max(0, ...players.map((p) => p.unlocked)) - 1);
 show('title');
 for (const p of players) p.reset(world.playerStart);
 frame();
@@ -717,6 +906,10 @@ window.game = {
   players, huds, menus, coins, shots, creator,
   player: players[0], shop: menus[0].shop, gym: menus[0].gym,
   startLevel, levelDone,
+  get profiles() { return profiles; },
+  get difficulty() { return difficultyId; },
+  setDifficulty(id) { difficultyId = id; },
+  touchForTest: zombieTouch,
   popForTest(z) { z.alive = false; popZombie(z); },
   addZombie,
   loudness, sfx,

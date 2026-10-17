@@ -13,6 +13,7 @@ export class GymMenu {
   constructor(root, player, building) {
     this.player = player;
     this.building = building;
+    this.levelIndex = 0; // main sets this, since each level only lets you train so much
     this.el = document.createElement('div');
     this.el.className = 'shop gym hidden';
     root.appendChild(this.el);
@@ -23,7 +24,7 @@ export class GymMenu {
     const p = this.player;
     p.inside = true;
     p.hand.visible = false;
-    this.menu('Welcome to the gym! 💪 Training is free.', '');
+    this.menu('Welcome to the gym! 💪 Training is free. Train Speed and Strength once in each place.', '');
     this.cursor = p.speedLevel <= p.strengthLevel ? 0 : 1;
     this.el.classList.remove('hidden');
     this.wait = 0.25; // ignore the key you were holding as you walked in
@@ -76,17 +77,21 @@ export class GymMenu {
   rows() {
     const p = this.player;
     if (this.mode === 'menu') {
-      const speedMax = p.speedLevel >= G.maxLevel;
-      const strengthMax = p.strengthLevel >= G.maxLevel;
+      // each stat shows MAX, done for this level, or what it goes up to
+      const label = (stat, name, level) => {
+        if (level >= G.maxLevel) return 'MAX ⭐';
+        if (this.doneHere(stat)) return 'Done here ✔';
+        return `${name} ${level} → ${level + 1}`;
+      };
+      const kind = (stat, level) => (level >= G.maxLevel || this.doneHere(stat) ? 'locked' : 'buy');
       return [
         {
           id: 'treadmill', icon: '🏃', name: 'Treadmill', about: 'Makes you faster',
-          label: speedMax ? 'MAX ⭐' : `Speed ${p.speedLevel} → ${p.speedLevel + 1}`, kind: speedMax ? 'locked' : 'buy',
+          label: label('speed', 'Speed', p.speedLevel), kind: kind('speed', p.speedLevel),
         },
         {
           id: 'weights', icon: '🏋️', name: 'Weights', about: 'Makes your weapons hit harder',
-          label: strengthMax ? 'MAX ⭐' : `Strength ${p.strengthLevel} → ${p.strengthLevel + 1}`,
-          kind: strengthMax ? 'locked' : 'buy',
+          label: label('strength', 'Strength', p.strengthLevel), kind: kind('strength', p.strengthLevel),
         },
         { id: 'leave', icon: '🚪', name: 'Leave', label: 'Back outside', kind: 'leave' },
       ];
@@ -114,9 +119,11 @@ export class GymMenu {
       return false;
     }
     if (row.kind === 'locked') {
-      this.message = this.mode === 'menu'
-        ? 'That one is as high as it goes! ⭐'
-        : 'You\'re too strong for this one! Try a heavier dumbbell';
+      const stat = row.id === 'treadmill' ? 'speed' : 'strength';
+      const max = (stat === 'speed' ? p.speedLevel : p.strengthLevel) >= G.maxLevel;
+      if (this.mode !== 'menu') this.message = 'You\'re too strong for this one! Try a heavier dumbbell';
+      else if (max) this.message = 'That one is as high as it goes! ⭐';
+      else this.message = 'You\'ve trained that here already! Train again on the next level 💪';
       this.messageKind = 'bad';
       return false;
     }
@@ -129,6 +136,11 @@ export class GymMenu {
       this.cursor = Math.max(0, WEIGHT_IDS.findIndex((id) => p.strengthLevel < DUMBBELLS[id].maxLevel));
     } else this.startLift(row.id);
     return false;
+  }
+
+  // True once you've used up this level's training for Speed or Strength.
+  doneHere(stat) {
+    return this.player.trainedOn(this.levelIndex, stat) >= G.upgradesPerLevel;
   }
 
   drawList() {
@@ -290,6 +302,7 @@ export class GymMenu {
       return;
     }
     const level = stat === 'speed' ? ++p.speedLevel : ++p.strengthLevel;
+    p.addTraining(this.levelIndex, stat);
     // a personal best is beating your own fastest time on this one
     const best = p.bests[what];
     const isBest = best !== undefined && time < best;

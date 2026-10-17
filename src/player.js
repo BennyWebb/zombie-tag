@@ -21,7 +21,13 @@ export class Player {
     this.keys = keys;
     this.index = index;
     this.scene = scene;
+    this.slotLook = { ...look }; // how a new hero looks in this slot (Player 1 pink, Player 2 blue)
     this.look = { ...look }; // name, skin, hair and clothes colour, from the character creator
+    this.profileId = null; // which saved hero is playing in this slot
+    this.unlocked = 1; // how many levels this hero can play
+    this.finished = new Set(); // levels this hero has finished
+    this.trained = {}; // gym upgrades on each level: { 0: { speed: 1, strength: 1 } }
+    this.out = false; // Hardcore: tagged, so out until the level ends
     this.outfits = []; // cool outfits you own
     this.wearing = []; // the ones you have on
     this.created = false; // true once you've been through the character creator
@@ -92,11 +98,12 @@ export class Player {
 
   // A zombie touch. Returns false if you couldn't be hurt, 'shield' if your armour blocked it,
   // or 'heart' if it cost you hearts.
-  hurt(amount) {
+  // `ignoreArmour` is for the Zombie King on Hard, who tags you in one go.
+  hurt(amount, ignoreArmour = false) {
     if (this.safe > 0 || this.tagged > 0 || this.inside) return false;
     this.safe = CONFIG.player.safeTime;
     this.shake = 0.3;
-    if (this.shields > 0) {
+    if (this.shields > 0 && !ignoreArmour) {
       this.shields -= 1;
       return 'shield';
     }
@@ -125,8 +132,28 @@ export class Player {
     this.refillShields();
   }
 
+  // Hard and Hardcore: getting tagged takes your weapons and armour, leaving a new Spiky Stick.
+  // Hardcore takes your Tag Bux too. Outfits, looks and training are always kept.
+  loseItems(tagBuxToo) {
+    this.weapons = [];
+    this.armour = [];
+    this.shields = 0;
+    if (tagBuxToo) this.tagBux = 0;
+    this.giveStick();
+  }
+
+  // Gym upgrades are limited on each level, so you can't max everything out on level 1.
+  trainedOn(levelIndex, stat) {
+    return (this.trained[levelIndex] && this.trained[levelIndex][stat]) || 0;
+  }
+
+  addTraining(levelIndex, stat) {
+    this.trained[levelIndex] = { ...this.trained[levelIndex], [stat]: this.trainedOn(levelIndex, stat) + 1 };
+  }
+
   // Back to the start with full hearts, keeping Tag Bux, weapons and training.
   respawn(start) {
+    this.out = false;
     this.reset(start);
     this.hearts = CONFIG.player.hearts;
     this.refillShields();
@@ -143,9 +170,11 @@ export class Player {
     return 1 + CONFIG.player.strengthPerLevel * (this.strengthLevel - 1);
   }
 
-  // Everything worth keeping between days: looks, Tag Bux, weapons, armour, outfits and training.
+  // Everything worth keeping between days: looks, Tag Bux, weapons, armour, outfits, training
+  // and levels reached.
   toSave() {
     return {
+      id: this.profileId,
       look: this.look,
       created: this.created,
       tagBux: this.tagBux,
@@ -157,11 +186,33 @@ export class Player {
       speedLevel: this.speedLevel,
       strengthLevel: this.strengthLevel,
       bests: this.bests,
+      unlocked: this.unlocked,
+      finished: [...this.finished],
+      trained: this.trained,
     };
   }
 
+  // A brand-new hero in this slot, before the character creator.
+  blank(id) {
+    this.fromSave({
+      id,
+      look: { ...this.slotLook, name: `Player ${this.index + 1}` },
+      created: false,
+      tagBux: 0,
+      weapons: [{ id: 'spikyStick' }],
+      holding: 'spikyStick',
+      armour: [],
+      outfits: [],
+      wearing: [],
+      speedLevel: CONFIG.player.startSpeed,
+      strengthLevel: CONFIG.player.startStrength,
+    });
+  }
+
   fromSave(d) {
-    this.look = { ...this.look, ...d.look };
+    this.profileId = d.id ?? null;
+    // the name tag colour belongs to the slot, so a hero can play as Player 1 or Player 2
+    this.look = { ...this.slotLook, ...d.look, tagColour: this.slotLook.tagColour };
     this.created = d.created;
     this.tagBux = d.tagBux;
     // only things that still exist in config.js, in case the numbers have changed
@@ -177,6 +228,9 @@ export class Player {
     this.speedLevel = d.speedLevel;
     this.strengthLevel = d.strengthLevel;
     this.bests = d.bests || {};
+    this.unlocked = Math.min(CONFIG.levels.length, d.unlocked || 1);
+    this.finished = new Set(d.finished || []);
+    this.trained = d.trained || {};
     this.refillShields();
     this.rebuildBody();
   }

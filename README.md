@@ -16,14 +16,31 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **7. Character creator and outfits:** type your name, pick your look, and buy cool outfits.
 - [x] **8. Levels 1 to 10:** ten places, new zombies, the Zombie King, level select and saving.
 - [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
-- [ ] 9. Refinement: tuning the numbers and anything else from play-testing
+- [ ] **9. Refinement:** tuning from play-testing. Done so far: Easy, Hard and Hardcore, a hero for
+  everyone on "Who's playing?", the gym limited to one upgrade per place, and the Zombie King as the final battle.
 
 ## How to play
 
-On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space,
-then pick a level.
+On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space.
+Then each player picks her hero on **Who's playing?** (Player 1 with W / S and Space, then Player 2
+with the arrows and Enter), chooses how hard, and picks a level.
 
-The first time, each hero is made in the **character creator**: type your name (up to 12 letters)
+**Who's playing?** Everyone has their own saved hero, with her own looks, Tag Bux, weapons, outfits,
+training and levels reached, so anyone can play as Player 1 or Player 2. Choose **➕ New hero** to make
+another one (up to 8). Press **X** on a hero to delete it (it asks first).
+
+**How hard?** Choose with A / D and press Space. The game remembers your choice for next time.
+
+| | Getting tagged | The Zombie King |
+| --- | --- | --- |
+| 🙂 **Easy** | Back at the start, keeping everything | As below |
+| 😬 **Hard** | Back at the start, but your weapons and armour are gone (you get a new Spiky Stick) | Tougher, faster, and tags you in one go, even through armour |
+| 💀 **Hardcore** | Only 1 life! Game over: your weapons, armour and Tag Bux are gone | Tougher, faster, and tags you in one go |
+
+You always keep your looks, outfits, training and levels. On Hardcore with 2 players, a tagged sister
+is out until the other one finishes the level; if you're both tagged it's game over.
+
+The first time, each new hero is made in the **character creator**: type your name (up to 12 letters)
 and press Enter, then pick your skin, hair style, hair colour and clothes colour with W / S and A / D
 (Player 2: the arrows) while your hero turns round to show off. Press Space (Player 2: Enter) on
 **Done!**. With 2 players, Player 1 goes first. To change your looks later, press **C** on the start screen.
@@ -62,14 +79,14 @@ reached again from the level picker to earn more Tag Bux. The shop and gym are i
 | 7 | 🧸 Toy Factory | 20 | |
 | 8 | 🍄 Haunted Forest | 22 | Slime Zombie: splits into two little Shufflers |
 | 9 | 🎃 Graveyard at Night | 25 | |
-| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: arrives after 20 pops and calls Shufflers to help |
+| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: the final battle once every other zombie is popped. He calls Shufflers to help |
 
 Zombies get tougher on each level, so keep training and upgrading. Beat the Zombie King and all the
 zombies become your friends for a big party!
 
-**Saving:** progress saves by itself at the start of each level (and when you leave the shop or gym),
-so you can stop and carry on another day. Press **N** on the start screen for a brand new game
-(it asks first, because it wipes everything).
+**Saving:** each hero's progress saves by itself at the start of each level, when you leave the shop
+or gym, and when you get tagged, so you can stop and carry on another day. To start a hero again from
+scratch, delete her on **Who's playing?** and make a new one.
 
 ### Sound and music
 
@@ -92,7 +109,7 @@ and zombies chase whichever hero is nearest. If one of you gets tagged, she's ba
 
 You have **3 hearts** (top left). A zombie touch costs 1 heart, then you blink for 2 seconds and
 can't be hurt, so run away! Lose all 3 and you're **TAGGED**: after a 3-second countdown you're back
-at the start with 3 hearts, and you keep your Tag Bux and weapons. A zombie that tags you gets
+at the start with 3 hearts, and on Easy you keep your Tag Bux and weapons (see **How hard?** above). A zombie that tags you gets
 bumped back and goes dizzy (stars round its head) for a moment, so you can get away. Turn round and
 run: you're faster than a chasing zombie going forwards, but a bit slower walking backwards.
 
@@ -137,7 +154,9 @@ When you play again, you keep your Tag Bux and weapons, so after two clears you 
 
 ## The gym
 
-Look for the **glowing blue dumbbell** above the trees and walk in through the door. Training is free.
+Look for the **glowing blue dumbbell** above the trees and walk in through the door. Training is free,
+but each place only lets you raise **Speed once and Strength once**, so you get stronger as you go
+through the levels instead of maxing out in Sunny Park. Replaying a place doesn't give you more.
 
 - **🏃 Treadmill (Speed):** press A, D, A, D… as fast as you can. Pressing the same key twice doesn't
   count. Fill the bar in 15 seconds for +1 Speed. Each level needs a few more presses.
@@ -152,7 +171,8 @@ Look for the **glowing blue dumbbell** above the trees and walk in through the d
 | 🔴 Heavy | very quickly | 10 |
 
 If you don't make it, nothing is lost: just try again. Beat your fastest time for a **PERSONAL BEST!**
-Speed and Strength go up to 10, and you keep them when you play again or get tagged.
+Speed and Strength go up to 10 (so you can reach the top by the last levels), and you keep them when
+you play again or get tagged.
 
 ## Running it
 

@@ -33,7 +33,29 @@
         <div><kbd>Enter</kbd> or <kbd>0</kbd> bonk!</div>
       </div>
       <p class="go"><kbd>W</kbd> <kbd>S</kbd> to choose, <kbd>Space</kbd> to play</p>
-      <p class="sub small">Press <kbd>C</kbd> to change how your hero looks &nbsp; · &nbsp; <kbd>N</kbd> new game</p>
+      <p class="sub small">Press <kbd>C</kbd> to change how your hero looks</p>
+    </div>
+
+    <!-- each player picks her saved hero, or makes a new one -->
+    <div id="who" class="screen hidden">
+      <div class="who-badge p1"></div>
+      <h1>Who's playing?</h1>
+      <div class="hero-list"></div>
+      <p class="go" id="who-keys"></p>
+      <p class="sub small"><kbd>X</kbd> delete a hero &nbsp; · &nbsp; <kbd>Esc</kbd> back</p>
+    </div>
+
+    <div id="remove" class="screen hidden">
+      <h1 id="remove-name"></h1>
+      <p class="sub">Their Tag Bux, weapons, outfits, training and levels will all be gone!</p>
+      <p class="go">Press <kbd>Y</kbd> for yes, or <kbd>N</kbd> to keep them</p>
+    </div>
+
+    <div id="difficulty" class="screen hidden">
+      <h1>How hard?</h1>
+      <div class="choices"></div>
+      <p class="sub small">The Zombie King is tougher and faster on Hard and Hardcore, and tags you in one go!</p>
+      <p class="go"><kbd>A</kbd> <kbd>D</kbd> to choose, <kbd>Space</kbd> to go</p>
     </div>
 
     <!-- the character creator (creator.js fills it in) -->
@@ -41,15 +63,17 @@
 
     <div id="levels" class="screen hidden">
       <h1>Pick a level</h1>
+      <p class="sub" id="levels-mode"></p>
       <div class="level-grid"></div>
       <p class="go"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to choose, <kbd>Space</kbd> to play</p>
-      <p class="sub small"><kbd>Esc</kbd> back to the start screen</p>
+      <p class="sub small"><kbd>Esc</kbd> back to how hard</p>
     </div>
 
-    <div id="newgame" class="screen hidden">
-      <h1>New game?</h1>
-      <p class="sub">This starts again from level 1. All your Tag Bux, weapons and training will be gone!</p>
-      <p class="go">Press <kbd>Y</kbd> for yes, or <kbd>Esc</kbd> to keep everything</p>
+    <div id="gameover" class="screen hidden">
+      <h1>GAME OVER!</h1>
+      <p class="sub">Hardcore is tough! Your weapons, armour and Tag Bux are gone.</p>
+      <p class="sub">You keep your outfits, training and levels.</p>
+      <p class="go">Press <kbd>Space</kbd> to pick a level</p>
     </div>
 
     <div id="party" class="screen hidden">

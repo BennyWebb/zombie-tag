@@ -26,8 +26,8 @@ export class Hud {
       <div class="who pill">Player ${number}</div>
       <div class="tagged hidden">
         <h1>TAGGED!</h1>
-        <p class="sub">Back to the start in <b class="tagged-count"></b>…</p>
-        <p class="sub">You keep your Tag Bux and weapons</p>
+        <p class="sub tagged-back">Back to the start in <b class="tagged-count"></b>…</p>
+        <p class="sub tagged-keep"></p>
       </div>
       <div class="toast"></div>
     </div>`;
@@ -62,9 +62,19 @@ export class Hud {
     el.classList.remove('show'); // fades back out
   }
 
-  showTagged(on) {
+  // What getting tagged costs depends on the difficulty: nothing on Easy, your weapons and armour
+  // on Hard, and on Hardcore it's game over (in 2-player mode, until your sister finishes the level).
+  showTagged(on, difficulty) {
     this.q('.tagged').classList.toggle('hidden', !on);
-    if (on) this.clearToast();
+    if (!on) return;
+    this.clearToast();
+    const d = difficulty || {};
+    this.q('.tagged h1').textContent = d.oneLife ? 'GAME OVER!' : 'TAGGED!';
+    this.q('.tagged-back').classList.toggle('hidden', !!d.oneLife);
+    let keep = 'You keep your Tag Bux and weapons';
+    if (d.loseItems) keep = 'Your weapons and armour are gone! You keep your Tag Bux';
+    if (d.oneLife) keep = 'Your weapons, armour and Tag Bux are all gone! 💀';
+    this.q('.tagged-keep').textContent = keep;
   }
 
   // Makes the Tag Bux counter jump when coins go in.
@@ -82,7 +92,7 @@ export class Hud {
       this.toastTimer -= dt;
       if (this.toastTimer <= 0) this.q('.toast').classList.remove('show');
     }
-    if (p.tagged) this.q('.tagged-count').textContent = Math.max(1, Math.ceil(p.tagged));
+    if (p.tagged && !p.out) this.q('.tagged-count').textContent = Math.max(1, Math.ceil(p.tagged));
 
     let left = zombiesLeft === 1 ? '1 zombie left' : `${zombiesLeft} zombies left`;
     if (gateOpen) left = '✨ Go to the exit gate!';

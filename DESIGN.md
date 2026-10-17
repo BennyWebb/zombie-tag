@@ -229,7 +229,7 @@ Build it as a browser game with JavaScript and Three.js, in small steps that the
 - **Split screen:** one shared world drawn twice per frame by two cameras, each into its own half of the window.
 - **Keyboard:** track which keys are down using `event.code` (`KeyW`, `ArrowUp`, `Space`, `Numpad0`, `Enter`) so both players' keys work at the same time.
 - **All numbers in one file** (`config.js`): speeds, damage, prices, zombie health and level settings, so balancing is just editing numbers.
-- **Saving:** browser local storage, one save slot to start.
+- **Saving:** browser local storage, with a saved profile for each hero.
 - **Sound:** short sound effects generated in code or free sound files added later.
 
 **Build steps** (play-test with Chloe and Naomi after each)
@@ -243,7 +243,10 @@ Build it as a browser game with JavaScript and Three.js, in small steps that the
 7. **Character creator and outfits.**
 8. **Levels 1 to 10:** themes, random shop and gym spots, new zombie types, the Zombie King, level select and saving.
    8b. **Sound and music:** sound effects and a tune for each place, made in code, with volume in the pause menu.
-9. **Refinement:** menus, and tuning the numbers from play-testing.
+9. **Refinement:** menus, and tuning the numbers from play-testing. From the first play-tests:
+   Easy, Hard and Hardcore difficulty; a saved profile for every hero (not just Player 1 and 2);
+   the gym limited to one Speed and one Strength upgrade per level; and the Zombie King arriving as
+   the final battle after every other zombie, tougher and faster on Hard and Hardcore.
 
 **Getting started in Claude Code**
 
