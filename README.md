@@ -13,13 +13,18 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **4. The gym:** treadmill and weights mini-games that raise Speed and Strength.
 - [x] **5. All the weapons and armour:** ten weapons up to the Sparkle Star Laser Gun, and three kinds of armour.
 - [x] **6. Two players:** split screen, a second set of keys, separate wallets and giving Tag Bux.
-- [ ] 7. Character creator and outfits
+- [x] **7. Character creator and outfits:** type your name, pick your look, and buy cool outfits.
 - [ ] 8. Levels 1 to 10
 - [ ] 9. Polish
 
 ## How to play
 
 On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space.
+
+The first time, each hero is made in the **character creator**: type your name (up to 12 letters)
+and press Enter, then pick your skin, hair style, hair colour and clothes colour with W / S and A / D
+(Player 2: the arrows) while your hero turns round to show off. Press Space (Player 2: Enter) on
+**Done!**. With 2 players, Player 1 goes first. To change your looks later, press **C** on the start screen.
 With 2 players the screen splits down the middle: Player 1 on the left, Player 2 on the right.
 
 | Action | Player 1 | Player 2 |
@@ -79,6 +84,11 @@ and fills back up at the start of each level (and when you get tagged). Only you
 | 📦 Cardboard Box Armour | 40 | 1 hit |
 | 🏈 Sports Pads and Helmet | 150 | 2 hits |
 | 🛡️ Shiny Knight Armour | 600 | 3 hits |
+
+**Cool outfits** are just for looks, and your sister sees them on your hero:
+🏴‍☠️ Pirate Hat (40), 🦸 Superhero Cape (50), 🦄 Unicorn Onesie (80), 🩰 Sparkly Dancer Outfit (100),
+🧑‍🚀 Astronaut Suit (150) and 👑 Golden Crown (300). You can wear a hat and a cape together; putting on
+something that covers the same place takes the other one off. Choose an outfit you're wearing to take it off.
 
 The shop list scrolls: keep pressing S to see everything. It also sells **💊 Heart Medicine** (15 Tag Bux), which gives back 1 heart. Zombies wait outside
 the door, so you get 2 safe seconds when you walk back out.

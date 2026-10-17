@@ -410,7 +410,7 @@ kbd.tap { animation: pop 0.2s ease-out; }
 #creator .panel {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: min(60%, 760px);
+  width: min(62%, 800px);
   padding: 24px 34px;
   display: flex;
   flex-direction: column;
@@ -436,13 +436,13 @@ kbd.tap { animation: pop 0.2s ease-out; }
 .crow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 8px 16px;
   border-radius: 20px;
   border: 4px solid transparent;
 }
 .crow.current { background: rgba(255, 255, 255, 0.15); border-color: #ffe066; }
-.crow .label { width: 140px; flex-shrink: 0; font-size: 26px; font-weight: bold; }
+.crow .label { width: 120px; flex-shrink: 0; font-size: 26px; font-weight: bold; }
 .crow .opts { display: flex; flex-wrap: wrap; gap: 8px; }
 .opt { width: 46px; height: 46px; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.4); }
 .opt.text { width: auto; height: auto; padding: 5px 11px; border-radius: 16px; font-size: 20px; background: rgba(40, 20, 80, 0.6); }
