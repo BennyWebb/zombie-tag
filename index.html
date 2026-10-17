@@ -15,7 +15,7 @@
 
     <div id="title" class="screen">
       <h1>ZOMBIE TAG</h1>
-      <p class="sub">Sunny Park</p>
+      <p class="sub" id="welcome">10 levels of silly zombies</p>
       <div class="choices">
         <div class="choice selected">🧒 1 Player</div>
         <div class="choice">🧒🧒 2 Players</div>
@@ -33,11 +33,32 @@
         <div><kbd>Enter</kbd> or <kbd>0</kbd> bonk!</div>
       </div>
       <p class="go"><kbd>W</kbd> <kbd>S</kbd> to choose, <kbd>Space</kbd> to play</p>
-      <p class="sub small">Press <kbd>C</kbd> to change how your hero looks</p>
+      <p class="sub small">Press <kbd>C</kbd> to change how your hero looks &nbsp; · &nbsp; <kbd>N</kbd> new game</p>
     </div>
 
     <!-- the character creator (creator.js fills it in) -->
     <div id="creator" class="hidden"></div>
+
+    <div id="levels" class="screen hidden">
+      <h1>Pick a level</h1>
+      <div class="level-grid"></div>
+      <p class="go"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to choose, <kbd>Space</kbd> to play</p>
+      <p class="sub small"><kbd>Esc</kbd> back to the start screen</p>
+    </div>
+
+    <div id="newgame" class="screen hidden">
+      <h1>New game?</h1>
+      <p class="sub">This starts again from level 1. All your Tag Bux, weapons and training will be gone!</p>
+      <p class="go">Press <kbd>Y</kbd> for yes, or <kbd>Esc</kbd> to keep everything</p>
+    </div>
+
+    <div id="party" class="screen hidden">
+      <h1>You beat the Zombie King!</h1>
+      <div class="bottom">
+        <p class="sub">All the zombies are your friends now. 🎉 PARTY TIME! 🎉</p>
+        <p class="go">Press <kbd>Space</kbd> when you've finished partying</p>
+      </div>
+    </div>
 
     <div id="paused" class="screen hidden">
       <h1>Paused</h1>
@@ -46,10 +67,11 @@
     </div>
 
     <div id="won" class="screen hidden">
-      <h1>You popped<br />them all!</h1>
-      <p class="sub">Sunny Park is safe again</p>
+      <h1>Level done!</h1>
+      <p class="sub" id="won-place"></p>
       <p class="sub" id="won-bux"></p>
-      <p class="go">Press <kbd>Space</kbd> to play again</p>
+      <p class="go" id="won-next"></p>
+      <p class="sub small"><kbd>L</kbd> pick a level</p>
     </div>
 
     <script type="module" src="/src/main.js"></script>

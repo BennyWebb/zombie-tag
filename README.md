@@ -14,12 +14,13 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **5. All the weapons and armour:** ten weapons up to the Sparkle Star Laser Gun, and three kinds of armour.
 - [x] **6. Two players:** split screen, a second set of keys, separate wallets and giving Tag Bux.
 - [x] **7. Character creator and outfits:** type your name, pick your look, and buy cool outfits.
-- [ ] 8. Levels 1 to 10
+- [x] **8. Levels 1 to 10:** ten places, new zombies, the Zombie King, level select and saving.
 - [ ] 9. Polish
 
 ## How to play
 
-On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space.
+On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space,
+then pick a level.
 
 The first time, each hero is made in the **character creator**: type your name (up to 12 letters)
 and press Enter, then pick your skin, hair style, hair colour and clothes colour with W / S and A / D
@@ -36,17 +37,44 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 | Treadmill | A, D, A, D… as fast as you can | ←, →, ←, →… |
 | Weights | tap Space as fast as you can | tap Enter |
 | Pause (then Q to go back to the start screen) | Esc | Esc |
+| Level picker: choose / play | W A S D, then Space | arrows, then Enter |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
 
 Popped zombies burst into spinning **Tag Bux** coins. Walk over them to collect them;
 your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns 40.
 
+### Levels
+
+Pop every zombie, then walk through the **glowing exit gate** at the far end of the path (look for the
+beam of light) to finish the level. Each level unlocks the next one, and you can play any level you've
+reached again from the level picker to earn more Tag Bux. The shop and gym are in a different spot each time.
+
+| Level | Place | Zombies (1 player) | New zombie |
+| --- | --- | --- | --- |
+| 1 | 🌳 Sunny Park | 8 | Shuffler |
+| 2 | 🏫 School and Playground | 10 | |
+| 3 | 🛒 Supermarket Car Park | 12 | Speedy Sid: sprints, then stops to pant |
+| 4 | 🏖️ Beach and Pier | 14 | |
+| 5 | 🎡 Funfair | 16 | Bouncy Bob: hops right over fences and benches |
+| 6 | ⛄ Snowy Village | 18 | Big Bertha: huge, and takes 2 hearts |
+| 7 | 🧸 Toy Factory | 20 | |
+| 8 | 🍄 Haunted Forest | 22 | Slime Zombie: splits into two little Shufflers |
+| 9 | 🎃 Graveyard at Night | 25 | |
+| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: arrives after 20 pops and calls Shufflers to help |
+
+Zombies get tougher on each level, so keep training and upgrading. Beat the Zombie King and all the
+zombies become your friends for a big party!
+
+**Saving:** progress saves by itself at the start of each level (and when you leave the shop or gym),
+so you can stop and carry on another day. Press **N** on the start screen for a brand new game
+(it asks first, because it wipes everything).
+
 ### Playing together
 
 Each sister has her own hearts, Tag Bux, weapons, armour and training. Coins go to whoever touches them
 first. In the shop you can **🎁 Give 10 Tag Bux** to your sister as many times as you like, and the coins
-fly across the screen into her counter. There are 50% more zombies with two players (12 in Sunny Park),
+fly across the screen into her counter. There are 50% more zombies with two players,
 and zombies chase whichever hero is nearest. If one of you gets tagged, she's back at the start after
 10 seconds while the other keeps playing.
 
@@ -136,5 +164,5 @@ close it when you've finished.
 
 ## Changing the numbers
 
-Speeds, damage, prices, hearts, gym difficulty, zombie health and level settings are all in [`src/config.js`](src/config.js).
+Speeds, damage, prices, hearts, gym difficulty, zombies, and each level's zombie count, toughness and mix are all in [`src/config.js`](src/config.js).
 Edit a number, save, and the game reloads by itself.

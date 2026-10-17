@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 
 // A tiny seeded random number generator, so the park looks the same every time.
 function makeRandom(seed) {
@@ -18,80 +19,6 @@ function shadows(obj) {
     }
   });
   return obj;
-}
-
-function makeTree(rand) {
-  const tree = new THREE.Group();
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 10), mat(0x8b5a2b));
-  trunk.position.y = 1.2;
-  tree.add(trunk);
-  const greens = [0x4caf50, 0x66bb6a, 0x7cb342, 0x43a047];
-  const leaves = mat(greens[Math.floor(rand() * greens.length)]);
-  for (let i = 0; i < 3; i++) {
-    const r = 1.3 + rand() * 0.6;
-    const blob = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), leaves);
-    blob.position.set((rand() - 0.5) * 1.2, 3.0 + i * 0.7, (rand() - 0.5) * 1.2);
-    tree.add(blob);
-  }
-  return shadows(tree);
-}
-
-function makeBush(rand) {
-  const bush = new THREE.Group();
-  const m = mat(0x5cb85c);
-  for (let i = 0; i < 3; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.6 + rand() * 0.3, 12, 10), m);
-    s.position.set((i - 1) * 0.6, 0.5, (rand() - 0.5) * 0.4);
-    bush.add(s);
-  }
-  return shadows(bush);
-}
-
-function makeBench() {
-  const bench = new THREE.Group();
-  const wood = mat(0xd2691e);
-  const metal = mat(0x555555);
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.7), wood);
-  seat.position.y = 0.55;
-  const back = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.6, 0.12), wood);
-  back.position.set(0, 1.0, -0.3);
-  bench.add(seat, back);
-  for (const x of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.55, 0.6), metal);
-    leg.position.set(x, 0.27, 0);
-    bench.add(leg);
-  }
-  return shadows(bench);
-}
-
-function makeFlowers(rand) {
-  const bed = new THREE.Group();
-  const colours = [0xff6fae, 0xffe066, 0xff8a3d, 0xb28dff, 0xffffff];
-  const stem = mat(0x3f8f3f);
-  for (let i = 0; i < 12; i++) {
-    const x = (rand() - 0.5) * 2.5;
-    const z = (rand() - 0.5) * 2.5;
-    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 5), stem);
-    s.position.set(x, 0.2, z);
-    const f = new THREE.Mesh(
-      new THREE.SphereGeometry(0.14, 8, 6),
-      mat(colours[Math.floor(rand() * colours.length)]),
-    );
-    f.position.set(x, 0.45, z);
-    bed.add(s, f);
-  }
-  return bed;
-}
-
-function makeCloud(rand) {
-  const cloud = new THREE.Group();
-  const white = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(3 + rand() * 2, 12, 10), white);
-    s.position.set(i * 3 - 6, rand() * 1.5, (rand() - 0.5) * 3);
-    cloud.add(s);
-  }
-  return cloud;
 }
 
 // Draws text onto a canvas so it can be painted on the shop front.
@@ -232,82 +159,124 @@ function makeBuilding(look) {
   return { group: g, sign: topper, halfW: w / 2, halfD: d / 2 };
 }
 
-export function buildWorld(scene, level) {
-  const rand = makeRandom(1234);
-  const half = level.size / 2;
+// The exit gate: closed with bars until every zombie is popped, then it opens and sparkles.
+function makeGate() {
+  const g = new THREE.Group();
+  const stone = mat(0xb28dff);
+  for (const x of [-2.6, 2.6]) g.add(meshAt(new THREE.BoxGeometry(1, 5, 1), stone, x, 2.5, 0));
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.45, 8, 20, Math.PI), stone);
+  arch.position.y = 5;
+  g.add(arch);
+  const bars = new THREE.Group();
+  for (let i = -3; i <= 3; i++) bars.add(meshAt(new THREE.CylinderGeometry(0.08, 0.08, 5, 6), mat(0x555566), i * 0.65, 2.5, 0));
+  g.add(bars);
+  // the glowing "way out" that shows once it's open, with a beam of light up into the sky
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.2, 4.6),
+    new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
+  );
+  glow.position.y = 2.4;
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.2, 2.2, 80, 20, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0xffe066, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }),
+  );
+  beam.position.y = 40;
+  const open = new THREE.Group();
+  open.add(glow, beam);
+  open.visible = false;
+  g.add(open);
+  return { group: g, bars, open, beam };
+}
+
+function meshAt(geo, material, x, y, z) {
+  const m = new THREE.Mesh(geo, material);
+  m.position.set(x, y, z);
+  return m;
+}
+
+// Where the shop and gym can go (their doors face +z). Two are picked at random each level,
+// never right next to the start or next to each other.
+const BUILDING_SPOTS = [[-25, 11], [25, 12], [-25, -14], [25, -14], [-12, -27], [12, -27]];
+
+export function buildWorld(scene, level, theme) {
+  const rand = makeRandom(1234 + level.number * 77);
+  const size = CONFIG.arena.size;
+  const half = size / 2;
   const colliders = []; // circles { x, z, r } and boxes { x, z, hw, hd } that block walking
+  const group = new THREE.Group(); // everything in this level, so it can be cleared away
+  scene.add(group);
+  const animations = [];
 
-  scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.Fog(0x87ceeb, 40, 110);
+  scene.background = new THREE.Color(theme.sky);
+  scene.fog = new THREE.Fog(theme.sky, theme.fog[0], theme.fog[1]);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x6aa84f, 1.6));
-  const sun = new THREE.DirectionalLight(0xfff4d6, 2.2);
+  const L = theme.light;
+  group.add(new THREE.HemisphereLight(L.sky, L.ground, L.amount));
+  const sun = new THREE.DirectionalLight(L.sun, L.sunAmount);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera;
   sc.left = -half - 5; sc.right = half + 5; sc.top = half + 5; sc.bottom = -half - 5;
   sc.near = 1; sc.far = 150;
-  scene.add(sun);
+  group.add(sun);
 
-  const sunBall = new THREE.Mesh(
+  // the sun, or a big friendly moon at night
+  const sky = new THREE.Mesh(
     new THREE.SphereGeometry(6, 20, 16),
-    new THREE.MeshBasicMaterial({ color: 0xfff176, fog: false }),
+    new THREE.MeshBasicMaterial({ color: theme.night ? 0xf4f0d0 : 0xfff176, fog: false }),
   );
-  sunBall.position.set(60, 70, -90);
-  scene.add(sunBall);
+  sky.position.set(60, 70, -90);
+  group.add(sky);
 
-  // grass, with grass outside the hedge too so the world doesn't end in a cliff
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat(0x7ccf5a));
+  // ground inside and outside the wall, so the world doesn't end in a cliff
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat(theme.ground));
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
-  scene.add(ground);
+  group.add(ground);
 
   // paths: a cross through the middle and a ring
-  const pathMat = mat(0xe8d5a3);
-  for (const [w, d] of [[4, level.size], [level.size, 4]]) {
+  const pathMat = mat(theme.path);
+  for (const [w, d] of [[4, size], [size, 4]]) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(w, d), pathMat);
     p.rotation.x = -Math.PI / 2;
     p.position.y = 0.02;
     p.receiveShadow = true;
-    scene.add(p);
+    group.add(p);
   }
   const ring = new THREE.Mesh(new THREE.RingGeometry(18, 21.5, 64), pathMat);
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.03;
   ring.receiveShadow = true;
-  scene.add(ring);
+  group.add(ring);
 
-  // a round pond in the middle with a fountain
-  const pond = new THREE.Mesh(
-    new THREE.CylinderGeometry(7, 7, 0.3, 40),
-    mat(0x4fc3f7, { transparent: true, opacity: 0.9 }),
-  );
-  pond.position.y = 0.1;
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(7, 0.4, 8, 40), mat(0xbdbdbd));
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.3;
-  const fountain = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.2, 2, 16), mat(0xe0e0e0));
-  fountain.position.y = 1;
-  scene.add(shadows(pond), shadows(rim), shadows(fountain));
-  colliders.push({ x: 0, z: 0, r: 7.4 });
-
-  // hedge wall all the way round
-  const hedgeMat = mat(0x2e7d32);
+  // the wall all the way round
+  const wallMat = mat(theme.wall.colour);
+  const wh = theme.wall.height;
   for (const [x, z, w, d] of [
-    [0, -half, level.size + 2, 2], [0, half, level.size + 2, 2],
-    [-half, 0, 2, level.size + 2], [half, 0, 2, level.size + 2],
+    [0, -half, size + 2, 2], [0, half, size + 2, 2],
+    [-half, 0, 2, size + 2], [half, 0, 2, size + 2],
   ]) {
-    const h = new THREE.Mesh(new THREE.BoxGeometry(w, 2.2, d), hedgeMat);
-    h.position.set(x, 1.1, z);
-    scene.add(shadows(h));
+    const h = new THREE.Mesh(new THREE.BoxGeometry(w, wh, d), wallMat);
+    h.position.set(x, wh / 2, z);
+    group.add(shadows(h));
+    if (theme.wall.battlements) {
+      const along = w > d ? 'x' : 'z';
+      for (let i = -half; i <= half; i += 3) {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 1.5), wallMat);
+        b.position.set(along === 'x' ? i : x, wh + 0.6, along === 'z' ? i : z);
+        group.add(b);
+      }
+    }
   }
 
-  // the shop and the gym, both in sight of the start, far from each other
-  const placeBuilding = (look, x, z) => {
+  // the shop and the gym at two random spots
+  const placeBuilding = (look, [x, z]) => {
     const b = makeBuilding(look);
     b.group.position.set(x, 0, z);
-    scene.add(b.group);
+    group.add(b.group);
     colliders.push({ x, z, hw: b.halfW, hd: b.halfD });
     const door = { x, z: z + b.halfD };
     return {
@@ -317,83 +286,109 @@ export function buildWorld(scene, level) {
       sign: b.sign,
     };
   };
+  const spots = [...BUILDING_SPOTS].sort(() => Math.random() - 0.5);
+  const shopSpot = spots[0];
+  const gymSpot = spots.find((s) => Math.hypot(s[0] - shopSpot[0], s[1] - shopSpot[1]) > 30);
   const shop = placeBuilding({
     walls: 0xffa8cc, trim: 0x8e5bd6, stripe: 0xff4f8b, stripeGlow: 0x661a38,
     text: 'SHOP', textColour: '#ff4f8b', glow: 0xff4f8b, makeSign: makeBagSign,
-  }, -25, 11);
+  }, shopSpot);
   const gym = placeBuilding({
     walls: 0xa8e6ff, trim: 0x1e6fd6, stripe: 0x4fc3f7, stripeGlow: 0x14506e,
     text: 'GYM', textColour: '#1e6fd6', glow: 0x4fc3f7, makeSign: makeDumbbellSign,
-  }, 25, -12);
+  }, gymSpot);
+
+  // the exit gate, at the far end of the path from the start
+  const gate = makeGate();
+  const gatePos = { x: 0, z: -half + 2.5 };
+  gate.group.position.set(gatePos.x, 0, gatePos.z);
+  group.add(shadows(gate.group));
+  gate.beam.castShadow = false;
+  for (const x of [-2.6, 2.6]) colliders.push({ x: gatePos.x + x, z: gatePos.z, r: 0.8 });
+
+  const playerStart = { x: 0, z: half - 6, yaw: 0 }; // yaw 0 faces the middle
   const doors = [shop.door, gym.door];
 
-  // keep things off the paths, the pond and the start
+  // keep things off the paths, the middle, the start, the doors and the gate
   const onPath = (x, z) => {
     const r = Math.hypot(x, z);
     return Math.abs(x) < 3.5 || Math.abs(z) < 3.5 || (r > 16.5 && r < 23) || r < 10;
   };
   const freeSpot = (minGap) => {
     for (let tries = 0; tries < 200; tries++) {
-      const x = (rand() - 0.5) * (level.size - 8);
-      const z = (rand() - 0.5) * (level.size - 8);
+      const x = (rand() - 0.5) * (size - 8);
+      const z = (rand() - 0.5) * (size - 8);
       if (onPath(x, z)) continue;
-      if (Math.hypot(x - 0, z - (half - 6)) < 8) continue; // the start
-      if (doors.some((d) => Math.hypot(x - d.x, z - (d.z + 3)) < 5)) continue; // in front of a door
+      if (Math.hypot(x - playerStart.x, z - playerStart.z) < 8) continue;
+      if (Math.hypot(x - gatePos.x, z - gatePos.z) < 7) continue;
+      if (doors.some((d) => Math.hypot(x - d.x, z - (d.z + 3)) < 5)) continue;
       if (colliders.some((c) => distanceTo(c, x, z) < minGap)) continue;
       return { x, z };
     }
     return null;
   };
 
-  for (let i = 0; i < 28; i++) {
-    const spot = freeSpot(3);
-    if (!spot) break;
-    const t = makeTree(rand);
-    t.position.set(spot.x, 0, spot.z);
-    t.rotation.y = rand() * Math.PI * 2;
-    scene.add(t);
-    colliders.push({ x: spot.x, z: spot.z, r: 0.6 });
-  }
-  for (let i = 0; i < 18; i++) {
-    const spot = freeSpot(1.5);
-    if (!spot) break;
-    const b = makeBush(rand);
-    b.position.set(spot.x, 0, spot.z);
-    b.rotation.y = rand() * Math.PI * 2;
-    scene.add(b);
-    colliders.push({ x: spot.x, z: spot.z, r: 1.1 });
-  }
-  for (let i = 0; i < 10; i++) {
-    const spot = freeSpot(1);
-    if (!spot) break;
-    const f = makeFlowers(rand);
-    f.position.set(spot.x, 0, spot.z);
-    scene.add(f);
-  }
-  // benches facing the pond, just inside the ring path
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-    const b = makeBench();
-    b.position.set(Math.cos(a) * 15.5, 0, Math.sin(a) * 15.5);
-    b.lookAt(0, 0, 0);
-    scene.add(b);
-    colliders.push({ x: b.position.x, z: b.position.z, r: 1.2 });
-  }
-  for (let i = 0; i < 8; i++) {
-    const c = makeCloud(rand);
-    c.position.set((rand() - 0.5) * 160, 35 + rand() * 15, (rand() - 0.5) * 160);
-    scene.add(c);
-  }
+  const ctx = {
+    rand,
+    half,
+    group,
+    add(obj, x, z, { r, small, box } = {}) {
+      obj.position.x = x;
+      obj.position.z = z;
+      group.add(shadows(obj));
+      if (r) colliders.push({ x, z, r, small });
+      if (box) colliders.push({ x, z, hw: box[0], hd: box[1] });
+    },
+    scatter(make, count, { gap = 1, r, small } = {}) {
+      for (let i = 0; i < count; i++) {
+        const spot = freeSpot(gap + (r || 0));
+        if (!spot) break;
+        const obj = make(rand, i);
+        obj.rotation.y += rand() * Math.PI * 2;
+        ctx.add(obj, spot.x, spot.z, { r, small });
+      }
+    },
+    ring(make, count, radius, { r, small } = {}) {
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + Math.PI / 6;
+        const obj = make(rand, i);
+        obj.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+        obj.lookAt(0, 0, 0);
+        ctx.add(obj, obj.position.x, obj.position.z, { r, small });
+      }
+    },
+    animate(fn) {
+      animations.push(fn);
+    },
+  };
+  theme.decorate(ctx);
 
-  const playerStart = { x: 0, z: half - 6, yaw: 0 }; // yaw 0 faces the middle of the park
-
+  let time = 0;
   return {
+    group,
     colliders,
     bounds: half - 1.5,
     playerStart,
     shop,
     gym,
-    // spot is clear of the pond, trees, the shop and the hedge
+    gate: { ...gatePos, isOpen: false },
+    openGate() {
+      this.gate.isOpen = true;
+      gate.bars.visible = false;
+      gate.open.visible = true;
+    },
+    // spinning signs, rides, snow and so on
+    update(dt) {
+      time += dt;
+      shop.sign.rotation.y += dt * 1.2;
+      gym.sign.rotation.y += dt * 1.2;
+      if (gate.open.visible) {
+        gate.beam.rotation.y += dt;
+        gate.open.children[0].material.opacity = 0.65 + Math.sin(time * 4) * 0.2;
+      }
+      for (const fn of animations) fn(dt, time);
+    },
+    // spot is clear of the middle, props, buildings and the wall
     isClear: (x, z, r) =>
       Math.abs(x) < half - 2 && Math.abs(z) < half - 2 &&
       !colliders.some((c) => distanceTo(c, x, z) < r),
@@ -409,8 +404,10 @@ function distanceTo(c, x, z) {
 }
 
 // Pushes a circle out of anything solid and keeps it inside the hedge.
-export function resolveCollisions(pos, radius, world) {
+// `hopper` (Bouncy Bob) jumps over small things like fences, bushes and benches.
+export function resolveCollisions(pos, radius, world, hopper = false) {
   for (const c of world.colliders) {
+    if (hopper && c.small) continue;
     if (c.r === undefined) {
       pushOutOfBox(pos, radius, c);
       continue;

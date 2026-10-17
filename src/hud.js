@@ -11,6 +11,7 @@ export class Hud {
     // everything sits in `inner`, which shrinks to fit half the screen in 2-player mode
     this.el.innerHTML = `<div class="inner">
       <div class="zombies-left pill"></div>
+      <div class="boss hidden"><b>👑 Zombie King</b><div class="boss-bar"><i></i></div></div>
       <div class="top-left">
         <div class="hearts"></div>
         <div class="stats">
@@ -74,7 +75,8 @@ export class Hud {
     el.classList.add('bump');
   }
 
-  update(dt, zombiesLeft) {
+  // `boss` is the Zombie King while he's about, so his health shows at the top.
+  update(dt, zombiesLeft, gateOpen, boss) {
     const p = this.player;
     if (this.toastTimer > 0) {
       this.toastTimer -= dt;
@@ -82,7 +84,11 @@ export class Hud {
     }
     if (p.tagged) this.q('.tagged-count').textContent = Math.max(1, Math.ceil(p.tagged));
 
-    const left = zombiesLeft === 1 ? '1 zombie left' : `${zombiesLeft} zombies left`;
+    let left = zombiesLeft === 1 ? '1 zombie left' : `${zombiesLeft} zombies left`;
+    if (gateOpen) left = '✨ Go to the exit gate!';
+    this.q('.zombies-left').classList.toggle('gate', gateOpen);
+    this.q('.boss').classList.toggle('hidden', !boss);
+    if (boss) this.q('.boss-bar i').style.width = `${Math.max(0, boss.health / boss.maxHealth) * 100}%`;
     if (this.q('.zombies-left').textContent !== left) this.q('.zombies-left').textContent = left;
     this.q('.stat-speed').textContent = p.speedLevel;
     this.q('.stat-strength').textContent = p.strengthLevel;
@@ -94,6 +100,7 @@ export class Hud {
       el.classList.add('bump');
       p.statUp = null;
     }
+    if (this.q('.who').textContent !== p.name) this.q('.who').textContent = p.name;
     const bux = this.q('.bux-count');
     if (bux.textContent !== String(p.tagBux)) bux.textContent = p.tagBux;
 

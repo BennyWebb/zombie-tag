@@ -137,6 +137,44 @@ export class Player {
     return 1 + CONFIG.player.strengthPerLevel * (this.strengthLevel - 1);
   }
 
+  // Everything worth keeping between days: looks, Tag Bux, weapons, armour, outfits and training.
+  toSave() {
+    return {
+      look: this.look,
+      created: this.created,
+      tagBux: this.tagBux,
+      weapons: this.weapons.map((w) => ({ id: w.id, hitsLeft: w.hitsLeft })),
+      holding: this.weapon ? this.weapon.id : null,
+      armour: this.armour,
+      outfits: this.outfits,
+      wearing: this.wearing,
+      speedLevel: this.speedLevel,
+      strengthLevel: this.strengthLevel,
+      bests: this.bests,
+    };
+  }
+
+  fromSave(d) {
+    this.look = { ...this.look, ...d.look };
+    this.created = d.created;
+    this.tagBux = d.tagBux;
+    // only things that still exist in config.js, in case the numbers have changed
+    this.weapons = d.weapons.filter((w) => CONFIG.weapons[w.id]).map((w) => {
+      const weapon = { id: w.id, ...CONFIG.weapons[w.id] };
+      if (weapon.maxHits) weapon.hitsLeft = w.hitsLeft ?? weapon.maxHits;
+      return weapon;
+    });
+    this.hold(this.weapons.some((w) => w.id === d.holding) ? d.holding : null);
+    this.armour = d.armour.filter((id) => CONFIG.armour[id]);
+    this.outfits = d.outfits.filter((id) => CONFIG.outfits[id]);
+    this.wearing = d.wearing.filter((id) => this.outfits.includes(id));
+    this.speedLevel = d.speedLevel;
+    this.strengthLevel = d.strengthLevel;
+    this.bests = d.bests || {};
+    this.refillShields();
+    this.rebuildBody();
+  }
+
   get name() {
     return this.look.name;
   }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 import { resolveCollisions } from './world.js';
 
 const SKINS = [0x8fdc5a, 0x6fd0b0, 0x7fb8ff, 0xa6e05a];
@@ -34,10 +35,92 @@ const glowIce = new THREE.Color(0x3a78b0);
 const glowSlime = new THREE.Color(0x2f7a10);
 const glowNone = new THREE.Color(0x000000);
 
-function makeShufflerMesh() {
-  const skin = new THREE.MeshLambertMaterial({ color: pick(SKINS) });
-  const shirt = new THREE.MeshLambertMaterial({ color: pick(SHIRTS) });
-  const trousers = new THREE.MeshLambertMaterial({ color: 0x5a4a8a });
+// Each kind of zombie has its own colours and silly extras.
+const LOOKS = {
+  speedySid: { skins: [0x6fd0e0, 0x7fb8ff], shirts: [0xffffff], trousers: 0x1e6fd6 },
+  bouncyBob: { skins: [0xc8e05a, 0xa6e05a], shirts: [0xff8a3d], trousers: 0x8a5a2a },
+  bigBertha: { skins: [0x9fdc8a, 0x8fdc5a], shirts: [0xff6fae, 0xff9ed2], trousers: 0xff6fae },
+  slimeZombie: { skins: [0x7dff4f], shirts: [0x4fdf3f], trousers: 0x3fbf1f, slime: true },
+  zombieKing: { skins: [0x8fdc5a], shirts: [0x8e5bd6], trousers: 0x5a2a8a },
+};
+
+function addExtras(kind, body, mats) {
+  const m = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const extras = {};
+  if (kind === 'speedySid') {
+    // a sweatband, and a tongue that hangs out when he pants
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.06, 6, 20), m(0xe53935));
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 1.95;
+    const tongue = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.12, 4, 8), m(0xff6fae));
+    tongue.position.set(0.02, 1.48, 0.42);
+    tongue.visible = false;
+    body.add(band, tongue);
+    extras.tongue = tongue;
+  } else if (kind === 'bouncyBob') {
+    // big bouncy feet and long ears
+    for (const x of [-0.2, 0.2]) {
+      const foot = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.35, 4, 8), m(0x8a5a2a));
+      foot.rotation.x = Math.PI / 2;
+      foot.position.set(x, 0.08, 0.2);
+      const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.35, 4, 8), mats.skin);
+      ear.position.set(x * 1.3, 2.25, -0.05);
+      ear.rotation.z = -x;
+      body.add(foot, ear);
+    }
+  } else if (kind === 'bigBertha') {
+    // curlers in her hair and a handbag
+    const colours = [0xffd23f, 0x4fc3f7, 0xff8a3d, 0xb28dff];
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.2, 8), m(colours[i % 4]));
+      c.rotation.z = Math.PI / 2;
+      c.position.set(Math.cos(a) * 0.3, 2.08, Math.sin(a) * 0.3);
+      c.rotation.y = -a;
+      body.add(c);
+    }
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.12), m(0x8e5bd6));
+    bag.position.set(0.55, 0.85, 0.5);
+    body.add(bag);
+  } else if (kind === 'slimeZombie') {
+    // goo drips
+    for (let i = 0; i < 6; i++) {
+      const drip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mats.skin);
+      const a = i * 1.1;
+      drip.position.set(Math.cos(a) * 0.4, 1.2 + (i % 3) * 0.25, Math.sin(a) * 0.4);
+      drip.scale.y = 1.6;
+      body.add(drip);
+    }
+  } else if (kind === 'zombieKing') {
+    // a wonky golden crown and a long red cape
+    const gold = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x664400 });
+    const crown = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 16, 1, true), gold);
+    crown.add(ring);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 6), gold);
+      spike.position.set(Math.cos(a) * 0.29, 0.16, Math.sin(a) * 0.29);
+      crown.add(spike);
+    }
+    crown.position.set(0.1, 2.2, 0);
+    crown.rotation.z = -0.35; // wonky!
+    const cape = new THREE.Mesh(
+      new THREE.BoxGeometry(1.0, 1.5, 0.05),
+      new THREE.MeshLambertMaterial({ color: 0xe53935, side: THREE.DoubleSide }),
+    );
+    cape.position.set(0, 0.95, -0.45);
+    body.add(crown, cape);
+  }
+  return extras;
+}
+
+function makeZombieMesh(kind) {
+  const look = LOOKS[kind] || { skins: SKINS, shirts: SHIRTS, trousers: 0x5a4a8a };
+  const goo = look.slime ? { transparent: true, opacity: 0.8 } : {};
+  const skin = new THREE.MeshLambertMaterial({ color: pick(look.skins), ...goo });
+  const shirt = new THREE.MeshLambertMaterial({ color: pick(look.shirts), ...goo });
+  const trousers = new THREE.MeshLambertMaterial({ color: look.trousers, ...goo });
 
   const root = new THREE.Group(); // turns to face where it walks
   const body = new THREE.Group(); // wobbles and squashes
@@ -80,6 +163,8 @@ function makeShufflerMesh() {
     body.add(leg);
     legs.push(leg);
   }
+
+  const extras = addExtras(kind, body, { skin });
 
   root.traverse((o) => {
     if (o.isMesh) o.castShadow = true;
@@ -125,13 +210,15 @@ function makeShufflerMesh() {
   root.add(bubble, ice);
 
   return {
-    root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, stars, bubble, ice,
+    root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, stars, bubble, ice, extras,
     flashMats: [skin, shirt, trousers],
   };
 }
 
 export class Zombie {
-  constructor(type, healthMultiplier, x, z) {
+  constructor(kind, healthMultiplier, x, z) {
+    this.kind = kind;
+    const type = CONFIG.zombies[kind];
     this.type = type;
     this.maxHealth = type.health * healthMultiplier;
     this.health = this.maxHealth;
@@ -153,12 +240,17 @@ export class Zombie {
     this.bubbleTime = 0;
     this.frozenTime = 0;
     this.lift = 0; // how high its bubble has floated
-    Object.assign(this, makeShufflerMesh());
+    this.sprint = type.sprintTime || 0; // Speedy Sid: time left in this sprint (or panting, when below 0)
+    this.hop = Math.random() * Math.PI; // Bouncy Bob: where he is in his hop
+    this.helpTimer = type.callHelpEvery || 0; // Zombie King: time until he calls for help
+    this.callingHelp = false;
+    Object.assign(this, makeZombieMesh(kind));
+    this.root.scale.setScalar(type.size);
     this.root.position.copy(this.pos);
   }
 
   get centre() {
-    return new THREE.Vector3(this.pos.x, 1.2, this.pos.z);
+    return new THREE.Vector3(this.pos.x, 1.2 * this.type.size + this.lift, this.pos.z);
   }
 
   hit(damage) {
@@ -223,7 +315,19 @@ export class Zombie {
     } else if (player && dist < this.type.noticeDistance) {
       // chase, and stop once touching the hero (the touch costs them a heart)
       const touching = this.radius + player.radius + 0.15;
-      if (dist > touching) {
+      if (this.type.sprintTime) {
+        // Speedy Sid sprints, then stops to pant
+        this.sprint -= dt;
+        if (this.sprint < -this.type.pantTime) this.sprint = this.type.sprintTime;
+      }
+      if (this.type.callHelpEvery) {
+        this.helpTimer -= dt;
+        if (this.helpTimer <= 0) {
+          this.helpTimer = this.type.callHelpEvery;
+          this.callingHelp = true; // main.js brings in the helpers
+        }
+      }
+      if (dist > touching && this.sprint >= 0) {
         dir = toPlayer.normalize();
         speed = this.type.chaseSpeed;
       } else {
@@ -275,7 +379,13 @@ export class Zombie {
         this.pos.z += (dz / d) * (min - d) * 0.5;
       }
     }
-    resolveCollisions(this.pos, this.radius, world);
+    // Bouncy Bob only moves while he's in the air, and hops over small things
+    let hopUp = 0;
+    if (this.type.hopHeight) {
+      this.hop += dt * this.type.hopsPerSecond * Math.PI * (speed > 0 ? 1 : 0.5);
+      hopUp = Math.abs(Math.sin(this.hop)) * this.type.hopHeight;
+    }
+    resolveCollisions(this.pos, this.radius, world, !!this.type.jumpsSmallThings && hopUp > 0.3);
 
     // ---- silly animation ----
     this.stars.visible = this.dizzy > 0;
@@ -286,7 +396,8 @@ export class Zombie {
     this.lift += ((this.bubbleTime > 0 ? 1.3 : 0) - this.lift) * Math.min(1, dt * (this.bubbleTime > 0 ? 2 : 8));
     if (this.bubbleTime > 0) this.bubble.scale.setScalar(1 + Math.sin(this.time * 4) * 0.04);
     this.root.position.copy(this.pos);
-    this.root.position.y = this.lift;
+    this.root.position.y = this.lift + hopUp;
+    if (this.extras.tongue) this.extras.tongue.visible = this.sprint < 0;
     this.root.rotation.y = this.yaw;
     if (this.frozenTime > 0) {
       // frozen solid: no wobbling at all

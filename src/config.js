@@ -217,6 +217,7 @@ export const CONFIG = {
     enterDistance: 1.4, // how close to the door you walk to go in
   },
 
+  // Every zombie has the same touch rules: after tagging you it bounces back and goes dizzy.
   zombies: {
     shuffler: {
       name: 'Shuffler',
@@ -225,24 +226,146 @@ export const CONFIG = {
       chaseSpeed: 3.0, // you walk at 4.0 forwards and 2.8 backwards
       noticeDistance: 15,
       radius: 0.55,
+      size: 1, // how big it is drawn
       tagBux: 5,
       touchHearts: 1, // hearts lost when it touches you
       bounceBack: 8, // it gets bumped back after tagging you
       dizzyTime: 2.5, // then it stands still, seeing stars, so you can get away
     },
+    speedySid: {
+      name: 'Speedy Sid',
+      health: 2,
+      wanderSpeed: 1.4,
+      chaseSpeed: 6.0, // faster than you, but only in short bursts
+      sprintTime: 1.4, // seconds of sprinting...
+      pantTime: 1.6, // ...then he stops to pant
+      noticeDistance: 16,
+      radius: 0.5,
+      size: 0.95,
+      tagBux: 10,
+      touchHearts: 1,
+      bounceBack: 8,
+      dizzyTime: 2.5,
+    },
+    bouncyBob: {
+      name: 'Bouncy Bob',
+      health: 3,
+      wanderSpeed: 1.2,
+      chaseSpeed: 3.3,
+      hopHeight: 0.9, // he hops like a kangaroo...
+      hopsPerSecond: 1.6,
+      jumpsSmallThings: true, // ...right over fences, bushes and benches
+      noticeDistance: 16,
+      radius: 0.55,
+      size: 1,
+      tagBux: 15,
+      touchHearts: 1,
+      bounceBack: 8,
+      dizzyTime: 2.5,
+    },
+    bigBertha: {
+      name: 'Big Bertha',
+      health: 8,
+      wanderSpeed: 0.6,
+      chaseSpeed: 2.0,
+      noticeDistance: 14,
+      radius: 1.0,
+      size: 1.8,
+      tagBux: 25,
+      touchHearts: 2, // she's so big she takes 2 hearts
+      bounceBack: 5,
+      dizzyTime: 2.5,
+    },
+    slimeZombie: {
+      name: 'Slime Zombie',
+      health: 4,
+      wanderSpeed: 1.0,
+      chaseSpeed: 3.2,
+      splitsInto: 'smallShuffler', // two of these pop out when it's popped
+      noticeDistance: 15,
+      radius: 0.6,
+      size: 1.05,
+      tagBux: 20,
+      touchHearts: 1,
+      bounceBack: 8,
+      dizzyTime: 2.5,
+    },
+    smallShuffler: {
+      name: 'Little Shuffler',
+      health: 1,
+      wanderSpeed: 1.0,
+      chaseSpeed: 3.0,
+      noticeDistance: 15,
+      radius: 0.4,
+      size: 0.65,
+      tagBux: 3,
+      touchHearts: 1,
+      bounceBack: 8,
+      dizzyTime: 2.5,
+    },
+    zombieKing: {
+      name: 'Zombie King',
+      health: 60,
+      wanderSpeed: 0.8,
+      chaseSpeed: 2.2,
+      noticeDistance: 30,
+      radius: 1.2,
+      size: 2.2,
+      tagBux: 300,
+      touchHearts: 2,
+      bounceBack: 4,
+      dizzyTime: 2.5,
+      boss: true,
+      callHelpEvery: 10, // seconds between calling in Shufflers to help
+      helpers: 2, // how many come each time
+      maxHelpers: 6, // never more than this many helpers at once
+    },
   },
 
+  // A level: its place and theme (see themes.js), how many zombies and how tough.
+  // mix: how often each kind of zombie turns up (bigger number = more of them).
   levels: [
+    { name: 'Sunny Park', icon: '🌳', theme: 'park', zombies: 8, healthMultiplier: 1.0, mix: { shuffler: 1 } },
+    { name: 'School and Playground', icon: '🏫', theme: 'school', zombies: 10, healthMultiplier: 1.2, mix: { shuffler: 1 } },
     {
-      name: 'Sunny Park',
-      size: 80, // the park is size x size
-      zombies: 8,
-      healthMultiplier: 1.0,
-      waveSize: 3, // zombies arrive a few at a time
-      nextWaveWhenLeft: 1, // send the next wave when this many are still standing
-      zombieTypes: ['shuffler'],
+      name: 'Supermarket Car Park', icon: '🛒', theme: 'carPark', zombies: 12, healthMultiplier: 1.4,
+      mix: { shuffler: 3, speedySid: 2 },
+    },
+    { name: 'Beach and Pier', icon: '🏖️', theme: 'beach', zombies: 14, healthMultiplier: 1.7, mix: { shuffler: 3, speedySid: 2 } },
+    {
+      name: 'Funfair', icon: '🎡', theme: 'funfair', zombies: 16, healthMultiplier: 2.0,
+      mix: { shuffler: 3, speedySid: 2, bouncyBob: 2 },
+    },
+    {
+      name: 'Snowy Village', icon: '⛄', theme: 'snow', zombies: 18, healthMultiplier: 2.4,
+      mix: { shuffler: 3, speedySid: 2, bouncyBob: 2, bigBertha: 1 },
+    },
+    {
+      name: 'Toy Factory', icon: '🧸', theme: 'toys', zombies: 20, healthMultiplier: 2.8,
+      mix: { shuffler: 3, speedySid: 2, bouncyBob: 2, bigBertha: 1 },
+    },
+    {
+      name: 'Haunted Forest', icon: '🍄', theme: 'forest', zombies: 22, healthMultiplier: 3.3,
+      mix: { shuffler: 2, speedySid: 2, bouncyBob: 2, bigBertha: 1, slimeZombie: 2 },
+    },
+    {
+      name: 'Graveyard at Night', icon: '🎃', theme: 'graveyard', zombies: 25, healthMultiplier: 3.8,
+      mix: { shuffler: 2, speedySid: 2, bouncyBob: 2, bigBertha: 1, slimeZombie: 2 },
+    },
+    {
+      name: 'Zombie King\'s Castle', icon: '🏰', theme: 'castle', zombies: 30, healthMultiplier: 4.5,
+      mix: { shuffler: 2, speedySid: 2, bouncyBob: 2, bigBertha: 1, slimeZombie: 2 },
+      boss: 'zombieKing', bossAfter: 20, // the King arrives once this many zombies are popped
     },
   ],
+
+  // The same for every level.
+  arena: {
+    size: 80, // each level is size x size
+    waveSize: 4, // zombies arrive a few at a time
+    nextWaveWhenLeft: 1, // send the next wave when this many are still standing
+    spawnAway: 22, // zombies never appear closer than this to a hero
+  },
 
   // How each hero starts out, before the character creator.
   heroes: [
