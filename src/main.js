@@ -8,6 +8,7 @@ import { Effects } from './effects.js';
 import { Coins } from './coins.js';
 import { Squirts } from './weapons.js';
 import { ShopMenu } from './shop.js';
+import { GymMenu } from './gym.js';
 
 const level = CONFIG.levels[0];
 
@@ -23,7 +24,10 @@ const effects = new Effects(scene);
 const coins = new Coins(scene);
 const squirts = new Squirts(scene);
 const player = new Player(CONFIG.keys.p1, scene);
-const shop = new ShopMenu(document.getElementById('hud'), player);
+const shop = new ShopMenu(document.getElementById('hud'), player, world.shop);
+const gym = new GymMenu(document.getElementById('hud'), player, world.gym);
+// walk through a door to go in
+const buildings = [{ door: world.shop.door, menu: shop }, { door: world.gym.door, menu: gym }];
 
 const $ = (id) => document.getElementById(id);
 const screens = { title: $('title'), paused: $('paused'), won: $('won') };
@@ -40,7 +44,7 @@ function show(name) {
   state = name;
   for (const [key, el] of Object.entries(screens)) el.classList.toggle('hidden', key !== name);
   $('hud').classList.toggle('hidden', name === 'title');
-  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inShop && !player.tagged;
+  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inside && !player.tagged;
   if (name !== 'playing') {
     toastTimer = 0;
     $('toast').classList.remove('show');
@@ -61,13 +65,13 @@ function startLevel() {
   wonTimer = 0;
   coins.clear();
   squirts.clear();
-  if (player.inShop) shop.close(world);
+  if (player.inside) player.menu.close();
   // Tag Bux and weapons are kept when you play again
   player.respawn(world.playerStart);
   $('tagged').classList.add('hidden');
   if (!player.weapon) player.giveStick();
   show('playing');
-  toast('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop');
+  toast('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop<br>Get strong at the 💪 gym', 3.5);
 }
 
 function spawnWave() {
@@ -93,6 +97,14 @@ function updateHud() {
   $('zombies-left').textContent = left === 1 ? '1 zombie left' : `${left} zombies left`;
   $('stat-speed').textContent = player.speedLevel;
   $('stat-strength').textContent = player.strengthLevel;
+  if (player.statUp && !player.inside) {
+    // the badge for the stat you just trained does a little jump
+    const el = $(`stat-${player.statUp}`).parentElement;
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+    player.statUp = null;
+  }
   if ($('bux-count').textContent !== String(player.tagBux)) $('bux-count').textContent = player.tagBux;
   if (player.hearts !== heartsShown) {
     // the heart you just lost (or got back) does a little jump
@@ -105,9 +117,9 @@ function updateHud() {
     $('hearts').innerHTML = html;
     heartsShown = player.hearts;
   }
-  $('hearts').classList.toggle('blink', player.safe > 0 && !player.tagged && !player.inShop);
+  $('hearts').classList.toggle('blink', player.safe > 0 && !player.tagged && !player.inside);
   const w = player.weapon;
-  $('weapon').classList.toggle('hidden', player.inShop || player.tagged > 0);
+  $('weapon').classList.toggle('hidden', player.inside || player.tagged > 0);
   $('weapon').classList.toggle('empty', !w);
   let text = 'No weapon! Get a free Spiky Stick at the 🛍️ shop';
   if (w) text = `${w.icon} ${w.name}`;
@@ -182,9 +194,9 @@ function update(dt) {
       $('tagged').classList.add('hidden');
       toast('Back at the start with 3 hearts! ❤️❤️❤️', 2);
     }
-  } else if (player.inShop) {
-    if (shop.update(dt)) {
-      shop.close(world);
+  } else if (player.inside) {
+    if (player.menu.update(dt)) {
+      player.menu.close();
       toast('See you soon! 👋', 1.5);
     }
   } else {
@@ -195,12 +207,13 @@ function update(dt) {
         ? `Your stick broke! 🪵💥<br>Now holding the ${player.weapon.name}`
         : 'Your stick broke! 🪵💥<br>Get a free one at the 🛍️ shop');
     }
-    // walk through the shop door to go in
-    const door = world.shop.door;
-    if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) < player.radius + CONFIG.shop.enterDistance) {
-      shop.open();
-      toastTimer = 0;
-      $('toast').classList.remove('show');
+    for (const { door, menu } of buildings) {
+      if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) < player.radius + CONFIG.shop.enterDistance) {
+        player.menu = menu;
+        menu.open();
+        toastTimer = 0;
+        $('toast').classList.remove('show');
+      }
     }
   }
   for (const hit of squirts.update(dt, zombies)) {
@@ -234,8 +247,11 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   update(dt);
   if (state !== 'paused') effects.update(dt);
-  shop.el.classList.toggle('hidden', !player.inShop || state !== 'playing');
-  world.shop.bag.rotation.y += dt * 1.2;
+  for (const { menu } of buildings) {
+    menu.el.classList.toggle('hidden', !player.inside || player.menu !== menu || state !== 'playing');
+  }
+  world.shop.sign.rotation.y += dt * 1.2;
+  world.gym.sign.rotation.y += dt * 1.2;
 
   if (toastTimer > 0) {
     toastTimer -= dt;
@@ -267,7 +283,7 @@ frame();
 
 // handy for testing from the browser console
 window.game = {
-  player, world, shop, coins,
+  player, world, shop, gym, coins,
   get zombies() { return zombies; },
   get state() { return state; },
 };

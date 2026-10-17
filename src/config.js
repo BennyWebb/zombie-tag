@@ -71,6 +71,27 @@ export const CONFIG = {
     },
   },
 
+  // Training is free. Filling the bar raises a stat by 1, up to maxLevel.
+  gym: {
+    maxLevel: 10,
+    treadmill: {
+      time: 15, // seconds to fill the bar
+      presses: 20, // good presses (left, right, left...) needed to go from Speed 1 to 2
+      morePressesPerLevel: 4, // each level after that needs this many more
+      drainAfter: 0.4, // stop pressing for this long and the bar starts to drain
+      drainPerSecond: 0.15, // how much of the bar drains each second
+    },
+    weights: {
+      time: 10,
+      // rise: how much each tap lifts the bar (1 is the top); sink: how fast it falls each second
+      dumbbells: {
+        small: { name: 'Small', icon: '🔵', rise: 0.085, sink: 0.08, maxLevel: 4 },
+        medium: { name: 'Medium', icon: '🟠', rise: 0.075, sink: 0.16, maxLevel: 7 },
+        heavy: { name: 'Heavy', icon: '🔴', rise: 0.065, sink: 0.25, maxLevel: 10 },
+      },
+    },
+  },
+
   tagBux: {
     coinValue: 1, // each coin is worth this; a zombie drops its tagBux as separate coins
     pickupDistance: 0.7, // walk this close to grab a coin

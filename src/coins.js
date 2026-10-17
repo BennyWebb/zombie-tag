@@ -79,7 +79,7 @@ export class Coins {
       let nearest = null;
       let nearestDist = Infinity;
       for (const p of players) {
-        if (p.inShop || p.tagged) continue;
+        if (p.inside || p.tagged) continue;
         const d = Math.hypot(p.pos.x - c.pos.x, p.pos.z - c.pos.z);
         if (d < nearestDist) {
           nearest = p;

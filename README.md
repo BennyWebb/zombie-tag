@@ -1,7 +1,7 @@
 # Zombie Tag
 
 A silly, cartoony 3D first-person game invented by Chloe and Naomi.
-Bonk goofy zombies, pop them into confetti and Tag Bux, and spend your Tag Bux at the shop!
+Bonk goofy zombies, pop them into confetti and Tag Bux, spend your Tag Bux at the shop and get strong at the gym!
 
 The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small steps, play-testing after each one.
 
@@ -10,7 +10,7 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **1. Walk and bonk:** walk around Sunny Park and pop Shufflers into confetti.
 - [x] **2. Tag Bux and the shop:** collect coins from popped zombies and buy the Foam Noodle Bat and Water Blaster.
 - [x] **3. Hearts:** zombie touches cost hearts, Heart Medicine in the shop, and getting tagged sends you back to the start.
-- [ ] 4. The gym
+- [x] **4. The gym:** treadmill and weights mini-games that raise Speed and Strength.
 - [ ] 5. All the weapons and armour
 - [ ] 6. Two players
 - [ ] 7. Character creator and outfits
@@ -24,7 +24,9 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 | Walk forward / back | W / S |
 | Turn left / right | A / D |
 | Bonk! (hold it down to keep squirting the Water Blaster) | Space |
-| Shop: choose / buy | W / S, then Space |
+| Shop and gym: choose / go | W / S, then Space |
+| Treadmill | A, D, A, D… as fast as you can |
+| Weights | tap Space as fast as you can |
 | Pause | Esc |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
@@ -54,6 +56,25 @@ A new weapon goes straight into your hand. You keep every weapon you buy and can
 which one you hold in the shop. Choose **Leave** to go back outside.
 When you play again, you keep your Tag Bux and weapons, so after two clears you can afford the Water Blaster.
 
+## The gym
+
+Look for the **glowing blue dumbbell** above the trees and walk in through the door. Training is free.
+
+- **🏃 Treadmill (Speed):** press A, D, A, D… as fast as you can. Pressing the same key twice doesn't
+  count. Fill the bar in 15 seconds for +1 Speed. Each level needs a few more presses.
+  Every Speed level makes you 10% faster.
+- **🏋️ Weights (Strength):** pick a dumbbell, then tap Space as fast as you can to lift it to the top
+  in 10 seconds. It sinks if you stop! Every Strength level makes all your weapons hit 20% harder.
+
+| Dumbbell | Sinks | Gets your Strength up to |
+| --- | --- | --- |
+| 🔵 Small | slowly | 4 |
+| 🟠 Medium | quicker | 7 |
+| 🔴 Heavy | very quickly | 10 |
+
+If you don't make it, nothing is lost: just try again. Beat your fastest time for a **PERSONAL BEST!**
+Speed and Strength go up to 10, and you keep them when you play again or get tagged.
+
 ## Running it on a Windows PC
 
 You only need to do this once: install **Node.js** (the "LTS" version) from <https://nodejs.org>.
@@ -74,5 +95,5 @@ close it when you've finished.
 
 ## Changing the numbers
 
-Speeds, damage, prices, hearts, zombie health and level settings are all in [`src/config.js`](src/config.js).
+Speeds, damage, prices, hearts, gym difficulty, zombie health and level settings are all in [`src/config.js`](src/config.js).
 Edit a number, save, and the game reloads by itself.

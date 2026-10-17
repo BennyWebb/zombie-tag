@@ -139,22 +139,48 @@ function makeBagSign() {
   return bag;
 }
 
-// The shop: a safe building where you spend Tag Bux. The door is on the +z side.
-function makeShop() {
+// A big glowing dumbbell for the gym's sign.
+function makeDumbbellSign() {
+  const bell = new THREE.Group();
+  const bar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.22, 3.2, 12),
+    new THREE.MeshBasicMaterial({ color: 0xdddddd, fog: false }),
+  );
+  bar.rotation.z = Math.PI / 2;
+  bell.add(bar);
+  const plateMat = new THREE.MeshBasicMaterial({ color: 0x4fc3f7, fog: false });
+  const capMat = new THREE.MeshBasicMaterial({ color: 0xffe066, fog: false });
+  for (const side of [-1, 1]) {
+    for (const [x, r] of [[1.1, 1.0], [1.5, 0.8]]) {
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.35, 24), plateMat);
+      plate.rotation.z = Math.PI / 2;
+      plate.position.x = side * x;
+      bell.add(plate);
+    }
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 12), capMat);
+    cap.rotation.z = Math.PI / 2;
+    cap.position.x = side * 1.75;
+    bell.add(cap);
+  }
+  return bell;
+}
+
+// A safe building that zombies can't get into (the shop or the gym). The door is on the +z side.
+function makeBuilding(look) {
   const g = new THREE.Group();
   const w = 8;
   const d = 6;
   const h = 4.8;
-  const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(0xffa8cc));
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(look.walls));
   walls.position.y = h / 2;
   g.add(walls);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.4, d + 0.6), mat(0x8e5bd6));
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.4, d + 0.6), mat(look.trim));
   roof.position.y = h + 0.2;
   g.add(roof);
 
   const front = d / 2;
   // doorway with a glowing inside, so it's obvious where to walk in
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.0, 0.2), mat(0x8e5bd6));
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.0, 0.2), mat(look.trim));
   frame.position.set(0, 1.5, front + 0.05);
   const doorway = new THREE.Mesh(
     new THREE.PlaneGeometry(1.6, 2.7),
@@ -178,32 +204,32 @@ function makeShop() {
   for (let i = 0; i < 8; i++) {
     const stripe = new THREE.Mesh(
       new THREE.BoxGeometry(w / 8, 0.12, 1.3),
-      mat(i % 2 ? 0xffffff : 0xff4f8b, { emissive: i % 2 ? 0x555555 : 0x661a38 }),
+      mat(i % 2 ? 0xffffff : look.stripe, { emissive: i % 2 ? 0x555555 : look.stripeGlow }),
     );
     stripe.position.set(-w / 2 + w / 16 + (i * w) / 8, 3.25, front + 0.6);
     stripe.rotation.x = 0.25;
     g.add(stripe);
   }
 
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.85), textMaterial('SHOP', 512, 100, '#ffe066', '#ff4f8b'));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.85), textMaterial(look.text, 512, 100, '#ffe066', look.textColour));
   sign.position.set(0, 4.2, front + 0.02);
   g.add(sign);
 
-  // tall pole with the glowing bag on top, high above the trees
+  // tall pole with the glowing sign on top, high above the trees
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 7, 8), mat(0xffffff));
   pole.position.y = h + 3.5;
   g.add(pole);
-  const bag = makeBagSign();
-  bag.scale.setScalar(1.6);
-  bag.position.y = h + 9.2;
-  g.add(bag);
-  const glow = new THREE.PointLight(0xff4f8b, 25, 16);
+  const topper = look.makeSign();
+  topper.scale.setScalar(1.6);
+  topper.position.y = h + 9.2;
+  g.add(topper);
+  const glow = new THREE.PointLight(look.glow, 25, 16);
   glow.position.y = h + 9.2;
   g.add(glow);
 
   shadows(g);
-  bag.traverse((o) => { o.castShadow = false; });
-  return { group: g, bag, halfW: w / 2, halfD: d / 2 };
+  topper.traverse((o) => { o.castShadow = false; });
+  return { group: g, sign: topper, halfW: w / 2, halfD: d / 2 };
 }
 
 export function buildWorld(scene, level) {
@@ -277,20 +303,29 @@ export function buildWorld(scene, level) {
     scene.add(shadows(h));
   }
 
-  // the shop, in sight of the start (its sign is up and to the left when you begin)
-  const shopMesh = makeShop();
-  const shopX = -25;
-  const shopZ = 11;
-  shopMesh.group.position.set(shopX, 0, shopZ);
-  scene.add(shopMesh.group);
-  colliders.push({ x: shopX, z: shopZ, hw: shopMesh.halfW, hd: shopMesh.halfD });
-  const door = { x: shopX, z: shopZ + shopMesh.halfD };
-  const shop = {
-    door,
-    // where you stand when you walk back out, facing away from the shop
-    outside: { x: door.x, z: door.z + 2.4, yaw: Math.PI },
-    bag: shopMesh.bag,
+  // the shop and the gym, both in sight of the start, far from each other
+  const placeBuilding = (look, x, z) => {
+    const b = makeBuilding(look);
+    b.group.position.set(x, 0, z);
+    scene.add(b.group);
+    colliders.push({ x, z, hw: b.halfW, hd: b.halfD });
+    const door = { x, z: z + b.halfD };
+    return {
+      door,
+      // where you stand when you walk back out, facing away from the building
+      outside: { x: door.x, z: door.z + 2.4, yaw: Math.PI },
+      sign: b.sign,
+    };
   };
+  const shop = placeBuilding({
+    walls: 0xffa8cc, trim: 0x8e5bd6, stripe: 0xff4f8b, stripeGlow: 0x661a38,
+    text: 'SHOP', textColour: '#ff4f8b', glow: 0xff4f8b, makeSign: makeBagSign,
+  }, -25, 11);
+  const gym = placeBuilding({
+    walls: 0xa8e6ff, trim: 0x1e6fd6, stripe: 0x4fc3f7, stripeGlow: 0x14506e,
+    text: 'GYM', textColour: '#1e6fd6', glow: 0x4fc3f7, makeSign: makeDumbbellSign,
+  }, 25, -12);
+  const doors = [shop.door, gym.door];
 
   // keep things off the paths, the pond and the start
   const onPath = (x, z) => {
@@ -303,7 +338,7 @@ export function buildWorld(scene, level) {
       const z = (rand() - 0.5) * (level.size - 8);
       if (onPath(x, z)) continue;
       if (Math.hypot(x - 0, z - (half - 6)) < 8) continue; // the start
-      if (Math.hypot(x - door.x, z - (door.z + 3)) < 5) continue; // in front of the shop door
+      if (doors.some((d) => Math.hypot(x - d.x, z - (d.z + 3)) < 5)) continue; // in front of a door
       if (colliders.some((c) => distanceTo(c, x, z) < minGap)) continue;
       return { x, z };
     }
@@ -357,6 +392,7 @@ export function buildWorld(scene, level) {
     bounds: half - 1.5,
     playerStart,
     shop,
+    gym,
     // spot is clear of the pond, trees, the shop and the hedge
     isClear: (x, z, r) =>
       Math.abs(x) < half - 2 && Math.abs(z) < half - 2 &&

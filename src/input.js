@@ -18,3 +18,7 @@ window.addEventListener('blur', () => down.clear());
 export const isDown = (codes) => codes.some((c) => down.has(c));
 export const wasPressed = (codes) => codes.some((c) => pressed.has(c));
 export const endFrame = () => pressed.clear();
+
+// How a key is shown on screen, e.g. KeyW → W
+const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Numpad0: '0', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+export const keyName = (code) => KEY_NAMES[code] || code.replace(/^Key/, '');

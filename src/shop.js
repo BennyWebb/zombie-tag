@@ -1,18 +1,16 @@
 import { CONFIG } from './config.js';
-import { wasPressed } from './input.js';
+import { keyName, wasPressed } from './input.js';
 
 // The shop menu one player sees while inside the shop.
 // It builds itself inside `root`, so each player can have their own later on.
-
-const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Numpad0: '0', ArrowUp: '↑', ArrowDown: '↓' };
-const keyName = (code) => KEY_NAMES[code] || code.replace(/^Key/, '');
 
 const coin = '<span class="coin">T</span>';
 const thing = (id) => CONFIG.weapons[id] || CONFIG.items[id];
 
 export class ShopMenu {
-  constructor(root, player) {
+  constructor(root, player, building) {
     this.player = player;
+    this.building = building;
     this.el = document.createElement('div');
     this.el.className = 'shop hidden';
     root.appendChild(this.el);
@@ -25,7 +23,7 @@ export class ShopMenu {
 
   open() {
     const p = this.player;
-    p.inShop = true;
+    p.inside = true;
     p.hand.visible = false;
     // start on something useful: a free stick if you need one, medicine if you're hurt,
     // else the next weapon to buy
@@ -41,12 +39,11 @@ export class ShopMenu {
     this.openTime = 0.25; // ignore the key you were holding as you walked in
   }
 
-  close(world) {
+  close() {
     const p = this.player;
-    p.inShop = false;
+    p.inside = false;
     p.hand.visible = true;
-    const out = world.shop.outside;
-    p.reset(out);
+    p.reset(this.building.outside);
     p.safe = CONFIG.player.leaveShopSafeTime; // a moment to get past zombies waiting at the door
     this.el.classList.add('hidden');
   }

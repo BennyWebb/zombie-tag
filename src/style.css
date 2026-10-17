@@ -259,3 +259,95 @@ kbd {
 }
 
 .shop-hearts { font-size: 40px; display: flex; gap: 4px; }
+
+/* ---------- The gym (uses the shop's layout, in blue) ---------- */
+.shop.gym { background: radial-gradient(circle at 50% 30%, #4fc3f7, #1e3a8a); }
+.shop.gym .row.selected { border-color: #4fc3f7; }
+.shop.gym .row.selected::before { color: #1e6fd6; }
+.shop.gym .row.selected .price { color: #1e6fd6; }
+
+.timer b { font-size: 1.1em; }
+.timer.hurry { background: #d0304a; animation: shake 0.5s infinite; }
+
+.train { display: flex; align-items: stretch; gap: 30px; height: min(340px, 45vh); width: min(760px, 100%); }
+.train .scene {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 26px;
+  background: linear-gradient(#bfeaff, #e8f7ff);
+  border: 5px solid #fff;
+}
+
+/* treadmill: the belt slides under your running hero */
+.belt {
+  position: absolute;
+  left: 8%; right: 8%; bottom: 12%;
+  height: 34px;
+  border-radius: 17px;
+  border: 5px solid #333;
+  background: repeating-linear-gradient(90deg, #555 0 24px, #777 24px 48px);
+}
+.runner { position: absolute; left: 50%; bottom: calc(12% + 30px); margin-left: -70px; width: 140px; text-align: center; }
+.runner .who { font-size: 130px; line-height: 1; display: block; }
+.sweat { position: absolute; top: -10px; right: -10px; font-size: 44px; opacity: 0; transition: opacity 0.3s; }
+
+/* weights: the dumbbell goes up as you tap */
+.lift .bell {
+  position: absolute;
+  left: 50%;
+  bottom: 42%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+.lift .bell i { display: block; width: 150px; height: 16px; background: #ccc; border: 3px solid #555; }
+.lift .bell span { display: block; width: 34px; height: 70px; border-radius: 10px; border: 4px solid #333; }
+.lift.small .bell span { height: 60px; background: #4fc3f7; }
+.lift.medium .bell span { width: 44px; height: 90px; background: #ff8a3d; }
+.lift.heavy .bell span { width: 56px; height: 120px; background: #ff4f6b; }
+.lifter { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); }
+.lifter .who { font-size: 110px; line-height: 1; display: block; }
+
+.meter {
+  position: relative;
+  width: 70px;
+  border-radius: 35px;
+  border: 5px solid #fff;
+  background: rgba(40, 20, 80, 0.6);
+  overflow: hidden;
+}
+.meter .fill {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: linear-gradient(#ffe066, #ff8a3d);
+}
+.meter .fill.nearly { background: linear-gradient(#9cff57, #ffe066); }
+
+kbd.next { background: #ffe066; transform: scale(1.25); box-shadow: 0 4px 0 #e09b00; }
+kbd.tap { animation: pop 0.2s ease-out; }
+
+.result { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.result .big { font-size: 140px; line-height: 1; }
+.result .flex { animation: flex 0.5s ease-in-out infinite alternate; }
+.result p { margin: 0; font-size: 34px; }
+.result .level { font-size: 48px; font-weight: bold; }
+.result .level b { color: #ffe066; font-size: 1.3em; }
+.result .go { margin-top: 18px; animation: bounce 1s ease-in-out infinite; }
+.result.win h2 { color: #9cff57; }
+.pb {
+  padding: 6px 26px;
+  border-radius: 999px;
+  background: #ff4f8b;
+  font-size: 40px;
+  font-weight: bold;
+  animation: pop 0.4s ease-out, blink 0.6s step-end infinite 0.4s;
+}
+@keyframes flex {
+  from { transform: rotate(-12deg) scale(1); }
+  to { transform: rotate(12deg) scale(1.2); }
+}
+
+.badge.bump { animation: bump 0.4s ease-out 3; }
+.shop-msg kbd { text-shadow: none; }

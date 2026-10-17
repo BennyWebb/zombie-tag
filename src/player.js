@@ -50,9 +50,10 @@ export class Player {
     this.tagBux = 0;
     this.weapons = []; // every weapon you own, newest last
     this.weapon = null; // the one in your hand
-    this.inShop = false;
+    this.inside = false;
     this.giveStick();
 
+    this.bests = {}; // fastest gym times, for "PERSONAL BEST!"
     this.hearts = CONFIG.player.hearts;
     this.safe = 0; // counts down while you can't be hurt
     this.tagged = 0; // counts down while you're tagged, before going back to the start
@@ -61,7 +62,7 @@ export class Player {
 
   // A zombie touch. Returns true if it cost you hearts.
   hurt(amount) {
-    if (this.safe > 0 || this.tagged > 0 || this.inShop) return false;
+    if (this.safe > 0 || this.tagged > 0 || this.inside) return false;
     this.hearts = Math.max(0, this.hearts - amount);
     this.safe = CONFIG.player.safeTime;
     this.shake = 0.3;
@@ -95,7 +96,7 @@ export class Player {
     this.swing = 0;
     this.attackQueued = false;
     this.cooldown = 0;
-    this.inShop = false;
+    this.inside = false;
     this.shake = 0;
     this.hand.rotation.set(0, 0, 0);
   }
