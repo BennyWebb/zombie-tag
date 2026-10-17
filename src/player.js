@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { isDown, wasPressed } from './input.js';
+import { isDown, padFor, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
 import { Beam, WEAPON_MODELS } from './weapons.js';
 import { clothesColour, makeHeroBody } from './hero.js';
@@ -28,6 +28,7 @@ export class Player {
     this.finished = new Set(); // levels this hero has finished
     this.trained = {}; // gym upgrades on each level: { 0: { speed: 1, strength: 1 } }
     this.out = false; // Hardcore: tagged, so out until the level ends
+    this.mouseLook = false; // Player 1's mouse controls: A/D step sideways and main turns you with the mouse
     this.outfits = []; // cool outfits you own
     this.wearing = []; // the ones you have on
     this.created = false; // true once you've been through the character creator
@@ -366,17 +367,31 @@ export class Player {
   // Returns the hits landed this frame: [{ zombie, weapon, by, push }]
   update(dt, world, zombies, shots) {
     const k = this.keys;
+    // joypad buttons are read from the sticks below, not as keys, so they don't count twice
+    const key = (codes) => isDown(codes.filter((c) => !c.startsWith('Pad')));
     let turn = 0;
-    if (isDown(k.left)) turn += 1;
-    if (isDown(k.right)) turn -= 1;
+    let walk = 0;
+    let side = 0; // stepping sideways (mouse controls and joypads)
+    if (this.mouseLook) side += (key(k.right) ? 1 : 0) - (key(k.left) ? 1 : 0);
+    else turn += (key(k.left) ? 1 : 0) - (key(k.right) ? 1 : 0);
+    if (key(k.forward)) walk += 1;
+    if (key(k.back)) walk -= 0.7;
+    const pad = padFor(this.index);
+    if (pad) {
+      walk += pad.move > 0 ? pad.move : pad.move * 0.7;
+      side += pad.strafe * 0.8;
+      this.yaw += THREE.MathUtils.clamp(pad.turn, -1, 1) * CONFIG.controls.padTurnSpeed * dt;
+    }
+    walk = THREE.MathUtils.clamp(walk, -0.7, 1);
+    side = THREE.MathUtils.clamp(side, -0.8, 0.8);
     this.yaw += turn * CONFIG.player.turnSpeed * dt;
 
-    let move = 0;
-    if (isDown(k.forward)) move += 1;
-    if (isDown(k.back)) move -= 0.7;
-    if (move !== 0) {
-      this.pos.addScaledVector(this.forward, move * this.moveSpeed * dt);
-      this.walkPhase += dt * this.moveSpeed * 2.2;
+    const move = walk !== 0 || side !== 0 ? 1 : 0; // whether you're walking at all
+    if (move) {
+      const fwd = this.forward;
+      this.pos.addScaledVector(fwd, walk * this.moveSpeed * dt);
+      this.pos.addScaledVector(new THREE.Vector3(-fwd.z, 0, fwd.x), side * this.moveSpeed * dt);
+      this.walkPhase += dt * this.moveSpeed * 2.2 * Math.max(Math.abs(walk), Math.abs(side));
     }
     resolveCollisions(this.pos, this.radius, world);
     for (const z of zombies) {
@@ -409,7 +424,8 @@ export class Player {
     const hits = [];
     const w = this.weapon;
     // a press during a swing is remembered, so mashing Space never feels ignored
-    if (wasPressed(k.attack)) this.attackQueued = true;
+    const attack = this.mouseLook ? [...k.attack, 'Mouse0'] : k.attack;
+    if (wasPressed(attack)) this.attackQueued = true;
     this.cooldown -= dt;
     this.recoil = Math.max(0, this.recoil - dt * 8);
 
@@ -420,7 +436,7 @@ export class Player {
 
     if (w && w.kind === 'beam') {
       // hold Space for a laser that hits whatever it's pointing at, again and again
-      if (isDown(k.attack) || this.attackQueued) {
+      if (isDown(attack) || this.attackQueued) {
         this.attackQueued = false;
         const target = this.findTarget(zombies);
         const end = target ? target.centre : muzzle.clone().addScaledVector(fwd, w.range);
@@ -455,7 +471,7 @@ export class Player {
 
     if (w && w.kind === 'shoot') {
       // hold Space to keep shooting
-      if ((this.attackQueued || isDown(k.attack)) && this.cooldown <= 0) {
+      if ((this.attackQueued || isDown(attack)) && this.cooldown <= 0) {
         this.attackQueued = false;
         this.cooldown = w.fireInterval;
         this.recoil = 1;

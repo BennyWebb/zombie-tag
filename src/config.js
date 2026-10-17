@@ -432,11 +432,24 @@ export const CONFIG = {
   twoPlayerZombies: 1.5, // 50% more zombies with 2 players, so you both earn enough Tag Bux
   giveTagBux: 10, // how many Tag Bux "Give" in the shop hands to your sister
 
+  // The keyboard keys come first (they're the ones shown on screen); PadN... are joypad buttons.
   keys: {
-    p1: { forward: ['KeyW'], back: ['KeyS'], left: ['KeyA'], right: ['KeyD'], attack: ['Space'] },
-    p2: {
-      forward: ['ArrowUp'], back: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
-      attack: ['Enter', 'Numpad0', 'NumpadEnter'], // Enter for laptops without a number pad
+    p1: {
+      forward: ['KeyW', 'Pad1Up'], back: ['KeyS', 'Pad1Down'], left: ['KeyA', 'Pad1Left'], right: ['KeyD', 'Pad1Right'],
+      attack: ['Space', 'Pad1A'],
     },
+    p2: {
+      forward: ['ArrowUp', 'Pad2Up'], back: ['ArrowDown', 'Pad2Down'], left: ['ArrowLeft', 'Pad2Left'],
+      right: ['ArrowRight', 'Pad2Right'],
+      attack: ['Enter', 'Numpad0', 'NumpadEnter', 'Pad2A'], // Enter for laptops without a number pad
+    },
+  },
+
+  // Joypads always work. Player 1 can also switch to mouse controls (in the pause menu or with M on
+  // the start screen): W/S walk, A/D step sideways, the mouse turns and a click attacks.
+  controls: {
+    mouseTurn: 0.0025, // how far you turn for each dot the mouse moves (radians)
+    deadzone: 0.2, // joypad sticks ignore tiny wobbles below this
+    padTurnSpeed: 2.8, // turning with the right stick pushed all the way (radians per second)
   },
 };

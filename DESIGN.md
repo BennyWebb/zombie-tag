@@ -246,7 +246,8 @@ Build it as a browser game with JavaScript and Three.js, in small steps that the
 9. **Refinement:** menus, and tuning the numbers from play-testing. From the first play-tests:
    Easy, Hard and Hardcore difficulty; a saved profile for every hero (not just Player 1 and 2);
    the gym limited to one Speed and one Strength upgrade per level; and the Zombie King arriving as
-   the final battle after every other zombie, tougher and faster on Hard and Hardcore.
+   the final battle after every other zombie, tougher and faster on Hard and Hardcore. Joypad support
+   for both players, and optional mouse controls (mouse to turn, A/D to step sideways) for Player 1.
 
 **Getting started in Claude Code**
 

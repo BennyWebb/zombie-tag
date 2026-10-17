@@ -17,7 +17,8 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **8. Levels 1 to 10:** ten places, new zombies, the Zombie King, level select and saving.
 - [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
 - [ ] **9. Refinement:** tuning from play-testing. Done so far: Easy, Hard and Hardcore, a hero for
-  everyone on "Who's playing?", the gym limited to one upgrade per place, and the Zombie King as the final battle.
+  everyone on "Who's playing?", the gym limited to one upgrade per place, the Zombie King as the final battle,
+  joypads, and mouse controls for Player 1.
 
 ## How to play
 
@@ -54,10 +55,29 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 | Shop and gym: choose / go | W / S, then Space | ↑ / ↓, then Enter |
 | Treadmill | A, D, A, D… as fast as you can | ←, →, ←, →… |
 | Weights | tap Space as fast as you can | tap Enter |
-| Pause: music and sound volume, or Q to go back to the start screen | Esc | Esc |
+| Pause: volume, Player 1's controls, or Q to go back to the start screen | Esc | Esc |
 | Level picker: choose / play | W A S D, then Space | arrows, then Enter |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
+
+**Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work in every
+screen, alongside the keyboard. Press a button once after connecting so the browser notices it.
+
+| Joypad | |
+| --- | --- |
+| Left stick | walk, and step sideways |
+| Right stick | turn |
+| D-pad | walk and turn, and choose in menus |
+| A (✕ on PlayStation) or right trigger | attack, choose, buy |
+| Start | pause |
+
+With one joypad it belongs to Player 1, except in 2-player mode, where it's Player 2's so Player 1
+keeps the keyboard. With two joypads, the first is Player 1's. Typing a new hero's name still needs the keyboard.
+
+**Mouse controls for Player 1:** press **M** on the start screen, or change "🖱️ Player 1" in the
+pause menu, to switch between **Simple keys** (A / D turn, as before) and **Mouse**: W / S walk,
+A / D step sideways, the mouse turns and a click attacks. Click the game once to grab the mouse; Esc
+lets go of it and pauses. The browser remembers your choice. Player 2 uses the arrow keys or a joypad.
 
 Popped zombies burst into spinning **Tag Bux** coins. Walk over them to collect them;
 your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns 40.

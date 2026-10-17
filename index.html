@@ -20,12 +20,7 @@
         <div class="choice selected">🧒 1 Player</div>
         <div class="choice">🧒🧒 2 Players</div>
       </div>
-      <div class="keys">
-        <div class="who-keys">Player 1</div>
-        <div><kbd>W</kbd> <kbd>S</kbd> walk</div>
-        <div><kbd>A</kbd> <kbd>D</kbd> turn</div>
-        <div><kbd>Space</kbd> bonk!</div>
-      </div>
+      <div class="keys" id="p1-keys"></div>
       <div class="keys hidden" id="p2-keys">
         <div class="who-keys">Player 2</div>
         <div><kbd>↑</kbd> <kbd>↓</kbd> walk</div>
@@ -34,6 +29,7 @@
       </div>
       <p class="go"><kbd>W</kbd> <kbd>S</kbd> to choose, <kbd>Space</kbd> to play</p>
       <p class="sub small">Press <kbd>C</kbd> to change how your hero looks</p>
+      <p class="sub small">🎮 Joypads work too &nbsp; · &nbsp; <kbd>M</kbd> Player 1 controls: <b id="controls-mode"></b></p>
     </div>
 
     <!-- each player picks her saved hero, or makes a new one -->
@@ -87,7 +83,7 @@
     <div id="paused" class="screen hidden">
       <h1>Paused</h1>
       <div id="volume"></div>
-      <p class="sub small"><kbd>W</kbd> <kbd>S</kbd> choose, <kbd>A</kbd> <kbd>D</kbd> quieter or louder</p>
+      <p class="sub small"><kbd>W</kbd> <kbd>S</kbd> choose, <kbd>A</kbd> <kbd>D</kbd> change</p>
       <p class="go">Press <kbd>Esc</kbd> to keep playing</p>
       <p class="sub">Press <kbd>Q</kbd> to go back to the start screen</p>
     </div>

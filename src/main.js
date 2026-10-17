@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { endFrame, keyName, wasPressed } from './input.js';
+import { endFrame, keyName, pollPads, takeMouseX, wasPressed } from './input.js';
 import { buildWorld } from './world.js';
 import { THEMES } from './themes.js';
 import { Zombie } from './zombie.js';
@@ -72,7 +72,16 @@ let spawned = 0;
 let popped = 0;
 let boss = null; // the Zombie King, once he arrives
 let friends = []; // the zombies at the party
-let pauseRow = 0; // which volume the pause menu is changing
+let pauseRow = 0; // which row of the pause menu is chosen: music, sounds or Player 1's controls
+const CONTROLS_KEY = 'zombie-tag-controls';
+let mouseLook = false; // Player 1 uses the mouse to turn (the browser remembers this choice)
+try {
+  mouseLook = localStorage.getItem(CONTROLS_KEY) === 'mouse';
+} catch {
+  // no saved choice: simple keyboard controls
+}
+players[0].mouseLook = mouseLook;
+let lockLostAt = -1; // when the mouse was last let go, so the same Esc doesn't pause and unpause
 let coinStreak = 0; // coins picked up one after another go up in pitch
 let lastCoin = 0;
 let lastGroan = 0;
@@ -88,6 +97,7 @@ function show(name) {
     p.hand.visible = (name === 'playing' || name === 'paused') && !p.inside && !p.tagged;
   }
   if (name !== 'playing') huds.forEach((h) => h.clearToast());
+  if (name !== 'playing' && document.pointerLockElement) document.exitPointerLock();
   if (name === 'title') drawTitle();
   if (name === 'who') drawWho();
   if (name === 'remove') drawRemove();
@@ -97,14 +107,46 @@ function show(name) {
   if (['title', 'who', 'remove', 'difficulty', 'levels', 'create', 'gameover'].includes(name)) music('title');
 }
 
-// The pause menu's music and sound volume bars.
+// The pause menu's music and sound volume bars, and Player 1's controls.
 function drawVolume() {
   const v = getVolumes();
   const bar = (n) => '▮'.repeat(n) + '<span class="off">' + '▮'.repeat(10 - n) + '</span>';
   $('volume').innerHTML = [['music', '🎵 Music'], ['sounds', '🔊 Sounds']].map(([key, label], i) => (
     `<div class="vol${i === pauseRow ? ' selected' : ''}"><span>${label}</span><b>${bar(v[key])}</b></div>`
-  )).join('');
+  )).join('') + `<div class="vol${pauseRow === 2 ? ' selected' : ''}"><span>🖱️ Player 1</span>`
+    + `<b class="mode">${mouseLook ? 'Mouse' : 'Simple keys'}</b></div>`;
 }
+
+// Simple keys: A/D turn. Mouse: A/D step sideways, the mouse turns, click to attack.
+function setMouseLook(on) {
+  mouseLook = on;
+  players[0].mouseLook = on;
+  try {
+    localStorage.setItem(CONTROLS_KEY, on ? 'mouse' : 'keys');
+  } catch {
+    // the browser won't let us remember it; it still works until the page closes
+  }
+  if (!on && document.pointerLockElement) document.exitPointerLock();
+}
+
+// Mouse controls hide the pointer while you play, so the mouse can turn you all the way round.
+function lockMouse() {
+  if (!mouseLook || state !== 'playing' || document.pointerLockElement) return;
+  try {
+    const p = renderer.domElement.requestPointerLock();
+    if (p && p.catch) p.catch(() => {}); // too soon after Esc: clicking the game tries again
+  } catch {
+    // no pointer lock here; turning still works while the pointer is over the game
+  }
+}
+renderer.domElement.addEventListener('mousedown', lockMouse);
+document.addEventListener('pointerlockchange', () => {
+  // Esc lets go of the mouse; treat that as pausing
+  if (!document.pointerLockElement && state === 'playing') {
+    lockLostAt = clock.elapsedTime;
+    show('paused');
+  }
+});
 
 const toastAll = (text, seconds) => active.forEach((p) => huds[p.index].toast(text, seconds));
 
@@ -150,6 +192,10 @@ const finishedNow = (i) => active.some((p) => p.finished.has(i));
 function drawTitle() {
   document.querySelectorAll('#title .choice').forEach((el, i) => el.classList.toggle('selected', i === titleChoice));
   $('p2-keys').classList.toggle('hidden', titleChoice === 0);
+  $('p1-keys').innerHTML = '<div class="who-keys">Player 1</div>' + (mouseLook
+    ? '<div><kbd>W</kbd> <kbd>S</kbd> walk, <kbd>A</kbd> <kbd>D</kbd> step</div><div>🖱️ mouse turns</div><div>click bonk!</div>'
+    : '<div><kbd>W</kbd> <kbd>S</kbd> walk</div><div><kbd>A</kbd> <kbd>D</kbd> turn</div><div><kbd>Space</kbd> bonk!</div>');
+  $('controls-mode').textContent = mouseLook ? 'mouse' : 'simple keys';
 }
 
 function drawLevels() {
@@ -318,6 +364,10 @@ function startLevel(i) {
   const d = difficulty();
   toastAll(`Level ${level.number}: ${level.name} ${level.icon} &nbsp; ${d.icon} ${d.name}`
     + '<br>Pop all the zombies, then find the exit gate!', 4);
+  if (mouseLook) {
+    lockMouse();
+    huds[0].toast('🖱️ Click the game to turn with the mouse', 3);
+  }
 }
 
 function addZombie(kind, x, z) {
@@ -624,18 +674,30 @@ function updateParty(dt) {
 // ---------- every frame ----------
 
 function update(dt) {
-  if (wasPressed(['Escape']) && (state === 'playing' || state === 'paused')) {
+  pollPads(state === 'title' ? titleChoice + 1 : playerCount);
+  // Player 1's mouse turns her (read every frame, so moves made in menus don't pile up)
+  const mouseX = takeMouseX();
+  const p1 = players[0];
+  if (mouseLook && state === 'playing' && active.includes(p1) && !p1.inside && !p1.tagged) {
+    p1.yaw -= mouseX * CONFIG.controls.mouseTurn;
+  }
+  const justLetGo = clock.elapsedTime - lockLostAt < 0.3; // the Esc that let go of the mouse already paused
+  if (wasPressed(['Escape']) && (state === 'playing' || state === 'paused') && !justLetGo) {
     show(state === 'playing' ? 'paused' : 'playing');
+    if (state === 'playing') lockMouse();
     return;
   }
   if (state === 'paused') {
-    // W/S (or the arrows) choose music or sounds, A/D (or the arrows) make it louder or quieter
+    // W/S (or the arrows) choose a row, A/D (or the arrows) make it louder or quieter or change controls
     const k = CONFIG.keys;
     const before = pauseRow;
-    if (wasPressed([...k.p1.forward, ...k.p2.forward])) pauseRow = 0;
-    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = 1;
+    if (wasPressed([...k.p1.forward, ...k.p2.forward])) pauseRow = Math.max(0, pauseRow - 1);
+    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = Math.min(2, pauseRow + 1);
     const change = (wasPressed([...k.p1.right, ...k.p2.right]) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left]) ? 1 : 0);
-    if (change) {
+    if (change && pauseRow === 2) {
+      setMouseLook(!mouseLook);
+      sfx('tick');
+    } else if (change) {
       const which = pauseRow === 0 ? 'music' : 'sounds';
       setVolume(which, getVolumes()[which] + change);
       sfx('tick');
@@ -649,7 +711,7 @@ function update(dt) {
     return;
   }
   const k = CONFIG.keys;
-  const go = ['Space', 'Enter', 'NumpadEnter'];
+  const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A'];
   if (state === 'title') {
     // choose 1 or 2 players with W/S or the arrows (or just press 1 or 2)
     if (wasPressed([...k.p1.forward, ...k.p2.forward, ...k.p1.left, ...k.p2.left])) titleChoice = 0;
@@ -659,6 +721,11 @@ function update(dt) {
     if (titleChoice !== Number($('title').dataset.choice || 0)) sfx('tick');
     $('title').dataset.choice = titleChoice;
     drawTitle();
+    if (wasPressed(['KeyM'])) {
+      setMouseLook(!mouseLook);
+      sfx('tick');
+      drawTitle();
+    }
     if (wasPressed([...go, 'Digit1', 'Digit2', 'Numpad1', 'Numpad2', 'KeyC'])) {
       sfx('select');
       playerCount = titleChoice + 1;
