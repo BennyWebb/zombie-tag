@@ -146,6 +146,7 @@ function zombieTouch(zombie) {
   if (!player.hurt(zombie.type.touchHearts)) return;
   const away = new THREE.Vector3(zombie.pos.x - player.pos.x, 0, zombie.pos.z - player.pos.z).normalize();
   zombie.knock(away, zombie.type.bounceBack);
+  zombie.dizzy = zombie.type.dizzyTime;
   const el = $('hurt');
   el.classList.add('show');
   void el.offsetWidth;
@@ -214,7 +215,7 @@ function update(dt) {
     if (!z.alive) continue;
     z.update(dt, player, world, zombies, player.camera);
     const d = Math.hypot(z.pos.x - player.pos.x, z.pos.z - player.pos.z);
-    if (z.spawnPop >= 1 && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
+    if (z.spawnPop >= 1 && z.dizzy <= 0 && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
   }
   zombies = zombies.filter((z) => z.alive);
 

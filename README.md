@@ -34,8 +34,9 @@ your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns
 
 You have **3 hearts** (top left). A zombie touch costs 1 heart, then you blink for 2 seconds and
 can't be hurt, so run away! Lose all 3 and you're **TAGGED**: after a 3-second countdown you're back
-at the start with 3 hearts, and you keep your Tag Bux and weapons. Zombies are faster when they
-chase, but you're a little faster still.
+at the start with 3 hearts, and you keep your Tag Bux and weapons. A zombie that tags you gets
+bumped back and goes dizzy (stars round its head) for a moment, so you can get away. Turn round and
+run: you're faster than a chasing zombie going forwards, but a bit slower walking backwards.
 
 Look for the **glowing pink shopping bag** above the trees and walk in through the shop door.
 Zombies can't get in. In the shop:

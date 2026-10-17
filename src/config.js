@@ -87,12 +87,13 @@ export const CONFIG = {
       name: 'Shuffler',
       health: 1,
       wanderSpeed: 0.9,
-      chaseSpeed: 3.4,
+      chaseSpeed: 3.0, // you walk at 4.0 forwards and 2.8 backwards
       noticeDistance: 15,
       radius: 0.55,
       tagBux: 5,
       touchHearts: 1, // hearts lost when it touches you
-      bounceBack: 6, // it gets bumped back after tagging you
+      bounceBack: 8, // it gets bumped back after tagging you
+      dizzyTime: 2.5, // then it stands still, seeing stars, so you can get away
     },
   },
 

@@ -89,7 +89,20 @@ function makeShufflerMesh() {
   bar.renderOrder = 5;
   root.add(bar);
 
-  return { root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, flashMats: [skin, shirt, trousers] };
+  // stars that circle its head when it's dizzy
+  const stars = new THREE.Group();
+  const starMat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+  for (let i = 0; i < 3; i++) {
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), starMat);
+    const a = (i / 3) * Math.PI * 2;
+    star.position.set(Math.cos(a) * 0.5, 0, Math.sin(a) * 0.5);
+    stars.add(star);
+  }
+  stars.position.y = 2.3;
+  stars.visible = false;
+  root.add(stars);
+
+  return { root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, stars, flashMats: [skin, shirt, trousers] };
 }
 
 export class Zombie {
@@ -108,6 +121,7 @@ export class Zombie {
     this.time = Math.random() * 10;
     this.alive = true;
     this.knockVel = new THREE.Vector3(); // set when a weapon bonks or squirts it backwards
+    this.dizzy = 0; // counts down after it tags you; it stands still while dizzy
     Object.assign(this, makeShufflerMesh());
     this.root.position.copy(this.pos);
   }
@@ -134,13 +148,16 @@ export class Zombie {
   update(dt, player, world, others, camera) {
     this.time += dt;
     this.spawnPop = Math.min(1, this.spawnPop + dt * 2);
+    this.dizzy = Math.max(0, this.dizzy - dt);
 
     const toPlayer = new THREE.Vector3(player.pos.x - this.pos.x, 0, player.pos.z - this.pos.z);
     const dist = toPlayer.length();
     let speed = 0;
     let dir = null;
 
-    if (dist < this.type.noticeDistance && !player.tagged) {
+    if (this.dizzy > 0) {
+      // seeing stars: stay put
+    } else if (dist < this.type.noticeDistance && !player.tagged) {
       // chase, and stop once touching the hero (the touch costs them a heart)
       const touching = this.radius + player.radius + 0.15;
       if (dist > touching) {
@@ -197,10 +214,13 @@ export class Zombie {
     resolveCollisions(this.pos, this.radius, world);
 
     // ---- silly animation ----
+    this.stars.visible = this.dizzy > 0;
+    if (this.dizzy > 0) this.stars.rotation.y += dt * 6;
     const walk = speed > 0 ? this.time * (speed > 2 ? 7 : 4) : 0;
     this.root.position.copy(this.pos);
     this.root.rotation.y = this.yaw;
-    this.body.rotation.z = Math.sin(this.time * 2.3) * 0.12; // wobble
+    // wobble, much more when dizzy
+    this.body.rotation.z = this.dizzy > 0 ? Math.sin(this.time * 6) * 0.25 : Math.sin(this.time * 2.3) * 0.12;
     this.body.position.y = Math.abs(Math.sin(walk)) * 0.08;
     this.legs[0].rotation.x = Math.sin(walk) * 0.5;
     this.legs[1].rotation.x = -Math.sin(walk) * 0.5;
