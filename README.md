@@ -154,23 +154,78 @@ Look for the **glowing blue dumbbell** above the trees and walk in through the d
 If you don't make it, nothing is lost: just try again. Beat your fastest time for a **PERSONAL BEST!**
 Speed and Strength go up to 10, and you keep them when you play again or get tagged.
 
-## Running it on a Windows PC
+## Running it
 
-You only need to do this once: install **Node.js** (the "LTS" version) from <https://nodejs.org>.
+You need **Node.js** (version 18 or newer) to run the game. It runs in a web browser:
+it's been play-tested in **Chrome** and **Edge**.
 
-Then either:
-
-- **Double-click `start-game.bat`.** The first time, it spends a minute installing; then the game opens in your browser.
-
-or, in a terminal in this folder:
+To get the game onto your computer, either download it from GitHub (the green **Code** button, then
+**Download ZIP**, and unzip it) or, if you have git:
 
 ```
-npm install
-npm run dev
+git clone https://github.com/bennywebb/zombie-tag.git
 ```
 
-The game opens at <http://localhost:5173>. Use Chrome or Edge. Keep the black terminal window open while playing;
-close it when you've finished.
+The game opens at <http://localhost:5173>. Keep the terminal window open while playing; close it
+(or press **Ctrl+C** in it) when you've finished. Progress is saved in the browser, so use the same
+browser each time.
+
+### Windows
+
+1. Install **Node.js** (the "LTS" version) from <https://nodejs.org>. You only need to do this once.
+2. **Double-click `start-game.bat`** in the game folder. The first time, it spends a minute installing;
+   then the game opens in your browser.
+
+Or, in a terminal in the game folder: `npm install` (just the first time), then `npm run dev`.
+
+### Mac
+
+1. Install **Node.js** (the "LTS" version) from <https://nodejs.org>: download the macOS installer and
+   double-click it. You only need to do this once. (If you use Homebrew, `brew install node` works too.)
+2. Open **Terminal** (press Cmd+Space, type *Terminal*, press Return).
+3. Type `cd ` (with a space after it), drag the game folder from Finder into the Terminal window,
+   and press Return.
+4. The first time only, install the game's parts:
+
+   ```
+   npm install
+   ```
+
+5. Start the game:
+
+   ```
+   npm run dev
+   ```
+
+   The game opens in your default browser. If that's Safari, copy the address into Chrome instead.
+
+Next time, just do steps 2, 3 and 5.
+
+### Linux
+
+1. Install **Node.js** 18 or newer. Check what you have with `node --version`. Many distributions
+   ship an older one, so if it's missing or below 18, get the "LTS" version from <https://nodejs.org>
+   (or with [nvm](https://github.com/nvm-sh/nvm): `nvm install --lts`).
+2. In a terminal, go to the game folder and install the game's parts (first time only):
+
+   ```
+   cd zombie-tag
+   npm install
+   ```
+
+3. Start the game:
+
+   ```
+   npm run dev
+   ```
+
+   The game opens in your default browser. If it doesn't, open <http://localhost:5173> in Chrome yourself.
+
+### Getting the newest version
+
+If you used git, run `git pull` in the game folder, then `npm install` (in case anything new is needed)
+and start the game as usual. If you downloaded the ZIP, download it again. Your progress is kept
+either way, because it's saved in the browser, not in the game folder.
 
 ## Changing the numbers
 
