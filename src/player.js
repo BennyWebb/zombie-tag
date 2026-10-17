@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { isDown, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
-import { WEAPON_MODELS } from './weapons.js';
+import { Beam, WEAPON_MODELS } from './weapons.js';
 
 const skinMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
 const sleeveMat = new THREE.MeshLambertMaterial({ color: 0xff6fae });
@@ -43,8 +43,10 @@ export class Player {
 
     this.swing = 0; // counts down while swinging
     this.swingHit = false;
-    this.cooldown = 0; // time until the blaster can squirt again
+    this.cooldown = 0; // time until a shooting weapon can fire again
     this.recoil = 0;
+    this.thrown = null; // the boomerang banana while it's flying
+    this.beam = new Beam(scene); // the Sparkle Star Laser Gun's beam
 
     // kept between levels and when you play again
     this.tagBux = 0;
@@ -54,29 +56,54 @@ export class Player {
     this.giveStick();
 
     this.bests = {}; // fastest gym times, for "PERSONAL BEST!"
+    this.armour = []; // armour you own; only the best one counts
+    this.shields = 0; // hits your armour can still block this level
     this.hearts = CONFIG.player.hearts;
     this.safe = 0; // counts down while you can't be hurt
     this.tagged = 0; // counts down while you're tagged, before going back to the start
     this.shake = 0;
   }
 
-  // A zombie touch. Returns true if it cost you hearts.
+  // A zombie touch. Returns false if you couldn't be hurt, 'shield' if your armour blocked it,
+  // or 'heart' if it cost you hearts.
   hurt(amount) {
     if (this.safe > 0 || this.tagged > 0 || this.inside) return false;
-    this.hearts = Math.max(0, this.hearts - amount);
     this.safe = CONFIG.player.safeTime;
     this.shake = 0.3;
+    if (this.shields > 0) {
+      this.shields -= 1;
+      return 'shield';
+    }
+    this.hearts = Math.max(0, this.hearts - amount);
     if (this.hearts === 0) {
       this.tagged = CONFIG.player.taggedTime;
       this.hand.visible = false;
     }
-    return true;
+    return 'heart';
+  }
+
+  get bestArmour() {
+    let best = null;
+    for (const id of this.armour) {
+      if (!best || CONFIG.armour[id].blocks > best.blocks) best = { id, ...CONFIG.armour[id] };
+    }
+    return best;
+  }
+
+  refillShields() {
+    this.shields = this.bestArmour ? this.bestArmour.blocks : 0;
+  }
+
+  addArmour(id) {
+    this.armour.push(id);
+    this.refillShields();
   }
 
   // Back to the start with full hearts, keeping Tag Bux, weapons and training.
   respawn(start) {
     this.reset(start);
     this.hearts = CONFIG.player.hearts;
+    this.refillShields();
     this.tagged = 0;
     this.safe = CONFIG.player.safeTime;
     this.hand.visible = true;
@@ -129,6 +156,24 @@ export class Player {
     return new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
   }
 
+  // Holding a gun: a kick back when it fires, and a little sway as you walk.
+  aimPose(move) {
+    this.hand.rotation.set(this.recoil * 0.15 + Math.sin(this.walkPhase * 0.5) * 0.03 * (move ? 1 : 0), 0, 0);
+    this.hand.position.z = -0.65 + this.recoil * 0.06;
+  }
+
+  // Every zombie roughly in front of you and in reach (for the Rubber Chicken Hammer).
+  findTargets(zombies) {
+    const w = this.weapon;
+    const cosLimit = Math.cos(THREE.MathUtils.degToRad(w.aimAngle));
+    return zombies.filter((z) => {
+      if (!z.alive) return false;
+      const to = new THREE.Vector3(z.pos.x - this.pos.x, 0, z.pos.z - this.pos.z);
+      if (to.length() - z.radius > w.range) return false;
+      return to.length() < 0.001 || to.normalize().dot(this.forward) >= cosLimit;
+    });
+  }
+
   // Aim help: the nearest zombie roughly in front of you and in reach.
   findTarget(zombies) {
     const w = this.weapon;
@@ -149,7 +194,7 @@ export class Player {
   }
 
   // Returns the hits landed this frame: [{ zombie, weapon, by, push }]
-  update(dt, world, zombies, squirts) {
+  update(dt, world, zombies, shots) {
     const k = this.keys;
     let turn = 0;
     if (isDown(k.left)) turn += 1;
@@ -198,21 +243,55 @@ export class Player {
     this.cooldown -= dt;
     this.recoil = Math.max(0, this.recoil - dt * 8);
 
+    // where shots and the laser come out: just in front of the gun in your hand
+    const fwd = this.forward;
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const muzzle = this.pos.clone().addScaledVector(fwd, 0.9).addScaledVector(right, 0.3).setY(1.2);
+
+    if (w && w.kind === 'beam') {
+      // hold Space for a laser that hits whatever it's pointing at, again and again
+      if (isDown(k.attack) || this.attackQueued) {
+        this.attackQueued = false;
+        const target = this.findTarget(zombies);
+        const end = target ? target.centre : muzzle.clone().addScaledVector(fwd, w.range);
+        this.beam.show(muzzle, end);
+        if (this.cooldown <= 0 && target) {
+          this.cooldown = w.fireInterval;
+          hits.push({ zombie: target, weapon: w, by: this, push: fwd, at: target.centre });
+        }
+        this.recoil = 0.4;
+      } else this.beam.hide();
+      this.beam.update(dt, w.starsPerSecond);
+      this.aimPose(move);
+      return hits;
+    }
+    this.beam.hide();
+    this.beam.update(dt, 0);
+
+    if (w && w.kind === 'throw') {
+      // the banana leaves your hand until it comes back
+      this.models[w.id].visible = !this.thrown;
+      if (this.attackQueued && !this.thrown) {
+        this.attackQueued = false;
+        const target = this.findTarget(zombies);
+        const dir = target ? target.centre.sub(muzzle).setY(0).normalize() : fwd.clone();
+        shots.fire(muzzle, dir, w, this, null);
+      }
+      this.aimPose(move);
+      return hits;
+    }
+
     if (w && w.kind === 'shoot') {
-      // hold Space to keep squirting
+      // hold Space to keep shooting
       if ((this.attackQueued || isDown(k.attack)) && this.cooldown <= 0) {
         this.attackQueued = false;
         this.cooldown = w.fireInterval;
         this.recoil = 1;
-        const fwd = this.forward;
-        const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-        const from = this.pos.clone().addScaledVector(fwd, 0.9).addScaledVector(right, 0.3).setY(1.2);
         const target = this.findTarget(zombies);
-        const dir = target ? target.centre.sub(from).normalize() : fwd.clone();
-        squirts.fire(from, dir, w, this);
+        const dir = target ? target.centre.sub(muzzle).normalize() : fwd.clone();
+        shots.fire(muzzle, dir, w, this, target ? target.centre : null);
       }
-      this.hand.rotation.set(this.recoil * 0.15 + Math.sin(this.walkPhase * 0.5) * 0.03 * (move ? 1 : 0), 0, 0);
-      this.hand.position.z = -0.65 + this.recoil * 0.06;
+      this.aimPose(move);
       return hits;
     }
     this.hand.position.z = -0.65;
@@ -227,11 +306,9 @@ export class Player {
       const t = 1 - Math.max(0, this.swing) / w.swingTime; // 0 → 1
       if (!this.swingHit && t >= 0.45) {
         this.swingHit = true;
-        const target = this.findTarget(zombies);
-        if (target) {
-          hits.push({ zombie: target, weapon: w, by: this, push: this.forward });
-          if (w.maxHits) w.hitsLeft -= 1;
-        }
+        const targets = w.hitsAll ? this.findTargets(zombies) : [this.findTarget(zombies)].filter(Boolean);
+        for (const target of targets) hits.push({ zombie: target, weapon: w, by: this, push: this.forward });
+        if (targets.length && w.maxHits) w.hitsLeft -= 1;
       }
       // wind up, chop down towards the middle of the screen, then come back up
       let x, z;

@@ -21,6 +21,19 @@ function makeEye(size) {
   return eye;
 }
 
+const bubbleGeo = new THREE.SphereGeometry(1.25, 20, 16);
+const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xe0c8ff, transparent: true, opacity: 0.35, depthWrite: false });
+const iceGeo = new THREE.BoxGeometry(1.4, 2.3, 1.4);
+const iceMat = new THREE.MeshLambertMaterial({
+  color: 0xbfe8ff, transparent: true, opacity: 0.55, emissive: 0x335577, depthWrite: false,
+});
+
+// The colour a zombie glows: white when hit, blue when frozen, green when slimed.
+const glowWhite = new THREE.Color(0xffffff);
+const glowIce = new THREE.Color(0x3a78b0);
+const glowSlime = new THREE.Color(0x2f7a10);
+const glowNone = new THREE.Color(0x000000);
+
 function makeShufflerMesh() {
   const skin = new THREE.MeshLambertMaterial({ color: pick(SKINS) });
   const shirt = new THREE.MeshLambertMaterial({ color: pick(SHIRTS) });
@@ -102,7 +115,19 @@ function makeShufflerMesh() {
   stars.visible = false;
   root.add(stars);
 
-  return { root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, stars, flashMats: [skin, shirt, trousers] };
+  // a floating bubble (Bubble Blaster) and a block of ice (Snowball Cannon), shown when needed
+  const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+  bubble.position.y = 1.1;
+  bubble.visible = false;
+  const ice = new THREE.Mesh(iceGeo, iceMat);
+  ice.position.y = 1.05;
+  ice.visible = false;
+  root.add(bubble, ice);
+
+  return {
+    root, body, eyes: [eyeL, eyeR], arms, legs, bar, barFill: fill, stars, bubble, ice,
+    flashMats: [skin, shirt, trousers],
+  };
 }
 
 export class Zombie {
@@ -122,6 +147,12 @@ export class Zombie {
     this.alive = true;
     this.knockVel = new THREE.Vector3(); // set when a weapon bonks or squirts it backwards
     this.dizzy = 0; // counts down after it tags you; it stands still while dizzy
+    // weapon effects, each counting down: slimed (slow), trapped in a bubble, frozen solid
+    this.slowTime = 0;
+    this.slowSpeed = 1;
+    this.bubbleTime = 0;
+    this.frozenTime = 0;
+    this.lift = 0; // how high its bubble has floated
     Object.assign(this, makeShufflerMesh());
     this.root.position.copy(this.pos);
   }
@@ -142,21 +173,45 @@ export class Zombie {
   }
 
   knock(dir, amount) {
+    if (this.bubbleTime > 0 || this.frozenTime > 0) return; // bubbles and ice blocks don't get pushed
     this.knockVel.addScaledVector(dir, amount);
+  }
+
+  // What a weapon does besides damage.
+  weaponEffects(w) {
+    if (w.slowTime) {
+      this.slowTime = w.slowTime;
+      this.slowSpeed = w.slowSpeed;
+    }
+    if (w.bubbleTime) this.bubbleTime = w.bubbleTime;
+    if (w.freezeTime) this.frozenTime = w.freezeTime;
+  }
+
+  // Standing still: dizzy, trapped in a bubble or frozen.
+  get stuck() {
+    return this.dizzy > 0 || this.bubbleTime > 0 || this.frozenTime > 0;
+  }
+
+  // Only a zombie that's fully arrived and not stuck can tag you.
+  get canTag() {
+    return this.spawnPop >= 1 && !this.stuck;
   }
 
   update(dt, player, world, others, camera) {
     this.time += dt;
     this.spawnPop = Math.min(1, this.spawnPop + dt * 2);
     this.dizzy = Math.max(0, this.dizzy - dt);
+    this.slowTime = Math.max(0, this.slowTime - dt);
+    this.bubbleTime = Math.max(0, this.bubbleTime - dt);
+    this.frozenTime = Math.max(0, this.frozenTime - dt);
 
     const toPlayer = new THREE.Vector3(player.pos.x - this.pos.x, 0, player.pos.z - this.pos.z);
     const dist = toPlayer.length();
     let speed = 0;
     let dir = null;
 
-    if (this.dizzy > 0) {
-      // seeing stars: stay put
+    if (this.stuck) {
+      // seeing stars, bubbled or frozen: stay put
     } else if (dist < this.type.noticeDistance && !player.tagged) {
       // chase, and stop once touching the hero (the touch costs them a heart)
       const touching = this.radius + player.radius + 0.15;
@@ -190,6 +245,7 @@ export class Zombie {
       speed *= Math.max(0, 1 - knocked / 3);
     }
 
+    if (this.slowTime > 0) speed *= this.slowSpeed;
     if (dir) {
       this.pos.addScaledVector(dir, speed * dt);
       // turn smoothly towards where it's going
@@ -216,9 +272,22 @@ export class Zombie {
     // ---- silly animation ----
     this.stars.visible = this.dizzy > 0;
     if (this.dizzy > 0) this.stars.rotation.y += dt * 6;
-    const walk = speed > 0 ? this.time * (speed > 2 ? 7 : 4) : 0;
+    this.bubble.visible = this.bubbleTime > 0;
+    this.ice.visible = this.frozenTime > 0;
+    // a bubble floats it up, then it drops back down when the bubble pops
+    this.lift += ((this.bubbleTime > 0 ? 1.3 : 0) - this.lift) * Math.min(1, dt * (this.bubbleTime > 0 ? 2 : 8));
+    if (this.bubbleTime > 0) this.bubble.scale.setScalar(1 + Math.sin(this.time * 4) * 0.04);
     this.root.position.copy(this.pos);
+    this.root.position.y = this.lift;
     this.root.rotation.y = this.yaw;
+    if (this.frozenTime > 0) {
+      // frozen solid: no wobbling at all
+      this.flash = Math.max(0, this.flash - dt);
+      for (const m of this.flashMats) m.emissive.copy(this.flash > 0 ? glowWhite : glowIce);
+      this.updateBar(camera);
+      return;
+    }
+    const walk = speed > 0 ? this.time * (speed > 2 ? 7 : 4) : 0;
     // wobble, much more when dizzy
     this.body.rotation.z = this.dizzy > 0 ? Math.sin(this.time * 6) * 0.25 : Math.sin(this.time * 2.3) * 0.12;
     this.body.position.y = Math.abs(Math.sin(walk)) * 0.08;
@@ -237,9 +306,13 @@ export class Zombie {
     const s = this.spawnPop * (1 + Math.sin(this.squash * Math.PI * 3) * 0.15 * this.squash);
     this.body.scale.set(s, this.spawnPop * (1 - this.squash * 0.2), s);
     this.flash = Math.max(0, this.flash - dt);
-    const glow = this.flash > 0 ? 1 : 0;
-    for (const m of this.flashMats) m.emissive.setScalar(glow);
+    const glow = this.flash > 0 ? glowWhite : this.slowTime > 0 ? glowSlime : glowNone;
+    for (const m of this.flashMats) m.emissive.copy(glow);
+    this.updateBar(camera);
+  }
 
+  // The health bar always faces the camera.
+  updateBar(camera) {
     if (this.bar.visible) this.bar.quaternion.copy(camera.quaternion).premultiply(
       new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -this.yaw),
     );

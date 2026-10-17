@@ -6,9 +6,14 @@ const confettiMats = CONFETTI_COLOURS.map(
   (c) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }),
 );
 
-const splashMats = [0x4fc3f7, 0xbfeaff, 0xffffff].map(
-  (c) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }),
-);
+// one material per colour, shared by every splash
+const splashMats = new Map();
+function splashMat(colour) {
+  if (!splashMats.has(colour)) {
+    splashMats.set(colour, new THREE.MeshBasicMaterial({ color: colour, side: THREE.DoubleSide }));
+  }
+  return splashMats.get(colour);
+}
 
 const textTextures = new Map();
 function textTexture(text, colour) {
@@ -62,19 +67,20 @@ export class Effects {
     }
   }
 
-  // a little burst of water drops where a squirt lands
-  splash(pos, count = 12) {
+  // a little burst of drops (water, goo, snow, pumpkin...) where a shot lands
+  splash(pos, count = 12, colours = [0x4fc3f7, 0xbfeaff, 0xffffff], power = 1) {
     for (let i = 0; i < count; i++) {
-      const m = new THREE.Mesh(confettiGeo, splashMats[i % splashMats.length]);
+      const m = new THREE.Mesh(confettiGeo, splashMat(colours[i % colours.length]));
       m.position.copy(pos);
+      m.scale.setScalar(power);
       const a = Math.random() * Math.PI * 2;
-      const s = 1 + Math.random() * 2;
+      const s = (1 + Math.random() * 2) * power;
       this.scene.add(m);
       this.bits.push({
         mesh: m,
-        vel: new THREE.Vector3(Math.cos(a) * s, 1 + Math.random() * 3, Math.sin(a) * s),
+        vel: new THREE.Vector3(Math.cos(a) * s, (1 + Math.random() * 3) * power, Math.sin(a) * s),
         spin: new THREE.Vector3(Math.random() * 10, Math.random() * 10, 0),
-        life: 0.4 + Math.random() * 0.3,
+        life: (0.4 + Math.random() * 0.3) * power,
       });
     }
   }

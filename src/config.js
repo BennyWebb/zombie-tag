@@ -38,6 +38,7 @@ export const CONFIG = {
       icon: '🏏',
       about: 'Never breaks. Bonks zombies back!',
       price: 25,
+      word: 'BONK!', // what pops up when it hits
       kind: 'swing',
       damage: 2,
       range: 3.4,
@@ -50,13 +51,117 @@ export const CONFIG = {
       icon: '💦',
       about: 'Shoots super fast. Pushes zombies away!',
       price: 60,
+      word: 'SPLOSH!', // what pops up when it hits
       kind: 'shoot',
       damage: 1 / 3, // play-test: it takes 3 squirts to pop a Shuffler
       range: 14,
       aimAngle: 25,
       fireInterval: 0.13, // seconds between squirts while Space is held
       shotSpeed: 26,
+      shot: 'water', // what flies out (see weapons.js)
       knockback: 4, // every squirt pushes a bit
+    },
+    chickenHammer: {
+      name: 'Rubber Chicken Hammer',
+      icon: '🐔',
+      about: 'SQUAWK! Bonks every zombie in front of you',
+      price: 120,
+      word: 'SQUAWK!', // what pops up when it hits
+      kind: 'swing',
+      damage: 4,
+      range: 3.8,
+      aimAngle: 70,
+      swingTime: 0.45,
+      hitsAll: true, // hits every zombie in reach, not just one
+      knockback: 7,
+    },
+    slimeSlinger: {
+      name: 'Slime Slinger',
+      icon: '🧪',
+      about: 'Green goo makes zombies slow for 3 seconds',
+      price: 200,
+      word: 'SPLAT!', // what pops up when it hits
+      kind: 'shoot',
+      damage: 3,
+      range: 14,
+      aimAngle: 25,
+      fireInterval: 0.5,
+      shotSpeed: 18,
+      shot: 'slime',
+      slowTime: 3,
+      slowSpeed: 0.35, // slimed zombies move at this much of their speed
+    },
+    bubbleBlaster: {
+      name: 'Bubble Blaster',
+      icon: '🧼',
+      about: 'Traps a zombie in a floating bubble for 3 seconds',
+      price: 350,
+      word: 'BLOOP!', // what pops up when it hits
+      kind: 'shoot',
+      damage: 3,
+      range: 13,
+      aimAngle: 25,
+      fireInterval: 0.6,
+      shotSpeed: 12,
+      shot: 'bubble',
+      bubbleTime: 3,
+    },
+    snowballCannon: {
+      name: 'Snowball Cannon',
+      icon: '❄️',
+      about: 'Freezes zombies solid for 2 seconds',
+      price: 500,
+      word: 'BRRR!', // what pops up when it hits
+      kind: 'shoot',
+      damage: 5,
+      range: 15,
+      aimAngle: 25,
+      fireInterval: 0.7,
+      shotSpeed: 20,
+      shot: 'snowball',
+      freezeTime: 2,
+    },
+    boomerangBanana: {
+      name: 'Boomerang Banana',
+      icon: '🍌',
+      about: 'Flies out and comes back, hitting zombies both ways',
+      price: 700,
+      word: 'BONK!', // what pops up when it hits
+      kind: 'throw',
+      damage: 6,
+      range: 12,
+      aimAngle: 30,
+      shotSpeed: 16,
+      shot: 'banana',
+    },
+    pumpkinLauncher: {
+      name: 'Pumpkin Launcher',
+      icon: '🎃',
+      about: 'Slow, but each pumpkin splats every zombie nearby',
+      price: 1000,
+      word: 'SPLAT!', // what pops up when it hits
+      kind: 'shoot',
+      damage: 10,
+      range: 16,
+      aimAngle: 30,
+      fireInterval: 1.4,
+      shotSpeed: 14,
+      shot: 'pumpkin',
+      gravity: 9, // pumpkins fly in an arc
+      splashRadius: 4, // every zombie this close to the splat gets hit
+    },
+    starLaser: {
+      name: 'Sparkle Star Laser Gun',
+      icon: '🌟',
+      about: 'The best weapon! A sparkly laser with swirling stars',
+      price: 1600,
+      word: 'ZAP!', // what pops up when it hits
+      kind: 'beam',
+      damage: 8,
+      range: 16,
+      aimAngle: 20,
+      fireInterval: 0.25, // the beam hits this often while Space is held
+      starsPerSecond: 40,
     },
   },
 
@@ -69,6 +174,14 @@ export const CONFIG = {
       price: 15,
       hearts: 1,
     },
+  },
+
+  // Armour takes hits for you before your hearts do. It refills at the start of each level
+  // (and when you get tagged). Only your best armour counts.
+  armour: {
+    cardboardBox: { name: 'Cardboard Box Armour', icon: '📦', price: 40, blocks: 1 },
+    sportsPads: { name: 'Sports Pads and Helmet', icon: '🏈', price: 150, blocks: 2 },
+    knightArmour: { name: 'Shiny Knight Armour', icon: '🛡️', price: 600, blocks: 3 },
   },
 
   // Training is free. Filling the bar raises a stat by 1, up to maxLevel.

@@ -11,7 +11,7 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **2. Tag Bux and the shop:** collect coins from popped zombies and buy the Foam Noodle Bat and Water Blaster.
 - [x] **3. Hearts:** zombie touches cost hearts, Heart Medicine in the shop, and getting tagged sends you back to the start.
 - [x] **4. The gym:** treadmill and weights mini-games that raise Speed and Strength.
-- [ ] 5. All the weapons and armour
+- [x] **5. All the weapons and armour:** ten weapons up to the Sparkle Star Laser Gun, and three kinds of armour.
 - [ ] 6. Two players
 - [ ] 7. Character creator and outfits
 - [ ] 8. Levels 1 to 10
@@ -23,7 +23,7 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 | --- | --- |
 | Walk forward / back | W / S |
 | Turn left / right | A / D |
-| Bonk! (hold it down to keep squirting the Water Blaster) | Space |
+| Attack (hold it down for shooting weapons and the laser) | Space |
 | Shop and gym: choose / go | W / S, then Space |
 | Treadmill | A, D, A, D… as fast as you can |
 | Weights | tap Space as fast as you can |
@@ -48,8 +48,26 @@ Zombies can't get in. In the shop:
 | 🪵 Spiky Stick | Free | 1 | Breaks after 4 hits. Get a free one any time you have no weapon. |
 | 🏏 Foam Noodle Bat | 25 | 2 | Never breaks. Bonks zombies back. |
 | 💦 Squirty Water Blaster | 60 | ⅓ | Shoots super fast. Pushes zombies away. 3 squirts pop a Shuffler. |
+| 🐔 Rubber Chicken Hammer | 120 | 4 | SQUAWK! Bonks every zombie in front of you at once. |
+| 🧪 Slime Slinger | 200 | 3 | Green goo makes zombies slow for 3 seconds. |
+| 🧼 Bubble Blaster | 350 | 3 | Traps a zombie in a floating bubble for 3 seconds. |
+| ❄️ Snowball Cannon | 500 | 5 | Freezes zombies solid for 2 seconds. |
+| 🍌 Boomerang Banana | 700 | 6 | Flies out and comes back, hitting zombies both ways. |
+| 🎃 Pumpkin Launcher | 1,000 | 10 | Slow, but each pumpkin splats every zombie nearby. |
+| 🌟 Sparkle Star Laser Gun | 1,600 | 8 | The best weapon! Hold Space for a sparkly laser with swirling stars. |
 
-The shop also sells **💊 Heart Medicine** (15 Tag Bux), which gives back 1 heart. Zombies wait outside
+Zombies that are bubbled, frozen or dizzy can't tag you.
+
+**Armour** takes hits for you before your hearts do. It shows as blue shields next to your hearts
+and fills back up at the start of each level (and when you get tagged). Only your best armour counts.
+
+| Armour | Price | Blocks |
+| --- | --- | --- |
+| 📦 Cardboard Box Armour | 40 | 1 hit |
+| 🏈 Sports Pads and Helmet | 150 | 2 hits |
+| 🛡️ Shiny Knight Armour | 600 | 3 hits |
+
+The shop list scrolls: keep pressing S to see everything. It also sells **💊 Heart Medicine** (15 Tag Bux), which gives back 1 heart. Zombies wait outside
 the door, so you get 2 safe seconds when you walk back out.
 
 A new weapon goes straight into your hand. You keep every weapon you buy and can swap

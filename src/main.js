@@ -6,7 +6,7 @@ import { Zombie } from './zombie.js';
 import { Player } from './player.js';
 import { Effects } from './effects.js';
 import { Coins } from './coins.js';
-import { Squirts } from './weapons.js';
+import { SPLASH_COLOURS, Shots } from './weapons.js';
 import { ShopMenu } from './shop.js';
 import { GymMenu } from './gym.js';
 
@@ -22,7 +22,7 @@ const scene = new THREE.Scene();
 const world = buildWorld(scene, level);
 const effects = new Effects(scene);
 const coins = new Coins(scene);
-const squirts = new Squirts(scene);
+const shots = new Shots(scene);
 const player = new Player(CONFIG.keys.p1, scene);
 const shop = new ShopMenu(document.getElementById('hud'), player, world.shop);
 const gym = new GymMenu(document.getElementById('hud'), player, world.gym);
@@ -39,6 +39,7 @@ let popped = 0;
 let wonTimer = 0;
 let toastTimer = 0;
 let heartsShown = -1;
+let shieldsShown = '';
 
 function show(name) {
   state = name;
@@ -64,7 +65,7 @@ function startLevel() {
   popped = 0;
   wonTimer = 0;
   coins.clear();
-  squirts.clear();
+  shots.clear();
   if (player.inside) player.menu.close();
   // Tag Bux and weapons are kept when you play again
   player.respawn(world.playerStart);
@@ -116,6 +117,20 @@ function updateHud() {
     }
     $('hearts').innerHTML = html;
     heartsShown = player.hearts;
+    shieldsShown = '';
+  }
+  // blue armour shields go after the hearts
+  const armour = player.bestArmour;
+  const shieldKey = `${player.shields}/${armour ? armour.blocks : 0}`;
+  if (shieldKey !== shieldsShown) {
+    const old = shieldsShown ? Number(shieldsShown.split('/')[0]) : player.shields;
+    $('hearts').querySelectorAll('.shield').forEach((el) => el.remove());
+    for (let i = 0; i < (armour ? armour.blocks : 0); i++) {
+      const el = document.createElement('span');
+      el.className = `shield${i < player.shields ? '' : ' empty'}${i === player.shields && old > player.shields ? ' lost' : ''}`;
+      $('hearts').appendChild(el);
+    }
+    shieldsShown = shieldKey;
   }
   $('hearts').classList.toggle('blink', player.safe > 0 && !player.tagged && !player.inside);
   const w = player.weapon;
@@ -135,31 +150,45 @@ function bumpBux() {
   el.classList.add('bump');
 }
 
-function hitZombie({ zombie, weapon, by, push }) {
+function hitZombie({ zombie, weapon, by, push, at, splat }) {
+  if (splat) {
+    // a pumpkin landed: a big orange splat
+    effects.splash(at, 60, SPLASH_COLOURS.pumpkin, 2.5);
+    effects.floatText(at.clone().setY(at.y + 1.2), weapon.word, '#ff8a1f', 1.8);
+    return;
+  }
   if (!zombie.alive) return;
+  if (weapon.shot && at) effects.splash(at, 12, SPLASH_COLOURS[weapon.shot]);
+  zombie.weaponEffects(weapon);
   if (weapon.knockback && push) zombie.knock(push, weapon.knockback);
   const popping = zombie.hit(weapon.damage * by.damageMultiplier);
+  const word = weapon.word || 'BONK!';
+  // the chicken squawks on every hit, even ones that pop
+  if (weapon.id === 'chickenHammer') {
+    effects.floatText(zombie.centre.add(new THREE.Vector3(0, popping ? 2 : 0.8, 0)), word, '#ffe066', 1.3);
+  }
   if (popping) {
     effects.confetti(zombie.centre);
     effects.floatText(zombie.centre.add(new THREE.Vector3(0, 1, 0)), 'POP!', '#9cff57', 1.4);
     coins.burst(zombie.centre, zombie.type.tagBux);
     scene.remove(zombie.root);
     popped++;
-  } else if (weapon.kind !== 'shoot' || !(zombie.splashTime > clock.elapsedTime - 0.6)) {
-    // the blaster squirts so fast that it only says SPLOSH now and then
-    if (weapon.kind === 'shoot') zombie.splashTime = clock.elapsedTime;
-    const word = weapon.kind === 'shoot' ? 'SPLOSH!' : 'BONK!';
+  } else if (weapon.id !== 'chickenHammer' && !(zombie.wordTime > clock.elapsedTime - 0.6)) {
+    // fast weapons hit so often that they only say their word now and then
+    zombie.wordTime = clock.elapsedTime;
     effects.floatText(zombie.centre.add(new THREE.Vector3(0, 0.8, 0)), word, '#ffe066', 1.1);
   }
 }
 
 // A zombie touched you: lose a heart, flash, and bump the zombie back.
 function zombieTouch(zombie) {
-  if (!player.hurt(zombie.type.touchHearts)) return;
+  const hurt = player.hurt(zombie.type.touchHearts);
+  if (!hurt) return;
   const away = new THREE.Vector3(zombie.pos.x - player.pos.x, 0, zombie.pos.z - player.pos.z).normalize();
   zombie.knock(away, zombie.type.bounceBack);
   zombie.dizzy = zombie.type.dizzyTime;
   const el = $('hurt');
+  el.classList.toggle('shield', hurt === 'shield'); // blue for armour, pink for a lost heart
   el.classList.add('show');
   void el.offsetWidth;
   el.classList.remove('show'); // fades back out
@@ -167,6 +196,8 @@ function zombieTouch(zombie) {
     $('tagged').classList.remove('hidden');
     toastTimer = 0;
     $('toast').classList.remove('show');
+  } else if (hurt === 'shield') {
+    toast('Your armour blocked it! 🛡️<br>Run away!', 1.5);
   } else {
     toast(player.hearts === 1 ? 'Ouch! Last heart! 💔<br>Run away!' : 'Ouch! 💔 Run away!', 1.5);
   }
@@ -186,6 +217,11 @@ function update(dt) {
   const alive = zombies.filter((z) => z.alive).length;
   if (spawned < level.zombies && alive <= level.nextWaveWhenLeft) spawnWave();
 
+  if (player.tagged || player.inside) {
+    // no laser while you're tagged or inside, but let its stars fade away
+    player.beam.hide();
+    player.beam.update(dt, 0);
+  }
   if (player.tagged) {
     player.tagged -= dt;
     $('tagged-count').textContent = Math.max(1, Math.ceil(player.tagged));
@@ -200,7 +236,7 @@ function update(dt) {
       toast('See you soon! 👋', 1.5);
     }
   } else {
-    for (const hit of player.update(dt, world, zombies, squirts)) hitZombie(hit);
+    for (const hit of player.update(dt, world, zombies, shots)) hitZombie(hit);
     if (player.justBroke) {
       player.justBroke = false;
       toast(player.weapon
@@ -216,10 +252,7 @@ function update(dt) {
       }
     }
   }
-  for (const hit of squirts.update(dt, zombies)) {
-    effects.splash(hit.at);
-    hitZombie(hit);
-  }
+  for (const hit of shots.update(dt, zombies)) hitZombie(hit);
 
   const cleared = popped >= level.zombies;
   if (coins.update(dt, [player], world, cleared).length) bumpBux();
@@ -228,7 +261,7 @@ function update(dt) {
     if (!z.alive) continue;
     z.update(dt, player, world, zombies, player.camera);
     const d = Math.hypot(z.pos.x - player.pos.x, z.pos.z - player.pos.z);
-    if (z.spawnPop >= 1 && z.dizzy <= 0 && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
+    if (z.canTag && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
   }
   zombies = zombies.filter((z) => z.alive);
 
@@ -283,7 +316,7 @@ frame();
 
 // handy for testing from the browser console
 window.game = {
-  player, world, shop, gym, coins,
+  player, world, shop, gym, coins, shots,
   get zombies() { return zombies; },
   get state() { return state; },
 };

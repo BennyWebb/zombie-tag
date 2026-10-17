@@ -186,15 +186,15 @@ kbd {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 20px;
+  gap: 8px;
+  padding: 12px 20px;
   background: radial-gradient(circle at 50% 30%, #ff6fae, #4b1e8a);
 }
 
 .shop-top { display: flex; align-items: center; gap: 40px; }
 .shop h2 {
   margin: 0;
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: clamp(36px, 5vw, 60px);
   color: #ffe066;
   text-shadow: 5px 5px 0 #4b1e8a;
 }
@@ -207,12 +207,12 @@ kbd {
   color: #ffe066;
 }
 
-.shop .rows { display: flex; flex-direction: column; gap: 10px; width: min(900px, 100%); }
+.shop .rows { display: flex; flex-direction: column; gap: 8px; width: min(900px, 100%); }
 .shop .row {
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 10px 22px;
+  padding: 6px 22px;
   border-radius: 22px;
   background: rgba(40, 20, 80, 0.5);
   border: 4px solid transparent;
@@ -238,7 +238,7 @@ kbd {
 .shop .row.locked .price { font-size: 20px; opacity: 0.8; }
 .shop .row.leave .price { font-size: 22px; opacity: 0.8; }
 
-.shop-msg { min-height: 48px; font-size: 34px; font-weight: bold; text-shadow: 3px 3px 0 #4b1e8a; animation: pop 0.35s ease-out; }
+.shop-msg { min-height: 42px; font-size: 30px; font-weight: bold; text-shadow: 3px 3px 0 #4b1e8a; animation: pop 0.35s ease-out; }
 .shop-msg.good { color: #9cff57; }
 .shop-msg.bad { color: #ffb3b3; animation: shake 0.4s; }
 .shop-help { font-size: 26px; }
@@ -351,3 +351,20 @@ kbd.tap { animation: pop 0.2s ease-out; }
 
 .badge.bump { animation: bump 0.4s ease-out 3; }
 .shop-msg kbd { text-shadow: none; }
+
+/* ---------- Armour shields (blue, next to the hearts) ---------- */
+.shield {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.92em;
+  margin-left: 4px;
+  background: linear-gradient(135deg, #8fd8ff, #1e6fd6);
+  clip-path: polygon(50% 0, 100% 15%, 92% 62%, 50% 100%, 8% 62%, 0 15%);
+}
+.shield.empty { background: rgba(255, 255, 255, 0.35); }
+#hearts .shield.lost { animation: heart-lost 0.6s ease-out; }
+#hurt.shield { background: radial-gradient(ellipse at center, transparent 45%, rgba(60, 150, 255, 0.65)); }
+
+/* the shop list scrolls; these show there's more above or below */
+.shop .more { text-align: center; font-size: 20px; font-weight: bold; color: #ffe066; height: 20px; line-height: 20px; }
+.shop .more.none { visibility: hidden; }
