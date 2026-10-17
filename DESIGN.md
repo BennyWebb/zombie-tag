@@ -120,7 +120,7 @@ The shop is a safe building where you claim your free Spiky Stick and spend Tag 
 | --- | --- | --- | --- | --- |
 | Spiky Stick | Free | 1 | Swing | Breaks after 4 hits. You can claim another free one whenever you have no weapon *(suggestion)*. |
 | Foam Noodle Bat *(suggestion)* | 25 | 2 | Swing | Never breaks. Bonks zombies back a little. |
-| Squirty Water Blaster *(suggestion)* | 60 | 1 | Shoots | Fires very fast. Pushes zombies away. |
+| Squirty Water Blaster *(suggestion)* | 60 | ⅓ | Shoots | Fires very fast. Pushes zombies away. 3 squirts pop a Shuffler (changed after play-testing). |
 | Rubber Chicken Hammer *(suggestion)* | 120 | 4 | Swing | Squawks on every hit and bonks every zombie in front of you. |
 | Slime Slinger *(suggestion)* | 200 | 3 | Shoots | Green goo makes zombies slow for 3 seconds. |
 | Bubble Blaster *(suggestion)* | 350 | 3 | Shoots | Traps a zombie in a floating bubble for 3 seconds. |
