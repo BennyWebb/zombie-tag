@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zombie Tag</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧟</text></svg>" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="game"></div>
+
+    <div id="hud" class="hidden">
+      <div id="zombies-left" class="pill"></div>
+      <div id="stats">
+        <span class="badge">Speed <b id="stat-speed"></b></span>
+        <span class="badge">Strength <b id="stat-strength"></b></span>
+      </div>
+      <div id="weapon" class="pill"></div>
+      <div id="crosshair"></div>
+    </div>
+
+    <div id="title" class="screen">
+      <h1>ZOMBIE TAG</h1>
+      <p class="sub">Sunny Park</p>
+      <div class="keys">
+        <div><kbd>W</kbd> <kbd>S</kbd> walk</div>
+        <div><kbd>A</kbd> <kbd>D</kbd> turn</div>
+        <div><kbd>Space</kbd> bonk!</div>
+      </div>
+      <p class="go">Press <kbd>Space</kbd> to play</p>
+    </div>
+
+    <div id="paused" class="screen hidden">
+      <h1>Paused</h1>
+      <p class="go">Press <kbd>Esc</kbd> to keep playing</p>
+    </div>
+
+    <div id="won" class="screen hidden">
+      <h1>You popped<br />them all!</h1>
+      <p class="sub">Sunny Park is safe again</p>
+      <p class="go">Press <kbd>Space</kbd> to play again</p>
+    </div>
+
+    <div id="toast"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
