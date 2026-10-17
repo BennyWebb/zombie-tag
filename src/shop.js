@@ -117,7 +117,7 @@ export class ShopMenu {
           + `<span class="price">${s.label}</span></div>`;
       }
       const w = CONFIG.weapons[id];
-      const power = '💥'.repeat(w.damage);
+      const power = '💥'.repeat(Math.max(1, Math.round(w.damage)));
       return `<div class="row ${s.kind}${sel}"><span class="icon">${w.icon}</span>`
         + `<span class="name">${w.name}<small>Power ${power} · ${w.about}</small></span>`
         + `<span class="price">${s.label}</span></div>`;

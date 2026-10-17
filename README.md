@@ -39,7 +39,7 @@ Zombies can't get in. In the shop:
 | --- | --- | --- | --- |
 | 🪵 Spiky Stick | Free | 1 | Breaks after 4 hits. Get a free one any time you have no weapon. |
 | 🏏 Foam Noodle Bat | 25 | 2 | Never breaks. Bonks zombies back. |
-| 💦 Squirty Water Blaster | 60 | 1 | Shoots super fast. Pushes zombies away. |
+| 💦 Squirty Water Blaster | 60 | ⅓ | Shoots super fast. Pushes zombies away. 3 squirts pop a Shuffler. |
 
 A new weapon goes straight into your hand. You keep every weapon you buy and can swap
 which one you hold in the shop. Choose **Leave** to go back outside.

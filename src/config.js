@@ -46,7 +46,7 @@ export const CONFIG = {
       about: 'Shoots super fast. Pushes zombies away!',
       price: 60,
       kind: 'shoot',
-      damage: 1,
+      damage: 1 / 3, // play-test: it takes 3 squirts to pop a Shuffler
       range: 14,
       aimAngle: 25,
       fireInterval: 0.13, // seconds between squirts while Space is held
