@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { keyName, wasPressed } from './input.js';
+import { sfx } from './audio.js';
 
 // The shop menu one player sees while inside the shop.
 // It builds itself inside `root`, so each player can have their own later on.
@@ -110,6 +111,7 @@ export class ShopMenu {
     if (this.openTime <= 0) {
       if (wasPressed(k.forward)) this.cursor = (this.cursor + this.ids.length - 1) % this.ids.length;
       if (wasPressed(k.back)) this.cursor = (this.cursor + 1) % this.ids.length;
+      if (wasPressed(k.forward) || wasPressed(k.back)) sfx('tick');
       if (wasPressed(k.attack) && this.choose()) return true;
     }
     this.draw();
@@ -122,6 +124,8 @@ export class ShopMenu {
     if (id === 'leave') return true;
     const s = this.status(id);
     this.drawn = ''; // redraw so the message animation plays again
+    // a happy sound for anything that worked, a buzz for anything that didn't
+    sfx(['dear', 'locked', 'full'].includes(s.kind) ? 'nope' : ['buy', 'free'].includes(s.kind) ? 'kaching' : 'select');
     if (id === 'give') {
       const amount = CONFIG.giveTagBux;
       if (s.kind === 'dear') this.say(`You need ${amount} Tag Bux to give`, 'bad');

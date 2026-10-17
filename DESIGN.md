@@ -242,7 +242,8 @@ Build it as a browser game with JavaScript and Three.js, in small steps that the
 6. **Two players:** split screen, second set of keys, separate wallets.
 7. **Character creator and outfits.**
 8. **Levels 1 to 10:** themes, random shop and gym spots, new zombie types, the Zombie King, level select and saving.
-9. **Polish:** sounds, music, menus, and tuning the numbers from play-testing.
+   8b. **Sound and music:** sound effects and a tune for each place, made in code, with volume in the pause menu.
+9. **Refinement:** menus, and tuning the numbers from play-testing.
 
 **Getting started in Claude Code**
 

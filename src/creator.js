@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { keyName, wasPressed } from './input.js';
+import { sfx } from './audio.js';
 
 // The character creator: type a name, then pick skin, hair and clothes from big buttons
 // while your hero turns round on the right. In 2-player mode Player 1 goes first, then Player 2.
@@ -80,12 +81,14 @@ export class Creator {
       if (wasPressed(k.back)) this.row = Math.min(ROWS.length - 1, this.row + 1);
       const r = ROWS[this.row];
       const step = (wasPressed(k.right) ? 1 : 0) - (wasPressed(k.left) ? 1 : 0);
+      if (wasPressed(k.forward) || wasPressed(k.back) || step) sfx('tick');
       if (step && r.options) {
         const i = r.options.indexOf(p.look[r.key]);
         const next = r.options[(Math.max(0, i) + step + r.options.length) % r.options.length];
         p.setLook({ [r.key]: next });
       }
       if (wasPressed(k.attack)) {
+        sfx('select');
         if (r.key === 'done') {
           p.created = true;
           this.next();

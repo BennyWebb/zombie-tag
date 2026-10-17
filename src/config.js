@@ -359,6 +359,9 @@ export const CONFIG = {
     },
   ],
 
+  // Starting volumes (0 to 10); they can be changed in the pause menu.
+  sound: { music: 6, sounds: 8 },
+
   // The same for every level.
   arena: {
     size: 80, // each level is size x size

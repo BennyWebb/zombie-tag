@@ -13,6 +13,7 @@ import { GymMenu } from './gym.js';
 import { Hud } from './hud.js';
 import { Creator } from './creator.js';
 import { clearSave, loadSave, writeSave } from './save.js';
+import { getVolumes, loudness, music, setVolume, sfx } from './audio.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -64,6 +65,13 @@ let spawned = 0;
 let popped = 0;
 let boss = null; // the Zombie King, once he arrives
 let friends = []; // the zombies at the party
+let pauseRow = 0; // which volume the pause menu is changing
+let coinStreak = 0; // coins picked up one after another go up in pitch
+let lastCoin = 0;
+let lastGroan = 0;
+
+// The sound a hit makes, by kind of shot (swinging weapons go "boing").
+const HIT_SOUNDS = { slime: 'splat', bubble: 'bloop', snowball: 'poof', banana: 'bonk' };
 
 function show(name) {
   state = name;
@@ -75,6 +83,17 @@ function show(name) {
   if (name !== 'playing') huds.forEach((h) => h.clearToast());
   if (name === 'title') drawTitle();
   if (name === 'levels') drawLevels();
+  if (name === 'paused') drawVolume();
+  if (['title', 'levels', 'create'].includes(name)) music('title');
+}
+
+// The pause menu's music and sound volume bars.
+function drawVolume() {
+  const v = getVolumes();
+  const bar = (n) => '▮'.repeat(n) + '<span class="off">' + '▮'.repeat(10 - n) + '</span>';
+  $('volume').innerHTML = [['music', '🎵 Music'], ['sounds', '🔊 Sounds']].map(([key, label], i) => (
+    `<div class="vol${i === pauseRow ? ' selected' : ''}"><span>${label}</span><b>${bar(v[key])}</b></div>`
+  )).join('');
 }
 
 const toastAll = (text, seconds) => active.forEach((p) => huds[p.index].toast(text, seconds));
@@ -190,6 +209,7 @@ function startLevel(i) {
   }
   saveGame(); // progress saves at the start of each level
   show('playing');
+  music(level.theme);
   toastAll(`Level ${level.number}: ${level.name} ${level.icon}<br>Pop all the zombies, then find the exit gate!`, 4);
 }
 
@@ -237,6 +257,7 @@ function spawnWave() {
 // The Zombie King arrives at the exit gate end of his castle.
 function spawnBoss() {
   boss = addZombie(level.boss, world.gate.x, world.gate.z + 8);
+  sfx('king');
   toastAll('👑 The Zombie King is here!<br>He keeps calling Shufflers to help him!', 4);
 }
 
@@ -254,6 +275,7 @@ function callHelpers(king) {
     addZombie('shuffler', x, z).helper = true;
     levelZombies++;
   }
+  if (n > 0) sfx('help');
   if (n > 0) effects.floatText(king.centre.add(new THREE.Vector3(0, 2.5, 0)), 'HELP!', '#ff8ad8', 2);
 }
 
@@ -285,6 +307,7 @@ function hitZombie({ zombie, weapon, by, push, at, splat }) {
   if (splat) {
     // a pumpkin landed: a big orange splat
     effects.splash(at, 60, SPLASH_COLOURS.pumpkin, 2.5);
+    sfx('splat', { pitch: 2 });
     effects.floatText(at.clone().setY(at.y + 1.2), weapon.word, '#ff8a1f', 1.8);
     return;
   }
@@ -292,6 +315,10 @@ function hitZombie({ zombie, weapon, by, push, at, splat }) {
   if (weapon.shot && at) effects.splash(at, 12, SPLASH_COLOURS[weapon.shot]);
   zombie.weaponEffects(weapon);
   if (weapon.knockback && push) zombie.knock(push, weapon.knockback);
+  const wobble = 0.9 + Math.random() * 0.25; // so the same sound twice doesn't sound robotic
+  if (weapon.id === 'chickenHammer') sfx('squawk', { pitch: wobble });
+  else if (weapon.kind === 'swing') sfx('bonk', { pitch: wobble });
+  else if (HIT_SOUNDS[weapon.shot]) sfx(HIT_SOUNDS[weapon.shot], { pitch: wobble * (weapon.shot === 'banana' ? 1.3 : 1) });
   const popping = zombie.hit(weapon.damage * by.damageMultiplier);
   const word = weapon.word || 'BONK!';
   // the chicken squawks on every hit, even ones that pop
@@ -311,6 +338,7 @@ function popZombie(zombie) {
   effects.confetti(zombie.centre, t.boss ? 300 : 70);
   effects.floatText(zombie.centre.add(new THREE.Vector3(0, 1 * t.size, 0)), 'POP!', '#9cff57', 1.4 * t.size);
   coins.burst(zombie.centre, t.tagBux);
+  sfx('pop', { pitch: (0.95 + Math.random() * 0.2) / t.size });
   scene.remove(zombie.root);
   popped++;
   if (t.splitsInto) {
@@ -322,8 +350,10 @@ function popZombie(zombie) {
       levelZombies++;
     }
     effects.floatText(zombie.centre.add(new THREE.Vector3(0, 2, 0)), 'SPLIT!', '#7dff4f', 1.4);
+    sfx('split');
   }
   if (t.boss) {
+    sfx('fanfare');
     toastAll('👑 You popped the Zombie King! 👑', 4);
   }
 }
@@ -337,6 +367,7 @@ function zombieTouch(zombie, p) {
   zombie.knock(away, zombie.type.bounceBack);
   zombie.dizzy = zombie.type.dizzyTime;
   hud.flash(hurt);
+  sfx(p.tagged ? 'tagged' : hurt === 'shield' ? 'clang' : 'ouch');
   if (p.tagged) hud.showTagged(true);
   else if (hurt === 'shield') hud.toast('Your armour blocked it! 🛡️<br>Run away!', 1.5);
   else if (zombie.type.touchHearts > 1) hud.toast(`${zombie.type.name} took ${zombie.type.touchHearts} hearts! 💔<br>Run away!`, 1.5);
@@ -361,6 +392,7 @@ function updatePlayer(p, dt) {
   } else if (p.inside) {
     if (p.menu.update(dt)) {
       p.menu.close();
+      sfx('select');
       saveGame(); // keep what you bought or trained
       hud.toast('See you soon! 👋', 1.5);
     }
@@ -390,6 +422,7 @@ function levelDone() {
   unlocked = Math.max(unlocked, Math.min(CONFIG.levels.length, levelIndex + 2));
   levelChoice = Math.min(levelIndex + 1, CONFIG.levels.length - 1);
   saveGame();
+  sfx('fanfare');
   if (level.boss) {
     startParty();
     return;
@@ -429,6 +462,7 @@ function startParty() {
     p.yaw = 0;
   });
   show('party');
+  music('party');
 }
 
 function updateParty(dt) {
@@ -448,6 +482,7 @@ function updateParty(dt) {
   if (Math.random() < dt * 3) {
     const f = friends[Math.floor(Math.random() * friends.length)];
     effects.confetti(f.centre.add(new THREE.Vector3(0, 2, 0)), 40);
+    if (Math.random() < 0.4) sfx('yay', { volume: 0.5, pitch: 0.8 + Math.random() * 0.6 });
   }
   showCamera.position.set(Math.sin(t * 0.15) * 20, 8, Math.cos(t * 0.15) * 20);
   showCamera.lookAt(0, 1.5, 0);
@@ -459,6 +494,20 @@ function update(dt) {
   if (wasPressed(['Escape']) && (state === 'playing' || state === 'paused')) {
     show(state === 'playing' ? 'paused' : 'playing');
     return;
+  }
+  if (state === 'paused') {
+    // W/S (or the arrows) choose music or sounds, A/D (or the arrows) make it louder or quieter
+    const k = CONFIG.keys;
+    const before = pauseRow;
+    if (wasPressed([...k.p1.forward, ...k.p2.forward])) pauseRow = 0;
+    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = 1;
+    const change = (wasPressed([...k.p1.right, ...k.p2.right]) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left]) ? 1 : 0);
+    if (change) {
+      const which = pauseRow === 0 ? 'music' : 'sounds';
+      setVolume(which, getVolumes()[which] + change);
+      sfx('tick');
+    }
+    if (change || pauseRow !== before) drawVolume();
   }
   if (state === 'paused' && wasPressed(['KeyQ'])) {
     for (const p of players) if (p.inside) p.menu.close();
@@ -474,8 +523,11 @@ function update(dt) {
     if (wasPressed([...k.p1.back, ...k.p2.back, ...k.p1.right, ...k.p2.right])) titleChoice = 1;
     if (wasPressed(['Digit1', 'Numpad1'])) titleChoice = 0;
     if (wasPressed(['Digit2', 'Numpad2'])) titleChoice = 1;
+    if (titleChoice !== Number($('title').dataset.choice || 0)) sfx('tick');
+    $('title').dataset.choice = titleChoice;
     drawTitle();
     if (wasPressed([...go, 'Digit1', 'Digit2', 'Numpad1', 'Numpad2', 'KeyC'])) {
+      sfx('select');
       playerCount = titleChoice + 1;
       beginGame(wasPressed(['KeyC']));
     }
@@ -502,8 +554,14 @@ function update(dt) {
     if (wasPressed([...k.p1.right, ...k.p2.right])) levelChoice = Math.min(n - 1, levelChoice + 1);
     if (wasPressed([...k.p1.forward, ...k.p2.forward])) levelChoice = Math.max(0, levelChoice - 5);
     if (wasPressed([...k.p1.back, ...k.p2.back])) levelChoice = Math.min(n - 1, levelChoice + 5);
-    if (levelChoice !== before) drawLevels();
-    if (wasPressed(go) && levelChoice < unlocked) startLevel(levelChoice);
+    if (levelChoice !== before) {
+      drawLevels();
+      sfx('tick');
+    }
+    if (wasPressed(go)) {
+      sfx(levelChoice < unlocked ? 'select' : 'nope');
+      if (levelChoice < unlocked) startLevel(levelChoice);
+    }
     if (wasPressed(['Escape'])) show('title');
     return;
   }
@@ -529,12 +587,29 @@ function update(dt) {
   for (const hit of shots.update(dt, zombies)) hitZombie(hit);
 
   const cleared = popped >= levelZombies;
-  for (const { player } of coins.update(dt, active, world, cleared)) huds[player.index].bumpBux();
+  for (const { player } of coins.update(dt, active, world, cleared)) {
+    huds[player.index].bumpBux();
+    // ka-ching, a little higher for each coin in a row
+    const now = clock.elapsedTime;
+    coinStreak = now - lastCoin < 0.6 ? coinStreak + 1 : 0;
+    if (now - lastCoin > 0.05) sfx('coin', { pitch: 1 + Math.min(coinStreak, 8) * 0.06 });
+    lastCoin = now;
+  }
 
   for (const z of zombies) {
     if (!z.alive) continue;
     z.update(dt, active, world, zombies);
     if (z.callingHelp) callHelpers(z);
+    // zombies groan now and then, louder when they're close
+    z.groanIn = (z.groanIn ?? 2 + Math.random() * 8) - dt;
+    if (z.groanIn <= 0) {
+      z.groanIn = 6 + Math.random() * 8;
+      const d = Math.min(...active.map((p) => Math.hypot(z.pos.x - p.pos.x, z.pos.z - p.pos.z)));
+      if (d < 18 && clock.elapsedTime - lastGroan > 1.2) {
+        lastGroan = clock.elapsedTime;
+        sfx('groan', { volume: (1 - d / 18) * 0.9, pitch: (0.9 + Math.random() * 0.25) / z.type.size });
+      }
+    }
     for (const p of active) {
       const d = Math.hypot(z.pos.x - p.pos.x, z.pos.z - p.pos.z);
       if (z.canTag && d < z.radius + p.radius + CONFIG.player.touchDistance) zombieTouch(z, p);
@@ -561,6 +636,7 @@ function update(dt) {
   // every zombie popped: the exit gate opens, and walking through it finishes the level
   if (cleared && !world.gate.isOpen) {
     world.openGate();
+    sfx('gate');
     toastAll('All the zombies are popped! ✨<br>Walk through the glowing exit gate', 4);
   }
   if (world.gate.isOpen && active.some((p) => !p.inside && !p.tagged
@@ -643,6 +719,7 @@ window.game = {
   startLevel, levelDone,
   popForTest(z) { z.alive = false; popZombie(z); },
   addZombie,
+  loudness, sfx,
   get world() { return world; },
   get level() { return level; },
   get levelIndex() { return levelIndex; },

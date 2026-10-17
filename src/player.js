@@ -4,10 +4,16 @@ import { isDown, wasPressed } from './input.js';
 import { resolveCollisions } from './world.js';
 import { Beam, WEAPON_MODELS } from './weapons.js';
 import { clothesColour, makeHeroBody } from './hero.js';
+import { sfx } from './audio.js';
 
 // Each player's camera sees the world (layer 0), their own hand (layer 1 or 2)
 // and the other player's body (layer 3 or 4), but never their own body.
 const HAND_LAYER = 1;
+// the sound each kind of shot makes as it leaves the gun: [sound, volume, pitch]
+const FIRE_SOUNDS = {
+  water: ['squirt', 0.6, 1], slime: ['splat', 0.4, 0.6], bubble: ['bloop', 0.7, 0.8],
+  snowball: ['whoosh', 0.7, 1], pumpkin: ['thump', 1, 1],
+};
 const BODY_LAYER = 3;
 
 export class Player {
@@ -365,9 +371,10 @@ export class Player {
         const target = this.findTarget(zombies);
         const end = target ? target.centre : muzzle.clone().addScaledVector(fwd, w.range);
         this.beam.show(muzzle, end);
-        if (this.cooldown <= 0 && target) {
+        if (this.cooldown <= 0) {
           this.cooldown = w.fireInterval;
-          hits.push({ zombie: target, weapon: w, by: this, push: fwd, at: target.centre });
+          sfx('pew');
+          if (target) hits.push({ zombie: target, weapon: w, by: this, push: fwd, at: target.centre });
         }
         this.recoil = 0.4;
       } else this.beam.hide();
@@ -386,6 +393,7 @@ export class Player {
         const target = this.findTarget(zombies);
         const dir = target ? target.centre.sub(muzzle).setY(0).normalize() : fwd.clone();
         shots.fire(muzzle, dir, w, this, null);
+        sfx('whoosh');
       }
       this.aimPose(move);
       return hits;
@@ -400,6 +408,8 @@ export class Player {
         const target = this.findTarget(zombies);
         const dir = target ? target.centre.sub(muzzle).normalize() : fwd.clone();
         shots.fire(muzzle, dir, w, this, target ? target.centre : null);
+        const [name, volume, pitch] = FIRE_SOUNDS[w.shot];
+        sfx(name, { volume, pitch });
       }
       this.aimPose(move);
       return hits;
@@ -410,6 +420,7 @@ export class Player {
       this.attackQueued = false;
       this.swing = w.swingTime;
       this.swingHit = false;
+      sfx('swing');
     }
     if (this.swing > 0) {
       this.swing -= dt;
@@ -444,6 +455,7 @@ export class Player {
           const next = this.weapons[this.weapons.length - 1];
           this.hold(next ? next.id : null);
           this.justBroke = true;
+          sfx('crack');
         }
       }
     } else {

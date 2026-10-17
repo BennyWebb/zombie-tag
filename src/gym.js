@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { keyName, wasPressed } from './input.js';
+import { sfx } from './audio.js';
 
 // The gym one player sees while inside it: a treadmill for Speed and weights for Strength.
 // Like the shop, it builds itself inside `root` so each player can have their own later on.
@@ -54,6 +55,7 @@ export class GymMenu {
       const rows = this.rows();
       if (ready && wasPressed(k.forward)) this.cursor = (this.cursor + rows.length - 1) % rows.length;
       if (ready && wasPressed(k.back)) this.cursor = (this.cursor + 1) % rows.length;
+      if (ready && (wasPressed(k.forward) || wasPressed(k.back))) sfx('tick');
       if (ready && wasPressed(k.attack) && this.choose(rows[this.cursor])) return true;
       if (this.mode === 'menu' || this.mode === 'pick') this.drawList(); // unless a mini-game just started
     } else if (this.mode === 'treadmill') {
@@ -104,6 +106,7 @@ export class GymMenu {
   choose(row) {
     const p = this.player;
     this.drawn = '';
+    sfx(row.kind === 'locked' ? 'nope' : 'select');
     if (row.id === 'leave') return true;
     if (row.id === 'back') {
       this.menu('', '');
@@ -184,6 +187,7 @@ export class GymMenu {
         this.sinceGood = 0;
         this.fill += 1 / this.need;
         this.tempo += 2;
+        sfx('step', { pitch: key === 'L' ? 1 : 1.25 }); // left, right, left, right...
       }
     }
     if (this.started) {
@@ -234,6 +238,7 @@ export class GymMenu {
     if (ready && wasPressed(this.player.keys.attack)) {
       this.started = true;
       this.fill += w.rise;
+      sfx('lift', { pitch: 1 + Math.min(1, this.fill) }); // higher as it goes up
       this.ui.keyL.classList.remove('tap');
       void this.ui.keyL.offsetWidth;
       this.ui.keyL.classList.add('tap');
@@ -277,6 +282,7 @@ export class GymMenu {
     this.mode = 'result';
     this.wait = 0.8; // so a last frantic tap doesn't skip the result
     const name = stat === 'speed' ? 'Speed' : 'Strength';
+    sfx(won ? 'levelUp' : 'aww');
     if (!won) {
       this.el.innerHTML = '<div class="result"><div class="big">😅</div><h2>So close!</h2>'
         + '<p>Try again? It\'s free!</p>'

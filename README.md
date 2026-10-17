@@ -15,7 +15,8 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **6. Two players:** split screen, a second set of keys, separate wallets and giving Tag Bux.
 - [x] **7. Character creator and outfits:** type your name, pick your look, and buy cool outfits.
 - [x] **8. Levels 1 to 10:** ten places, new zombies, the Zombie King, level select and saving.
-- [ ] 9. Polish
+- [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
+- [ ] 9. Refinement: tuning the numbers and anything else from play-testing
 
 ## How to play
 
@@ -36,7 +37,7 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 | Shop and gym: choose / go | W / S, then Space | ↑ / ↓, then Enter |
 | Treadmill | A, D, A, D… as fast as you can | ←, →, ←, →… |
 | Weights | tap Space as fast as you can | tap Enter |
-| Pause (then Q to go back to the start screen) | Esc | Esc |
+| Pause: music and sound volume, or Q to go back to the start screen | Esc | Esc |
 | Level picker: choose / play | W A S D, then Space | arrows, then Enter |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
@@ -69,6 +70,15 @@ zombies become your friends for a big party!
 **Saving:** progress saves by itself at the start of each level (and when you leave the shop or gym),
 so you can stop and carry on another day. Press **N** on the start screen for a brand new game
 (it asks first, because it wipes everything).
+
+### Sound and music
+
+Every sound is made by the game itself, so there are no sound files: boings and pops for hits, a
+ka-ching for every coin (higher and higher as you scoop up a pile), a squawk for the Rubber Chicken
+Hammer, pew-pew for the laser, silly zombie groans, and fanfares for training, finishing a level and
+beating the Zombie King. Each place has its own tune; the haunted forest, graveyard and castle are a
+little spookier. Turn the music or sounds up and down in the pause menu (Esc). Sound starts after the
+first key press, because browsers don't allow it before that.
 
 ### Playing together
 
