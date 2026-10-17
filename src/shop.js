@@ -8,6 +8,7 @@ const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Numpad0: '0', ArrowUp: '↑'
 const keyName = (code) => KEY_NAMES[code] || code.replace(/^Key/, '');
 
 const coin = '<span class="coin">T</span>';
+const thing = (id) => CONFIG.weapons[id] || CONFIG.items[id];
 
 export class ShopMenu {
   constructor(root, player) {
@@ -15,7 +16,7 @@ export class ShopMenu {
     this.el = document.createElement('div');
     this.el.className = 'shop hidden';
     root.appendChild(this.el);
-    this.ids = [...Object.keys(CONFIG.weapons), 'leave'];
+    this.ids = [...Object.keys(CONFIG.weapons), ...Object.keys(CONFIG.items), 'leave'];
     this.cursor = 0;
     this.message = '';
     this.messageKind = '';
@@ -26,10 +27,14 @@ export class ShopMenu {
     const p = this.player;
     p.inShop = true;
     p.hand.visible = false;
-    // start on something useful: a free stick if you need one, else the next thing to buy
-    const unowned = this.ids.filter((id) => id !== 'leave' && id !== 'spikyStick' && !p.owns(id));
+    // start on something useful: a free stick if you need one, medicine if you're hurt,
+    // else the next weapon to buy
+    const unowned = Object.keys(CONFIG.weapons).filter((id) => id !== 'spikyStick' && !p.owns(id));
     const affordable = unowned.find((id) => CONFIG.weapons[id].price <= p.tagBux);
-    const pick = !p.weapon ? 'spikyStick' : affordable || unowned[0] || 'leave';
+    const hurt = p.hearts < CONFIG.player.hearts && CONFIG.items.medicine.price <= p.tagBux;
+    let pick = affordable || unowned[0] || 'leave';
+    if (hurt) pick = 'medicine';
+    if (!p.weapon) pick = 'spikyStick';
     this.cursor = this.ids.indexOf(pick);
     this.say('Welcome to the shop! 🛍️', '');
     this.el.classList.remove('hidden');
@@ -42,6 +47,7 @@ export class ShopMenu {
     p.hand.visible = true;
     const out = world.shop.outside;
     p.reset(out);
+    p.safe = CONFIG.player.leaveShopSafeTime; // a moment to get past zombies waiting at the door
     this.el.classList.add('hidden');
   }
 
@@ -54,7 +60,8 @@ export class ShopMenu {
   status(id) {
     const p = this.player;
     if (id === 'leave') return { label: 'Back outside', ok: true };
-    const w = CONFIG.weapons[id];
+    const w = thing(id);
+    if (w.hearts && p.hearts >= CONFIG.player.hearts) return { label: 'Hearts full', ok: false, kind: 'full' };
     if (p.weapon && p.weapon.id === id) return { label: '✔ Holding', ok: false, kind: 'holding' };
     if (p.owns(id)) return { label: 'Hold it', ok: true, kind: 'owned' };
     if (w.price === 0) {
@@ -83,7 +90,7 @@ export class ShopMenu {
     const p = this.player;
     const id = this.ids[this.cursor];
     if (id === 'leave') return true;
-    const w = CONFIG.weapons[id];
+    const w = thing(id);
     const s = this.status(id);
     if (s.kind === 'holding') this.say(`You're already holding the ${w.name}!`, '');
     else if (s.kind === 'owned') {
@@ -94,9 +101,15 @@ export class ShopMenu {
       this.say('Here\'s a free Spiky Stick! 🪵', 'good');
     } else if (s.kind === 'locked') {
       this.say('You can have a free one when you have no weapon', 'bad');
+    } else if (s.kind === 'full') {
+      this.say('Your hearts are already full! ❤️❤️❤️', '');
     } else if (s.kind === 'dear') {
       const need = w.price - p.tagBux;
       this.say(`You need ${need} more Tag Bux. Go pop some zombies!`, 'bad');
+    } else if (w.hearts) {
+      p.tagBux -= w.price;
+      p.hearts = Math.min(CONFIG.player.hearts, p.hearts + w.hearts);
+      this.say('Yum! You got a heart back ❤️', 'good');
     } else {
       p.tagBux -= w.price;
       p.addWeapon(id);
@@ -116,13 +129,16 @@ export class ShopMenu {
         return `<div class="row leave${sel}"><span class="icon">🚪</span><span class="name">Leave</span>`
           + `<span class="price">${s.label}</span></div>`;
       }
-      const w = CONFIG.weapons[id];
-      const power = '💥'.repeat(Math.max(1, Math.round(w.damage)));
+      const w = thing(id);
+      const about = w.damage ? `Power ${'💥'.repeat(Math.max(1, Math.round(w.damage)))} · ${w.about}` : w.about;
       return `<div class="row ${s.kind}${sel}"><span class="icon">${w.icon}</span>`
-        + `<span class="name">${w.name}<small>Power ${power} · ${w.about}</small></span>`
+        + `<span class="name">${w.name}<small>${about}</small></span>`
         + `<span class="price">${s.label}</span></div>`;
     }).join('');
-    const html = `<div class="shop-top"><h2>🛍️ The Shop</h2><div class="shop-bux">${coin} ${p.tagBux}</div></div>`
+    const hearts = '<span class="heart"></span>'.repeat(p.hearts)
+      + '<span class="heart empty"></span>'.repeat(CONFIG.player.hearts - p.hearts);
+    const html = `<div class="shop-top"><h2>🛍️ The Shop</h2><div class="shop-hearts">${hearts}</div>`
+      + `<div class="shop-bux">${coin} ${p.tagBux}</div></div>`
       + `<div class="rows">${rows}</div>`
       + `<div class="shop-msg ${this.messageKind}">${this.message}</div>`
       + `<div class="shop-help"><kbd>${keyName(k.forward[0])}</kbd> <kbd>${keyName(k.back[0])}</kbd> choose`

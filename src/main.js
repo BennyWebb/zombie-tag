@@ -34,12 +34,13 @@ let spawned = 0;
 let popped = 0;
 let wonTimer = 0;
 let toastTimer = 0;
+let heartsShown = -1;
 
 function show(name) {
   state = name;
   for (const [key, el] of Object.entries(screens)) el.classList.toggle('hidden', key !== name);
   $('hud').classList.toggle('hidden', name === 'title');
-  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inShop;
+  player.hand.visible = (name === 'playing' || name === 'paused') && !player.inShop && !player.tagged;
   if (name !== 'playing') {
     toastTimer = 0;
     $('toast').classList.remove('show');
@@ -62,7 +63,8 @@ function startLevel() {
   squirts.clear();
   if (player.inShop) shop.close(world);
   // Tag Bux and weapons are kept when you play again
-  player.reset(world.playerStart);
+  player.respawn(world.playerStart);
+  $('tagged').classList.add('hidden');
   if (!player.weapon) player.giveStick();
   show('playing');
   toast('Bonk all the zombies!<br>Spend Tag Bux at the 🛍️ shop');
@@ -92,8 +94,20 @@ function updateHud() {
   $('stat-speed').textContent = player.speedLevel;
   $('stat-strength').textContent = player.strengthLevel;
   if ($('bux-count').textContent !== String(player.tagBux)) $('bux-count').textContent = player.tagBux;
+  if (player.hearts !== heartsShown) {
+    // the heart you just lost (or got back) does a little jump
+    const changed = player.hearts < heartsShown ? player.hearts : heartsShown;
+    let html = '';
+    for (let i = 0; i < CONFIG.player.hearts; i++) {
+      const jump = heartsShown >= 0 && i === changed ? ' lost' : '';
+      html += `<span class="heart${i < player.hearts ? '' : ' empty'}${jump}"></span>`;
+    }
+    $('hearts').innerHTML = html;
+    heartsShown = player.hearts;
+  }
+  $('hearts').classList.toggle('blink', player.safe > 0 && !player.tagged && !player.inShop);
   const w = player.weapon;
-  $('weapon').classList.toggle('hidden', player.inShop);
+  $('weapon').classList.toggle('hidden', player.inShop || player.tagged > 0);
   $('weapon').classList.toggle('empty', !w);
   let text = 'No weapon! Get a free Spiky Stick at the 🛍️ shop';
   if (w) text = `${w.icon} ${w.name}`;
@@ -127,6 +141,24 @@ function hitZombie({ zombie, weapon, by, push }) {
   }
 }
 
+// A zombie touched you: lose a heart, flash, and bump the zombie back.
+function zombieTouch(zombie) {
+  if (!player.hurt(zombie.type.touchHearts)) return;
+  const away = new THREE.Vector3(zombie.pos.x - player.pos.x, 0, zombie.pos.z - player.pos.z).normalize();
+  zombie.knock(away, zombie.type.bounceBack);
+  const el = $('hurt');
+  el.classList.add('show');
+  void el.offsetWidth;
+  el.classList.remove('show'); // fades back out
+  if (player.tagged) {
+    $('tagged').classList.remove('hidden');
+    toastTimer = 0;
+    $('toast').classList.remove('show');
+  } else {
+    toast(player.hearts === 1 ? 'Ouch! Last heart! 💔<br>Run away!' : 'Ouch! 💔 Run away!', 1.5);
+  }
+}
+
 function update(dt) {
   if (wasPressed(['Escape']) && (state === 'playing' || state === 'paused')) {
     show(state === 'playing' ? 'paused' : 'playing');
@@ -141,7 +173,15 @@ function update(dt) {
   const alive = zombies.filter((z) => z.alive).length;
   if (spawned < level.zombies && alive <= level.nextWaveWhenLeft) spawnWave();
 
-  if (player.inShop) {
+  if (player.tagged) {
+    player.tagged -= dt;
+    $('tagged-count').textContent = Math.max(1, Math.ceil(player.tagged));
+    if (player.tagged <= 0) {
+      player.respawn(world.playerStart);
+      $('tagged').classList.add('hidden');
+      toast('Back at the start with 3 hearts! ❤️❤️❤️', 2);
+    }
+  } else if (player.inShop) {
     if (shop.update(dt)) {
       shop.close(world);
       toast('See you soon! 👋', 1.5);
@@ -170,7 +210,12 @@ function update(dt) {
   const cleared = popped >= level.zombies;
   if (coins.update(dt, [player], world, cleared).length) bumpBux();
 
-  for (const z of zombies) if (z.alive) z.update(dt, player, world, zombies, player.camera);
+  for (const z of zombies) {
+    if (!z.alive) continue;
+    z.update(dt, player, world, zombies, player.camera);
+    const d = Math.hypot(z.pos.x - player.pos.x, z.pos.z - player.pos.z);
+    if (z.spawnPop >= 1 && d < z.radius + player.radius + CONFIG.player.touchDistance) zombieTouch(z);
+  }
   zombies = zombies.filter((z) => z.alive);
 
   if (cleared) {

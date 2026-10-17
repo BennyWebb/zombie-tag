@@ -12,6 +12,11 @@ export const CONFIG = {
     strengthPerLevel: 0.2,
     startSpeed: 1,
     startStrength: 1,
+    hearts: 3,
+    safeTime: 2, // seconds you flash and can't be hurt after a zombie touch
+    leaveShopSafeTime: 2, // and after walking out of the shop, in case zombies are waiting
+    taggedTime: 3, // seconds of "TAGGED!" before you're back at the start
+    touchDistance: 0.3, // how close a zombie gets (past touching skin) to tag you
   },
 
   // The shop sells these in this order. Damage is before the Strength bonus.
@@ -55,6 +60,17 @@ export const CONFIG = {
     },
   },
 
+  // Other things the shop sells, listed after the weapons.
+  items: {
+    medicine: {
+      name: 'Heart Medicine',
+      icon: '💊',
+      about: 'Gives back 1 heart',
+      price: 15,
+      hearts: 1,
+    },
+  },
+
   tagBux: {
     coinValue: 1, // each coin is worth this; a zombie drops its tagBux as separate coins
     pickupDistance: 0.7, // walk this close to grab a coin
@@ -75,6 +91,8 @@ export const CONFIG = {
       noticeDistance: 15,
       radius: 0.55,
       tagBux: 5,
+      touchHearts: 1, // hearts lost when it touches you
+      bounceBack: 6, // it gets bumped back after tagging you
     },
   },
 

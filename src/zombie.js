@@ -140,8 +140,8 @@ export class Zombie {
     let speed = 0;
     let dir = null;
 
-    if (dist < this.type.noticeDistance) {
-      // chase, but stop when touching the hero (hearts arrive in build step 3)
+    if (dist < this.type.noticeDistance && !player.tagged) {
+      // chase, and stop once touching the hero (the touch costs them a heart)
       const touching = this.radius + player.radius + 0.15;
       if (dist > touching) {
         dir = toPlayer.normalize();

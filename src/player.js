@@ -52,6 +52,33 @@ export class Player {
     this.weapon = null; // the one in your hand
     this.inShop = false;
     this.giveStick();
+
+    this.hearts = CONFIG.player.hearts;
+    this.safe = 0; // counts down while you can't be hurt
+    this.tagged = 0; // counts down while you're tagged, before going back to the start
+    this.shake = 0;
+  }
+
+  // A zombie touch. Returns true if it cost you hearts.
+  hurt(amount) {
+    if (this.safe > 0 || this.tagged > 0 || this.inShop) return false;
+    this.hearts = Math.max(0, this.hearts - amount);
+    this.safe = CONFIG.player.safeTime;
+    this.shake = 0.3;
+    if (this.hearts === 0) {
+      this.tagged = CONFIG.player.taggedTime;
+      this.hand.visible = false;
+    }
+    return true;
+  }
+
+  // Back to the start with full hearts, keeping Tag Bux, weapons and training.
+  respawn(start) {
+    this.reset(start);
+    this.hearts = CONFIG.player.hearts;
+    this.tagged = 0;
+    this.safe = CONFIG.player.safeTime;
+    this.hand.visible = true;
   }
 
   get moveSpeed() {
@@ -69,6 +96,7 @@ export class Player {
     this.attackQueued = false;
     this.cooldown = 0;
     this.inShop = false;
+    this.shake = 0;
     this.hand.rotation.set(0, 0, 0);
   }
 
@@ -150,6 +178,15 @@ export class Player {
     // camera with a little head bob
     const bob = move !== 0 ? Math.sin(this.walkPhase) * 0.05 : 0;
     this.camera.position.set(this.pos.x, CONFIG.player.eyeHeight + bob, this.pos.z);
+    // a little wobble when a zombie tags you
+    this.shake = Math.max(0, this.shake - dt);
+    if (this.shake > 0) {
+      this.camera.position.x += (Math.random() - 0.5) * this.shake * 0.5;
+      this.camera.position.y += (Math.random() - 0.5) * this.shake * 0.5;
+    }
+    // blink your hand while you can't be hurt
+    this.safe = Math.max(0, this.safe - dt);
+    this.hand.visible = this.safe <= 0 || Math.floor(this.safe * 8) % 2 === 0;
     this.camera.rotation.set(0, this.yaw, 0);
 
     // ---- attack ----

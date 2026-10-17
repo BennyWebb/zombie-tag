@@ -33,7 +33,52 @@ html, body {
 #weapon { bottom: 22px; left: 50%; transform: translateX(-50%); }
 #weapon.empty { background: rgba(200, 60, 40, 0.75); }
 
-#stats { position: absolute; top: 18px; left: 18px; display: flex; gap: 10px; }
+#top-left { position: absolute; top: 14px; left: 18px; display: flex; flex-direction: column; gap: 8px; }
+#stats { display: flex; gap: 10px; }
+
+/* hearts: full ones are red, lost ones are faded white */
+.heart::before { content: '❤️'; }
+.heart.empty::before { content: '🤍'; opacity: 0.45; }
+#hearts { font-size: 46px; line-height: 1; display: flex; gap: 6px; filter: drop-shadow(2px 3px 0 rgba(75, 30, 138, 0.6)); }
+#hearts .heart { display: inline-block; }
+#hearts .heart.lost { animation: heart-lost 0.6s ease-out; }
+#hearts.blink { animation: blink 0.25s step-end infinite; }
+@keyframes heart-lost {
+  0% { transform: scale(1.8) rotate(-15deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes blink { 50% { opacity: 0.3; } }
+
+/* the screen edges flash pink when a zombie tags you */
+#hurt {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 40, 100, 0.65));
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#hurt.show { opacity: 1; transition: none; }
+
+#tagged {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(150, 30, 90, 0.6);
+  text-align: center;
+}
+#tagged h1 {
+  margin: 0;
+  font-size: clamp(60px, 10vw, 130px);
+  color: #ffe066;
+  text-shadow: 6px 6px 0 #4b1e8a;
+  animation: pop 0.4s ease-out;
+}
+#tagged .sub { margin: 0; font-size: 34px; }
+#tagged b { color: #ffe066; font-size: 1.3em; }
 .badge {
   padding: 6px 14px;
   border-radius: 14px;
@@ -212,3 +257,5 @@ kbd {
   25% { transform: translateX(-10px); }
   75% { transform: translateX(10px); }
 }
+
+.shop-hearts { font-size: 40px; display: flex; gap: 4px; }
