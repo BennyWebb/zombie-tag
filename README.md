@@ -50,7 +50,7 @@ On Easy and Hard you always keep your looks, outfits, training and levels.
 Speed and Strength 1 and only level 1 open; nothing comes across from Easy or Hard except your
 outfits. There are **twice as many zombies**, with twice as many about at once. Your Hardcore game is
 saved like the normal one, so you can stop and come back, until you get tagged: then it starts again
-from nothing. Your Easy and Hard game is never touched. On Hardcore with 2 players, a tagged sister
+from nothing. Beating the Zombie King finishes it too, so your next Hardcore game starts fresh. Your Easy and Hard game is never touched. On Hardcore with 2 players, a tagged sister
 is out until the other one finishes the level; if you're both tagged it's game over.
 
 The first time, each new hero is made in the **character creator**: type your name (up to 12 letters)
@@ -106,7 +106,7 @@ reached again from the level picker to earn more Tag Bux. The shop and gym are i
 | 7 | 🧸 Toy Factory | 20 | |
 | 8 | 🍄 Haunted Forest | 22 | Slime Zombie: splits into two little Shufflers |
 | 9 | 🎃 Graveyard at Night | 25 | |
-| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: the final battle once every other zombie is popped. He arrives with 6 guards (12 on Hardcore) and calls Shufflers to help |
+| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: the final battle once every other zombie is popped. He arrives with 6 guards (12 on Hardcore) and calls Shufflers to help (2 at a time, or 4 on Hard and Hardcore) |
 
 Zombies get tougher on each level, so keep training and upgrading. Beat the Zombie King and all the
 zombies become your friends for a big party!

@@ -273,6 +273,8 @@ export class Player {
     this.runFromSave(d);
     this.run = 'normal';
     this.otherRun = d.hardcore || null; // null until she first plays Hardcore
+    // a Hardcore game saved after beating the King (before that ended it) starts fresh too
+    if (this.otherRun && (this.otherRun.finished || []).includes(CONFIG.levels.length - 1)) this.otherRun = null;
     this.rebuildBody();
   }
 

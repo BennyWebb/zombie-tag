@@ -668,7 +668,11 @@ function levelDone() {
     p.finished.add(levelIndex);
     p.unlocked = Math.max(p.unlocked, Math.min(CONFIG.levels.length, levelIndex + 2));
   }
-  levelChoice = Math.min(levelIndex + 1, CONFIG.levels.length - 1);
+  // beating the King finishes a Hardcore game: the next one starts fresh (outfits are kept)
+  const hardcoreWon = level.boss && difficulty().fresh;
+  if (hardcoreWon) for (const p of active) p.freshRun();
+  $('party-hardcore').classList.toggle('hidden', !hardcoreWon);
+  levelChoice = hardcoreWon ? 0 : Math.min(levelIndex + 1, CONFIG.levels.length - 1);
   saveGame();
   sfx('fanfare');
   if (level.boss) {

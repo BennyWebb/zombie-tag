@@ -366,20 +366,21 @@ export const CONFIG = {
   // oneLife: getting tagged is game over, and your Hardcore game starts again from nothing.
   // fresh: a separate game from Easy and Hard, starting with nothing (outfits are kept).
   // zombies: how many times as many zombies (and as many at once).
-  // king: changes to the Zombie King (health is before the level's healthMultiplier).
+  // king: changes to the Zombie King (health is before the level's healthMultiplier; helpers is
+  // how many come each time he calls for help).
   difficulties: {
     easy: { name: 'Easy', icon: '🙂', about: 'Get tagged and you keep everything' },
     hard: {
       name: 'Hard', icon: '😬', about: 'Get tagged and you lose your weapons and armour',
       loseItems: true,
-      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true, helpers: 4, maxHelpers: 8 },
     },
     hardcore: {
       name: 'Hardcore', icon: '💀', about: 'A fresh start with twice the zombies. Only 1 life: get tagged and it starts again!',
       oneLife: true,
       fresh: true,
       zombies: 2,
-      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true, helpers: 4, maxHelpers: 8 },
     },
   },
 
