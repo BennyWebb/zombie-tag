@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { endFrame, keyName, pollPads, setTwoSticks, takeMouseX, wasPressed } from './input.js';
+import {
+  clearPads, endFrame, givePad, keyName, pollPads, setTwoSticks, takeMouseX, unownedPadFired, wasPressed,
+} from './input.js';
 import { buildWorld } from './world.js';
 import { THEMES } from './themes.js';
 import { Zombie } from './zombie.js';
@@ -236,6 +238,7 @@ function drawLevels() {
 function beginGame(everyone) {
   editLooks = everyone;
   active = players.slice(0, playerCount);
+  clearPads(); // each joypad goes to whoever presses fire on it on "Who's playing?"
   startWho(0);
 }
 
@@ -274,7 +277,7 @@ function drawWho() {
       + `<small>${r.taken ? 'Playing as Player 1' : `⭐ ${stars} &nbsp; <span class="coin">T</span> ${d.tagBux}`}</small></div>`;
   }).join('');
   $('who-keys').innerHTML = `<kbd>${keyName(k.forward[0])}</kbd> <kbd>${keyName(k.back[0])}</kbd> choose,`
-    + ` <kbd>${keyName(k.attack[0])}</kbd> play`;
+    + ` <kbd>${keyName(k.attack[0])}</kbd> play, or 🎮 fire on your joypad`;
 }
 
 function chooseWho() {
@@ -694,7 +697,7 @@ function updateParty(dt) {
 // ---------- every frame ----------
 
 function update(dt) {
-  pollPads(state === 'title' ? titleChoice + 1 : playerCount);
+  pollPads();
   // Player 1's mouse turns her (read every frame, so moves made in menus don't pile up)
   const mouseX = takeMouseX();
   const p1 = players[0];
@@ -711,9 +714,9 @@ function update(dt) {
     // W/S (or the arrows) choose a row, A/D (or the arrows) make it louder or quieter or change controls
     const k = CONFIG.keys;
     const before = pauseRow;
-    if (wasPressed([...k.p1.forward, ...k.p2.forward])) pauseRow = Math.max(0, pauseRow - 1);
-    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = Math.min(PAUSE_ROWS - 1, pauseRow + 1);
-    const change = (wasPressed([...k.p1.right, ...k.p2.right]) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left]) ? 1 : 0);
+    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) pauseRow = Math.max(0, pauseRow - 1);
+    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown'])) pauseRow = Math.min(PAUSE_ROWS - 1, pauseRow + 1);
+    const change = (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight']) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft']) ? 1 : 0);
     if (change && pauseRow === 2) {
       setMouseLook(!mouseLook);
       sfx('tick');
@@ -734,11 +737,11 @@ function update(dt) {
     return;
   }
   const k = CONFIG.keys;
-  const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A'];
+  const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A', 'PadAnyA'];
   if (state === 'title') {
     // choose 1 or 2 players with W/S or the arrows (or just press 1 or 2)
-    if (wasPressed([...k.p1.forward, ...k.p2.forward, ...k.p1.left, ...k.p2.left])) titleChoice = 0;
-    if (wasPressed([...k.p1.back, ...k.p2.back, ...k.p1.right, ...k.p2.right])) titleChoice = 1;
+    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp', ...k.p1.left, ...k.p2.left, 'PadAnyLeft'])) titleChoice = 0;
+    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown', ...k.p1.right, ...k.p2.right, 'PadAnyRight'])) titleChoice = 1;
     if (wasPressed(['Digit1', 'Numpad1'])) titleChoice = 0;
     if (wasPressed(['Digit2', 'Numpad2'])) titleChoice = 1;
     if (titleChoice !== Number($('title').dataset.choice || 0)) sfx('tick');
@@ -763,16 +766,21 @@ function update(dt) {
   }
   if (state === 'who') {
     // the hero choosing uses her own keys
+    // (a joypad nobody owns yet can choose too: pressing fire makes it hers)
     const pk = players[whoSlot].keys;
     const n = whoRows().length;
     const before = whoChoice;
-    if (wasPressed([...pk.forward, ...pk.left])) whoChoice = (whoChoice + n - 1) % n;
-    if (wasPressed([...pk.back, ...pk.right])) whoChoice = (whoChoice + 1) % n;
+    if (wasPressed([...pk.forward, ...pk.left, 'PadAnyUp', 'PadAnyLeft'])) whoChoice = (whoChoice + n - 1) % n;
+    if (wasPressed([...pk.back, ...pk.right, 'PadAnyDown', 'PadAnyRight'])) whoChoice = (whoChoice + 1) % n;
     if (whoChoice !== before) {
       sfx('tick');
       drawWho();
     }
-    if (wasPressed(pk.attack)) chooseWho();
+    const pad = unownedPadFired();
+    if (pad >= 0) {
+      givePad(pad, whoSlot);
+      chooseWho();
+    } else if (wasPressed(pk.attack)) chooseWho();
     else if (wasPressed(['KeyX', 'Delete'])) {
       const r = whoRows()[whoChoice];
       if (r.profile && !r.taken) {
@@ -799,8 +807,8 @@ function update(dt) {
   if (state === 'difficulty') {
     const before = difficultyId;
     let i = difficultyIds.indexOf(difficultyId);
-    if (wasPressed([...k.p1.left, ...k.p2.left, ...k.p1.forward, ...k.p2.forward])) i = Math.max(0, i - 1);
-    if (wasPressed([...k.p1.right, ...k.p2.right, ...k.p1.back, ...k.p2.back])) i = Math.min(difficultyIds.length - 1, i + 1);
+    if (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft', ...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) i = Math.max(0, i - 1);
+    if (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight', ...k.p1.back, ...k.p2.back, 'PadAnyDown'])) i = Math.min(difficultyIds.length - 1, i + 1);
     difficultyId = difficultyIds[i];
     if (difficultyId !== before) {
       sfx('tick');
@@ -829,10 +837,10 @@ function update(dt) {
     // a grid of 5 x 2 levels
     const before = levelChoice;
     const n = CONFIG.levels.length;
-    if (wasPressed([...k.p1.left, ...k.p2.left])) levelChoice = Math.max(0, levelChoice - 1);
-    if (wasPressed([...k.p1.right, ...k.p2.right])) levelChoice = Math.min(n - 1, levelChoice + 1);
-    if (wasPressed([...k.p1.forward, ...k.p2.forward])) levelChoice = Math.max(0, levelChoice - 5);
-    if (wasPressed([...k.p1.back, ...k.p2.back])) levelChoice = Math.min(n - 1, levelChoice + 5);
+    if (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft'])) levelChoice = Math.max(0, levelChoice - 1);
+    if (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight'])) levelChoice = Math.min(n - 1, levelChoice + 1);
+    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) levelChoice = Math.max(0, levelChoice - 5);
+    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown'])) levelChoice = Math.min(n - 1, levelChoice + 5);
     if (levelChoice !== before) {
       drawLevels();
       sfx('tick');

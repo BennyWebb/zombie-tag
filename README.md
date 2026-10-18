@@ -74,14 +74,16 @@ screen, alongside the keyboard. Press a button once after connecting so the brow
 | Left stick | walk and turn | walk, and step sideways |
 | Right stick | not used | turn |
 | D-pad | walk and turn, and choose in menus | the same |
-| A (✕ on PlayStation) or right trigger | attack, choose, buy | the same |
+| Any face button (A B X Y, or ✕ ○ □ △) or right trigger | attack, choose, buy | the same |
 | Start | pause | the same |
 
 Switch between **Simple** and **Two sticks** with **J** on the start screen or "🎮 Joypads" in the
 pause menu. The browser remembers your choice, and it's the same for both joypads.
 
-With one joypad it belongs to Player 1, except in 2-player mode, where it's Player 2's so Player 1
-keeps the keyboard. With two joypads, the first is Player 1's. Typing a new hero's name still needs the keyboard.
+**Which player gets a joypad:** on **Who's playing?**, pick your hero by pressing fire on your
+joypad, and that joypad is yours for the game. Whoever picks with the keyboard stays on the keyboard.
+Until then a joypad only works the menus, so it never moves the wrong hero. Typing a new hero's name
+still needs the keyboard.
 
 **Mouse controls for Player 1:** press **M** on the start screen, or change "🖱️ Player 1" in the
 pause menu, to switch between **Simple keys** (A / D turn, as before) and **Mouse**: W / S walk,

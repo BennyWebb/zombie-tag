@@ -42,10 +42,11 @@ export function takeMouseX() {
 
 // ---------- joypads ----------
 
-// Buttons on a standard joypad (Xbox layout; PlayStation's ✕ is A).
-const B = { a: 0, b: 1, rt: 7, start: 9, up: 12, down: 13, left: 14, right: 15 };
+// Buttons on a standard joypad (Xbox layout). All four face buttons and the right trigger fire.
+const B = { rt: 7, start: 9, up: 12, down: 13, left: 14, right: 15 };
+const FIRE = [0, 1, 2, 3, B.rt];
 let padDown = new Set(); // pretend keys held on joypads this frame
-const padSticks = [null, null]; // each player's sticks: { move, strafe, turn }, from -1 to 1
+let padSticks = [null, null]; // each player's sticks: { move, strafe, turn }, from -1 to 1
 
 const stick = (v) => (Math.abs(v) < CONFIG.controls.deadzone ? 0 : v);
 
@@ -56,33 +57,56 @@ export function setTwoSticks(on) {
   twoSticks = on;
 }
 
-// Reads the joypads once a frame. With 2 players and only one joypad, the joypad is Player 2's,
-// so Player 1 can stay on the keyboard (or mouse).
-export function pollPads(playerCount) {
+// Which player each joypad belongs to, by the browser's joypad number. A joypad belongs to whoever
+// presses fire on it when it's her turn on "Who's playing?". Until then it only works the menus
+// (as PadAny...), so it never moves a hero by mistake.
+const padOwner = new Map();
+let firedPad = -1; // a joypad nobody owns that pressed fire this frame
+const firing = new Set(); // joypads holding fire last frame
+
+export function clearPads() {
+  padOwner.clear();
+}
+
+export function givePad(pad, player) {
+  for (const [p, owner] of padOwner) if (owner === player) padOwner.delete(p);
+  padOwner.set(pad, player);
+}
+
+export const unownedPadFired = () => firedPad;
+export const playerHasPad = (player) => [...padOwner.values()].includes(player);
+
+// Reads the joypads once a frame.
+export function pollPads() {
   const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((p) => p && p.connected);
-  const slots = playerCount === 2 && pads.length === 1 ? [null, pads[0]] : [pads[0], pads[1]];
   const now = new Set();
-  slots.forEach((pad, i) => {
-    padSticks[i] = null;
-    if (!pad) return;
+  firedPad = -1;
+  padSticks = [null, null];
+  for (const pad of pads) {
     const held = (b) => !!(pad.buttons[b] && pad.buttons[b].pressed);
     const [lx = 0, ly = 0, rx = 0] = pad.axes;
-    const n = i + 1;
+    const owner = padOwner.get(pad.index);
+    const n = owner === undefined ? 'Any' : owner + 1;
     // the d-pad or the left stick choose things in menus
     if (held(B.up) || ly < -0.5) now.add(`Pad${n}Up`);
     if (held(B.down) || ly > 0.5) now.add(`Pad${n}Down`);
     if (held(B.left) || lx < -0.5) now.add(`Pad${n}Left`);
     if (held(B.right) || lx > 0.5) now.add(`Pad${n}Right`);
-    if (held(B.a) || held(B.rt)) now.add(`Pad${n}A`);
+    const fire = FIRE.some(held);
+    if (fire) now.add(`Pad${n}A`);
+    if (fire && !firing.has(pad.index) && owner === undefined) firedPad = pad.index;
+    if (fire) firing.add(pad.index);
+    else firing.delete(pad.index);
     if (held(B.start)) now.add('PadStart');
+    if (owner === undefined) continue;
     // in the game the d-pad always walks and turns
     const dpad = (plus, minus) => (held(plus) ? 1 : 0) - (held(minus) ? 1 : 0);
-    padSticks[i] = {
+    padSticks[owner] = {
       move: -stick(ly) + dpad(B.up, B.down),
       strafe: twoSticks ? stick(lx) : 0,
       turn: -stick(twoSticks ? rx : lx) + dpad(B.left, B.right),
     };
-  });
+  }
   for (const code of now) if (!padDown.has(code)) pressed.add(code);
   // Start pauses, like Esc
   if (now.has('PadStart') && !padDown.has('PadStart')) pressed.add('Escape');
