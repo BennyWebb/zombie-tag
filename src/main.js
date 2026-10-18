@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import {
-  clearPads, endFrame, givePad, keyName, pollPads, setTwoSticks, takeMouseX, unownedPadFired, wasPressed,
+  clearPads, endFrame, givePad, keyName, padsFound, playerHasPad, pollPads, setTwoSticks, takeMouseX,
+  unownedPadsFired, wasPressed,
 } from './input.js';
 import { buildWorld } from './world.js';
 import { THEMES } from './themes.js';
@@ -216,7 +217,7 @@ function drawTitle() {
     ? '<div><kbd>W</kbd> <kbd>S</kbd> walk, <kbd>A</kbd> <kbd>D</kbd> step</div><div>🖱️ mouse turns</div><div>click bonk!</div>'
     : '<div><kbd>W</kbd> <kbd>S</kbd> walk</div><div><kbd>A</kbd> <kbd>D</kbd> turn</div><div><kbd>Space</kbd> bonk!</div>');
   $('controls-mode').textContent = mouseLook ? 'mouse' : 'simple keys';
-  $('pads-mode').textContent = twoSticks ? 'two sticks' : 'simple';
+  $('pads-mode').textContent = `${twoSticks ? 'two sticks' : 'simple'} (${padsFound()} found)`;
 }
 
 function drawLevels() {
@@ -776,9 +777,11 @@ function update(dt) {
       sfx('tick');
       drawWho();
     }
-    const pad = unownedPadFired();
-    if (pad >= 0) {
-      givePad(pad, whoSlot);
+    // with mouse controls on in a 2-player game, Player 1 is on the mouse, so joypads are for Player 2
+    const mouseP1 = whoSlot === 0 && playerCount === 2 && mouseLook;
+    const pads = unownedPadsFired();
+    if (pads.length && !mouseP1) {
+      for (const pad of pads) givePad(pad, whoSlot);
       chooseWho();
     } else if (wasPressed(pk.attack)) chooseWho();
     else if (wasPressed(['KeyX', 'Delete'])) {
@@ -955,7 +958,10 @@ function frame() {
     if (state !== 'party') p.updateBody(dt, playing && playerCount === 2 && active.includes(p));
   }
   const bossShown = boss && boss.alive ? boss : null;
-  for (const p of active) huds[p.index].update(dt, levelZombies - popped, world.gate.isOpen, bossShown);
+  for (const p of active) {
+    p.device = playerHasPad(p.index) ? '🎮' : p.mouseLook ? '🖱️' : '⌨️';
+    huds[p.index].update(dt, levelZombies - popped, world.gate.isOpen, bossShown);
+  }
 
   // the start screens show the level slowly turning behind them
   const inGame = ['playing', 'paused', 'won'].includes(state);

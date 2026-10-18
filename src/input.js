@@ -61,7 +61,8 @@ export function setTwoSticks(on) {
 // presses fire on it when it's her turn on "Who's playing?". Until then it only works the menus
 // (as PadAny...), so it never moves a hero by mistake.
 const padOwner = new Map();
-let firedPad = -1; // a joypad nobody owns that pressed fire this frame
+let firedPads = []; // joypads nobody owns that pressed fire this frame
+// (one controller can show up as two joypads, e.g. with Steam running, so they're claimed together)
 const firing = new Set(); // joypads holding fire last frame
 
 export function clearPads() {
@@ -69,18 +70,18 @@ export function clearPads() {
 }
 
 export function givePad(pad, player) {
-  for (const [p, owner] of padOwner) if (owner === player) padOwner.delete(p);
   padOwner.set(pad, player);
 }
 
-export const unownedPadFired = () => firedPad;
+export const unownedPadsFired = () => firedPads;
 export const playerHasPad = (player) => [...padOwner.values()].includes(player);
+export const padsFound = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((p) => p && p.connected).length;
 
 // Reads the joypads once a frame.
 export function pollPads() {
   const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((p) => p && p.connected);
   const now = new Set();
-  firedPad = -1;
+  firedPads = [];
   padSticks = [null, null];
   for (const pad of pads) {
     const held = (b) => !!(pad.buttons[b] && pad.buttons[b].pressed);
@@ -94,18 +95,24 @@ export function pollPads() {
     if (held(B.right) || lx > 0.5) now.add(`Pad${n}Right`);
     const fire = FIRE.some(held);
     if (fire) now.add(`Pad${n}A`);
-    if (fire && !firing.has(pad.index) && owner === undefined) firedPad = pad.index;
+    if (fire && !firing.has(pad.index) && owner === undefined) firedPads.push(pad.index);
     if (fire) firing.add(pad.index);
     else firing.delete(pad.index);
     if (held(B.start)) now.add('PadStart');
     if (owner === undefined) continue;
     // in the game the d-pad always walks and turns
     const dpad = (plus, minus) => (held(plus) ? 1 : 0) - (held(minus) ? 1 : 0);
-    padSticks[owner] = {
+    const sticks = {
       move: -stick(ly) + dpad(B.up, B.down),
       strafe: twoSticks ? stick(lx) : 0,
       turn: -stick(twoSticks ? rx : lx) + dpad(B.left, B.right),
     };
+    // a player with two joypads (one controller showing up twice) gets whichever is pushed
+    const had = padSticks[owner];
+    const bigger = (a, b) => (Math.abs(a) > Math.abs(b) ? a : b);
+    padSticks[owner] = had
+      ? { move: bigger(had.move, sticks.move), strafe: bigger(had.strafe, sticks.strafe), turn: bigger(had.turn, sticks.turn) }
+      : sticks;
   }
   for (const code of now) if (!padDown.has(code)) pressed.add(code);
   // Start pauses, like Esc

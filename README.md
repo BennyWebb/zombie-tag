@@ -82,8 +82,15 @@ pause menu. The browser remembers your choice, and it's the same for both joypad
 
 **Which player gets a joypad:** on **Who's playing?**, pick your hero by pressing fire on your
 joypad, and that joypad is yours for the game. Whoever picks with the keyboard stays on the keyboard.
-Until then a joypad only works the menus, so it never moves the wrong hero. Typing a new hero's name
-still needs the keyboard.
+Until then a joypad only works the menus, so it never moves the wrong hero. In a 2-player game with
+mouse controls on, Player 1 is on the mouse, so joypads can only be picked by Player 2. Typing a new
+hero's name still needs the keyboard.
+
+Each player's name tag (top right) shows what she's playing with: 🎮 joypad, 🖱️ mouse or ⌨️ keys.
+The start screen shows how many joypads the browser can see. One controller sometimes shows up as two
+(for example with Steam running); that's fine, both go to the same player. If a joypad moves Player 1
+even though Player 2's name tag shows 🎮, something outside the game (like Steam's controller settings)
+is turning the joypad into a mouse or keyboard.
 
 **Mouse controls for Player 1:** press **M** on the start screen, or change "🖱️ Player 1" in the
 pause menu, to switch between **Simple keys** (A / D turn, as before) and **Mouse**: W / S walk,

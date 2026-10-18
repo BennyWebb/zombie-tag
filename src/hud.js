@@ -110,7 +110,9 @@ export class Hud {
       el.classList.add('bump');
       p.statUp = null;
     }
-    if (this.q('.who').textContent !== p.name) this.q('.who').textContent = p.name;
+    // the name pill also shows what she's playing with: 🎮 joypad, 🖱️ mouse or ⌨️ keys
+    const who = p.device ? `${p.device} ${p.name}` : p.name;
+    if (this.q('.who').textContent !== who) this.q('.who').textContent = who;
     const bux = this.q('.bux-count');
     if (bux.textContent !== String(p.tagBux)) bux.textContent = p.tagBux;
 
