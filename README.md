@@ -18,13 +18,18 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
 - [ ] **9. Refinement:** tuning from play-testing. Done so far: Easy, Hard and Hardcore, a hero for
   everyone on "Who's playing?", the gym limited to one upgrade per place, the Zombie King as the final battle,
-  joypads (simple or two sticks), mouse controls for Player 1, and Hardcore as its own fresh game with twice the zombies.
+  joypads (simple or two sticks), keyboard or joypad for each player, mouse controls, and Hardcore as its own fresh game with twice the zombies.
 
 ## How to play
 
 On the start screen, choose **1 Player** or **2 Players** with W / S (or the arrows) and press Space.
-Then each player picks her hero on **Who's playing?** (Player 1 with W / S and Space, then Player 2
-with the arrows and Enter), chooses how hard, and picks a level.
+Then each player picks her hero on **Who's playing?**, Player 1 first, chooses how hard, and picks a level.
+
+**Keyboard or joypad:** on **Who's playing?** the button you pick your hero with decides what you play
+with: **Space** for the ⌨️ keyboard (and mouse), or **fire on a joypad** for that 🎮 joypad. Only one
+player can have the keyboard: if Player 1 picks with the keyboard, Player 2 has to pick with a joypad.
+If Player 1 picks with a joypad, Player 2 can have the keyboard or another joypad. Each name tag
+(top right) shows 🎮, 🖱️ or ⌨️.
 
 **Who's playing?** Everyone has their own saved hero, with her own looks, Tag Bux, weapons, outfits,
 training and levels reached, so anyone can play as Player 1 or Player 2. Choose **➕ New hero** to make
@@ -49,53 +54,36 @@ is out until the other one finishes the level; if you're both tagged it's game o
 
 The first time, each new hero is made in the **character creator**: type your name (up to 12 letters)
 and press Enter, then pick your skin, hair style, hair colour and clothes colour with W / S and A / D
-(Player 2: the arrows) while your hero turns round to show off. Press Space (Player 2: Enter) on
-**Done!**. With 2 players, Player 1 goes first. To change your looks later, press **C** on the start screen.
+(or your joypad) while your hero turns round to show off. Press Space (or fire) on **Done!**. With 2 players, Player 1 goes first. To change your looks later, press **C** on the start screen.
 With 2 players the screen splits down the middle: Player 1 on the left, Player 2 on the right.
 
-| Action | Player 1 | Player 2 |
+| Action | ⌨️ Keyboard | 🎮 Joypad (Simple) |
 | --- | --- | --- |
-| Walk forward / back | W / S | ↑ / ↓ |
-| Turn left / right | A / D | ← / → |
-| Attack (hold it down for shooting weapons and the laser) | Space | Enter (or Numpad 0) |
-| Shop and gym: choose / go | W / S, then Space | ↑ / ↓, then Enter |
-| Treadmill | A, D, A, D… as fast as you can | ←, →, ←, →… |
-| Weights | tap Space as fast as you can | tap Enter |
-| Pause: volume, Player 1's controls, or Q to go back to the start screen | Esc | Esc |
-| Level picker: choose / play | W A S D, then Space | arrows, then Enter |
+| Walk forward / back | W / S (or ↑ / ↓) | left stick or d-pad up / down |
+| Turn left / right | A / D (or ← / →) | left stick or d-pad left / right |
+| Attack (hold it down for shooting weapons and the laser) | Space (or Enter) | any face button (A B X Y, ✕ ○ □ △) or right trigger |
+| Shop and gym: choose / go | W / S, then Space | up / down, then fire |
+| Treadmill | A, D, A, D… as fast as you can | left, right, left, right… |
+| Weights | tap Space as fast as you can | tap fire |
+| Pause: volume, controls, or Q to go back to the start screen | Esc | Start |
+| Level picker: choose / play | W A S D, then Space | stick, then fire |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
 
-**Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work in every
-screen, alongside the keyboard. Press a button once after connecting so the browser notices it.
+**Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work every menu.
+Press a button once after connecting so the browser notices it; the start screen shows how many it can
+see. A joypad only moves a hero once someone has picked with it on **Who's playing?**. Typing a new
+hero's name still needs the keyboard. One controller sometimes shows up as two (for example with Steam
+running); that's fine, both go to the same player.
 
-| Joypad | Simple (the start) | Two sticks |
-| --- | --- | --- |
-| Left stick | walk and turn | walk, and step sideways |
-| Right stick | not used | turn |
-| D-pad | walk and turn, and choose in menus | the same |
-| Any face button (A B X Y, or ✕ ○ □ △) or right trigger | attack, choose, buy | the same |
-| Start | pause | the same |
+**Two sticks:** press **J** on the start screen, or change "🎮 Joypads" in the pause menu, to switch
+joypads from **Simple** to **Two sticks**: the left stick walks and steps sideways, and the right stick
+turns. The browser remembers your choice, and it's the same for every joypad.
 
-Switch between **Simple** and **Two sticks** with **J** on the start screen or "🎮 Joypads" in the
-pause menu. The browser remembers your choice, and it's the same for both joypads.
-
-**Which player gets a joypad:** on **Who's playing?**, pick your hero by pressing fire on your
-joypad, and that joypad is yours for the game. Whoever picks with the keyboard stays on the keyboard.
-Until then a joypad only works the menus, so it never moves the wrong hero. In a 2-player game with
-mouse controls on, Player 1 is on the mouse, so joypads can only be picked by Player 2. Typing a new
-hero's name still needs the keyboard.
-
-Each player's name tag (top right) shows what she's playing with: 🎮 joypad, 🖱️ mouse or ⌨️ keys.
-The start screen shows how many joypads the browser can see. One controller sometimes shows up as two
-(for example with Steam running); that's fine, both go to the same player. If a joypad moves Player 1
-even though Player 2's name tag shows 🎮, something outside the game (like Steam's controller settings)
-is turning the joypad into a mouse or keyboard.
-
-**Mouse controls for Player 1:** press **M** on the start screen, or change "🖱️ Player 1" in the
-pause menu, to switch between **Simple keys** (A / D turn, as before) and **Mouse**: W / S walk,
-A / D step sideways, the mouse turns and a click attacks. Click the game once to grab the mouse; Esc
-lets go of it and pauses. The browser remembers your choice. Player 2 uses the arrow keys or a joypad.
+**Mouse controls:** press **M** on the start screen, or change "🖱️ Keyboard" in the pause menu, to
+switch the keyboard player between **Simple keys** (A / D turn) and **Mouse**: W / S walk, A / D step
+sideways, the mouse turns and a click attacks. Click the game once to grab the mouse; Esc lets go of it
+and pauses. The browser remembers your choice.
 
 Popped zombies burst into spinning **Tag Bux** coins. Walk over them to collect them;
 your Tag Bux are at the top right. A Shuffler is worth 5, so popping all 8 earns 40.

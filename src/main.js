@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import {
-  clearPads, endFrame, givePad, keyName, padsFound, playerHasPad, pollPads, setTwoSticks, takeMouseX,
+  clearPads, endFrame, givePad, padsFound, pollPads, setTwoSticks, takeMouseX,
   unownedPadsFired, wasPressed,
 } from './input.js';
 import { buildWorld } from './world.js';
@@ -41,7 +41,18 @@ let level = null; // its settings from config.js
 let world = null; // its park, school, beach...
 
 // Both heroes always exist; in 1-player mode only the first one plays.
-const players = CONFIG.heroes.map((look, i) => new Player(i === 0 ? CONFIG.keys.p1 : CONFIG.keys.p2, scene, look, i));
+// Each player picks the keyboard (with the mouse, if mouse controls are on) or a joypad on
+// "Who's playing?". Only one player can have the keyboard.
+const KEYBOARD = CONFIG.keys.keyboard;
+const padKeys = (n) => ({
+  forward: [`Pad${n}Up`], back: [`Pad${n}Down`], left: [`Pad${n}Left`], right: [`Pad${n}Right`], attack: [`Pad${n}A`],
+});
+// menus anyone can use: the keyboard, or any joypad
+const menu = {};
+for (const [dir, pad] of [['forward', 'Up'], ['back', 'Down'], ['left', 'Left'], ['right', 'Right']]) {
+  menu[dir] = [...KEYBOARD[dir], `Pad1${pad}`, `Pad2${pad}`, `PadAny${pad}`];
+}
+const players = CONFIG.heroes.map((look, i) => new Player(KEYBOARD, scene, look, i));
 const huds = players.map((p, i) => new Hud($('hud'), p, i + 1));
 const menus = players.map((p, i) => ({
   shop: new ShopMenu(huds[i].inner, p, null),
@@ -87,7 +98,6 @@ try {
 } catch {
   // no saved choice: simple keyboard and joypad controls
 }
-players[0].mouseLook = mouseLook;
 setTwoSticks(twoSticks);
 let lockLostAt = -1; // when the mouse was last let go, so the same Esc doesn't pause and unpause
 let coinStreak = 0; // coins picked up one after another go up in pitch
@@ -121,7 +131,7 @@ function drawVolume() {
   const bar = (n) => '▮'.repeat(n) + '<span class="off">' + '▮'.repeat(10 - n) + '</span>';
   $('volume').innerHTML = [['music', '🎵 Music'], ['sounds', '🔊 Sounds']].map(([key, label], i) => (
     `<div class="vol${i === pauseRow ? ' selected' : ''}"><span>${label}</span><b>${bar(v[key])}</b></div>`
-  )).join('') + `<div class="vol${pauseRow === 2 ? ' selected' : ''}"><span>🖱️ Player 1</span>`
+  )).join('') + `<div class="vol${pauseRow === 2 ? ' selected' : ''}"><span>🖱️ Keyboard</span>`
     + `<b class="mode">${mouseLook ? 'Mouse' : 'Simple keys'}</b></div>`
     + `<div class="vol${pauseRow === 3 ? ' selected' : ''}"><span>🎮 Joypads</span>`
     + `<b class="mode">${twoSticks ? 'Two sticks' : 'Simple'}</b></div>`;
@@ -141,7 +151,7 @@ function setPadMode(on) {
 // Simple keys: A/D turn. Mouse: A/D step sideways, the mouse turns, click to attack.
 function setMouseLook(on) {
   mouseLook = on;
-  players[0].mouseLook = on;
+  for (const p of players) p.mouseLook = on && p.device === 'keyboard';
   try {
     localStorage.setItem(CONTROLS_KEY, on ? 'mouse' : 'keys');
   } catch {
@@ -212,11 +222,10 @@ const finishedNow = (i) => active.some((p) => p.finished.has(i));
 
 function drawTitle() {
   document.querySelectorAll('#title .choice').forEach((el, i) => el.classList.toggle('selected', i === titleChoice));
-  $('p2-keys').classList.toggle('hidden', titleChoice === 0);
-  $('p1-keys').innerHTML = '<div class="who-keys">Player 1</div>' + (mouseLook
+  $('p1-keys').innerHTML = '<div class="who-keys">⌨️ Keyboard</div>' + (mouseLook
     ? '<div><kbd>W</kbd> <kbd>S</kbd> walk, <kbd>A</kbd> <kbd>D</kbd> step</div><div>🖱️ mouse turns</div><div>click bonk!</div>'
     : '<div><kbd>W</kbd> <kbd>S</kbd> walk</div><div><kbd>A</kbd> <kbd>D</kbd> turn</div><div><kbd>Space</kbd> bonk!</div>');
-  $('controls-mode').textContent = mouseLook ? 'mouse' : 'simple keys';
+  $('controls-mode').textContent = mouseLook ? 'with the mouse' : 'simple keys';
   $('pads-mode').textContent = `${twoSticks ? 'two sticks' : 'simple'} (${padsFound()} found)`;
 }
 
@@ -240,7 +249,19 @@ function beginGame(everyone) {
   editLooks = everyone;
   active = players.slice(0, playerCount);
   clearPads(); // each joypad goes to whoever presses fire on it on "Who's playing?"
+  for (const p of players) p.device = null;
   startWho(0);
+}
+
+// Whether the keyboard is still free for the player choosing now (only one player can have it).
+const keyboardFree = () => !players.slice(0, whoSlot).some((p) => p.device === 'keyboard');
+
+// Gives a player the keyboard (and the mouse) or the joypad(s) she pressed fire on.
+function setDevice(p, device, pads = []) {
+  p.device = device;
+  p.keys = device === 'keyboard' ? KEYBOARD : padKeys(p.index + 1);
+  p.mouseLook = mouseLook && device === 'keyboard';
+  for (const pad of pads) givePad(pad, p.index);
 }
 
 function startWho(slot) {
@@ -262,7 +283,6 @@ function whoRows() {
 
 function drawWho() {
   const p = players[whoSlot];
-  const k = p.keys;
   const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
   const badge = $('who').querySelector('.who-badge');
   badge.className = `who-badge p${whoSlot + 1}`;
@@ -277,11 +297,13 @@ function drawWho() {
       + `<span class="dot" style="background:${hex(d.look.outfit)}"></span><b>${d.look.name}</b>`
       + `<small>${r.taken ? 'Playing as Player 1' : `⭐ ${stars} &nbsp; <span class="coin">T</span> ${d.tagBux}`}</small></div>`;
   }).join('');
-  $('who-keys').innerHTML = `<kbd>${keyName(k.forward[0])}</kbd> <kbd>${keyName(k.back[0])}</kbd> choose,`
-    + ` <kbd>${keyName(k.attack[0])}</kbd> play, or 🎮 fire on your joypad`;
+  // the button you pick with decides what you play with
+  $('who-keys').innerHTML = keyboardFree()
+    ? '<kbd>Space</kbd> to play with the ⌨️ keyboard, or 🎮 fire to play with a joypad'
+    : 'Player 1 has the keyboard, so press 🎮 fire on your joypad';
 }
 
-function chooseWho() {
+function chooseWho(device, pads) {
   const rows = whoRows();
   const r = rows[whoChoice];
   const p = players[whoSlot];
@@ -290,6 +312,7 @@ function chooseWho() {
     return;
   }
   sfx('select');
+  setDevice(p, device, pads);
   if (r.newHero) p.blank(`hero${Date.now().toString(36)}${whoSlot}`);
   else p.fromSave(r.profile);
   if (whoSlot + 1 < playerCount) {
@@ -701,9 +724,9 @@ function update(dt) {
   pollPads();
   // Player 1's mouse turns her (read every frame, so moves made in menus don't pile up)
   const mouseX = takeMouseX();
-  const p1 = players[0];
-  if (mouseLook && state === 'playing' && active.includes(p1) && !p1.inside && !p1.tagged) {
-    p1.yaw -= mouseX * CONFIG.controls.mouseTurn;
+  const kb = active.find((p) => p.device === 'keyboard');
+  if (mouseLook && state === 'playing' && kb && !kb.inside && !kb.tagged) {
+    kb.yaw -= mouseX * CONFIG.controls.mouseTurn;
   }
   const justLetGo = clock.elapsedTime - lockLostAt < 0.3; // the Esc that let go of the mouse already paused
   if (wasPressed(['Escape']) && (state === 'playing' || state === 'paused') && !justLetGo) {
@@ -713,11 +736,10 @@ function update(dt) {
   }
   if (state === 'paused') {
     // W/S (or the arrows) choose a row, A/D (or the arrows) make it louder or quieter or change controls
-    const k = CONFIG.keys;
     const before = pauseRow;
-    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) pauseRow = Math.max(0, pauseRow - 1);
-    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown'])) pauseRow = Math.min(PAUSE_ROWS - 1, pauseRow + 1);
-    const change = (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight']) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft']) ? 1 : 0);
+    if (wasPressed([...menu.forward])) pauseRow = Math.max(0, pauseRow - 1);
+    if (wasPressed([...menu.back])) pauseRow = Math.min(PAUSE_ROWS - 1, pauseRow + 1);
+    const change = (wasPressed([...menu.right]) ? 1 : 0) - (wasPressed([...menu.left]) ? 1 : 0);
     if (change && pauseRow === 2) {
       setMouseLook(!mouseLook);
       sfx('tick');
@@ -737,12 +759,11 @@ function update(dt) {
     show('title');
     return;
   }
-  const k = CONFIG.keys;
   const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A', 'PadAnyA'];
   if (state === 'title') {
     // choose 1 or 2 players with W/S or the arrows (or just press 1 or 2)
-    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp', ...k.p1.left, ...k.p2.left, 'PadAnyLeft'])) titleChoice = 0;
-    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown', ...k.p1.right, ...k.p2.right, 'PadAnyRight'])) titleChoice = 1;
+    if (wasPressed([...menu.forward, ...menu.left])) titleChoice = 0;
+    if (wasPressed([...menu.back, ...menu.right])) titleChoice = 1;
     if (wasPressed(['Digit1', 'Numpad1'])) titleChoice = 0;
     if (wasPressed(['Digit2', 'Numpad2'])) titleChoice = 1;
     if (titleChoice !== Number($('title').dataset.choice || 0)) sfx('tick');
@@ -766,24 +787,24 @@ function update(dt) {
     return;
   }
   if (state === 'who') {
-    // the hero choosing uses her own keys
-    // (a joypad nobody owns yet can choose too: pressing fire makes it hers)
-    const pk = players[whoSlot].keys;
+    // The hero choosing uses the keyboard (if Player 1 hasn't taken it) or any joypad nobody has yet.
+    // Picking with Space gives her the keyboard; picking with fire on a joypad gives her that joypad.
+    const kbFree = keyboardFree();
+    const kb = (keys) => (kbFree ? keys : []);
     const n = whoRows().length;
     const before = whoChoice;
-    if (wasPressed([...pk.forward, ...pk.left, 'PadAnyUp', 'PadAnyLeft'])) whoChoice = (whoChoice + n - 1) % n;
-    if (wasPressed([...pk.back, ...pk.right, 'PadAnyDown', 'PadAnyRight'])) whoChoice = (whoChoice + 1) % n;
+    if (wasPressed([...kb(KEYBOARD.forward), ...kb(KEYBOARD.left), 'PadAnyUp', 'PadAnyLeft'])) whoChoice = (whoChoice + n - 1) % n;
+    if (wasPressed([...kb(KEYBOARD.back), ...kb(KEYBOARD.right), 'PadAnyDown', 'PadAnyRight'])) whoChoice = (whoChoice + 1) % n;
     if (whoChoice !== before) {
       sfx('tick');
       drawWho();
     }
-    // with mouse controls on in a 2-player game, Player 1 is on the mouse, so joypads are for Player 2
-    const mouseP1 = whoSlot === 0 && playerCount === 2 && mouseLook;
     const pads = unownedPadsFired();
-    if (pads.length && !mouseP1) {
-      for (const pad of pads) givePad(pad, whoSlot);
-      chooseWho();
-    } else if (wasPressed(pk.attack)) chooseWho();
+    if (pads.length) chooseWho('pad', pads);
+    else if (wasPressed(KEYBOARD.attack)) {
+      if (kbFree) chooseWho('keyboard');
+      else sfx('nope'); // the keyboard is Player 1's
+    }
     else if (wasPressed(['KeyX', 'Delete'])) {
       const r = whoRows()[whoChoice];
       if (r.profile && !r.taken) {
@@ -791,8 +812,12 @@ function update(dt) {
         show('remove');
       } else sfx('nope');
     } else if (wasPressed(['Escape'])) {
-      if (whoSlot > 0) startWho(whoSlot - 1);
-      else show('title');
+      if (whoSlot > 0) {
+        // Player 1 chooses again, keyboard or joypad
+        clearPads();
+        players[0].device = null;
+        startWho(0);
+      } else show('title');
     }
     return;
   }
@@ -810,8 +835,8 @@ function update(dt) {
   if (state === 'difficulty') {
     const before = difficultyId;
     let i = difficultyIds.indexOf(difficultyId);
-    if (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft', ...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) i = Math.max(0, i - 1);
-    if (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight', ...k.p1.back, ...k.p2.back, 'PadAnyDown'])) i = Math.min(difficultyIds.length - 1, i + 1);
+    if (wasPressed([...menu.left, ...menu.forward])) i = Math.max(0, i - 1);
+    if (wasPressed([...menu.right, ...menu.back])) i = Math.min(difficultyIds.length - 1, i + 1);
     difficultyId = difficultyIds[i];
     if (difficultyId !== before) {
       sfx('tick');
@@ -840,10 +865,10 @@ function update(dt) {
     // a grid of 5 x 2 levels
     const before = levelChoice;
     const n = CONFIG.levels.length;
-    if (wasPressed([...k.p1.left, ...k.p2.left, 'PadAnyLeft'])) levelChoice = Math.max(0, levelChoice - 1);
-    if (wasPressed([...k.p1.right, ...k.p2.right, 'PadAnyRight'])) levelChoice = Math.min(n - 1, levelChoice + 1);
-    if (wasPressed([...k.p1.forward, ...k.p2.forward, 'PadAnyUp'])) levelChoice = Math.max(0, levelChoice - 5);
-    if (wasPressed([...k.p1.back, ...k.p2.back, 'PadAnyDown'])) levelChoice = Math.min(n - 1, levelChoice + 5);
+    if (wasPressed([...menu.left])) levelChoice = Math.max(0, levelChoice - 1);
+    if (wasPressed([...menu.right])) levelChoice = Math.min(n - 1, levelChoice + 1);
+    if (wasPressed([...menu.forward])) levelChoice = Math.max(0, levelChoice - 5);
+    if (wasPressed([...menu.back])) levelChoice = Math.min(n - 1, levelChoice + 5);
     if (levelChoice !== before) {
       drawLevels();
       sfx('tick');
@@ -959,7 +984,7 @@ function frame() {
   }
   const bossShown = boss && boss.alive ? boss : null;
   for (const p of active) {
-    p.device = playerHasPad(p.index) ? '🎮' : p.mouseLook ? '🖱️' : '⌨️';
+    p.deviceIcon = p.device === 'pad' ? '🎮' : p.mouseLook ? '🖱️' : '⌨️';
     huds[p.index].update(dt, levelZombies - popped, world.gate.isOpen, bossShown);
   }
 

@@ -126,6 +126,11 @@ export const isDown = (codes) => codes.some((c) => down.has(c) || padDown.has(c)
 export const wasPressed = (codes) => codes.some((c) => pressed.has(c));
 export const endFrame = () => pressed.clear();
 
-// How a key is shown on screen, e.g. KeyW → W
+// How a key is shown on screen, e.g. KeyW → W, Pad2Up → 🎮↑
 const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Numpad0: '0', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
-export const keyName = (code) => KEY_NAMES[code] || code.replace(/^Key/, '');
+const PAD_NAMES = { Up: '🎮↑', Down: '🎮↓', Left: '🎮←', Right: '🎮→', A: '🎮 fire' };
+export const keyName = (code) => {
+  const pad = code.match(/^Pad(?:\d|Any)(Up|Down|Left|Right|A)$/);
+  if (pad) return PAD_NAMES[pad[1]];
+  return KEY_NAMES[code] || code.replace(/^Key/, '');
+};

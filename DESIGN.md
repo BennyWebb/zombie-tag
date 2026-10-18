@@ -248,8 +248,9 @@ Build it as a browser game with JavaScript and Three.js, in small steps that the
    the gym limited to one Speed and one Strength upgrade per level; and the Zombie King arriving as
    the final battle after every other zombie, tougher and faster on Hard and Hardcore. Joypad support
    for both players (simple: left stick walks and turns; or two sticks; each joypad belongs to whoever
-   presses fire on it on "Who's playing?"; every face button fires), and optional mouse controls
-   (mouse to turn, A/D to step sideways) for Player 1. Hardcore is its own game for each hero, starting
+   presses fire on it on "Who's playing?"; every face button fires). Each player plays with the keyboard
+   or a joypad, chosen by the button she picks her hero with; only one player can have the keyboard.
+   Optional mouse controls (mouse to turn, A/D to step sideways) for the keyboard player. Hardcore is its own game for each hero, starting
    from nothing but outfits, with twice the zombies; game over starts it again.
 
 **Getting started in Claude Code**

@@ -111,7 +111,7 @@ export class Hud {
       p.statUp = null;
     }
     // the name pill also shows what she's playing with: 🎮 joypad, 🖱️ mouse or ⌨️ keys
-    const who = p.device ? `${p.device} ${p.name}` : p.name;
+    const who = p.deviceIcon ? `${p.deviceIcon} ${p.name}` : p.name;
     if (this.q('.who').textContent !== who) this.q('.who').textContent = who;
     const bux = this.q('.bux-count');
     if (bux.textContent !== String(p.tagBux)) bux.textContent = p.tagBux;
