@@ -320,6 +320,7 @@ export const CONFIG = {
       callHelpEvery: 10, // seconds between calling in Shufflers to help
       helpers: 2, // how many come each time
       maxHelpers: 6, // never more than this many helpers at once
+      guards: 6, // zombies (from the level's mix) that arrive with him to protect him
     },
   },
 
@@ -371,14 +372,14 @@ export const CONFIG = {
     hard: {
       name: 'Hard', icon: '😬', about: 'Get tagged and you lose your weapons and armour',
       loseItems: true,
-      king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
     },
     hardcore: {
       name: 'Hardcore', icon: '💀', about: 'A fresh start with twice the zombies. Only 1 life: get tagged and it starts again!',
       oneLife: true,
       fresh: true,
       zombies: 2,
-      king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
+      king: { health: 1000, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
     },
   },
 
@@ -435,12 +436,17 @@ export const CONFIG = {
   twoPlayerZombies: 1.5, // 50% more zombies with 2 players, so you both earn enough Tag Bux
   giveTagBux: 10, // how many Tag Bux "Give" in the shop hands to your sister
 
-  // The keyboard player's keys (the first of each is shown on screen). Only one player can use the
-  // keyboard; the other plays with a joypad (see input.js).
+  // Keys (the first of each is shown on screen). One player can have the whole keyboard, or two
+  // players can share it: Player 1 on the left (WASD + Space), Player 2 on the right (arrows + Enter).
   keys: {
     keyboard: {
       forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
       attack: ['Space', 'Enter', 'NumpadEnter', 'Numpad0'],
+    },
+    left: { forward: ['KeyW'], back: ['KeyS'], left: ['KeyA'], right: ['KeyD'], attack: ['Space'] },
+    right: {
+      forward: ['ArrowUp'], back: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
+      attack: ['Enter', 'NumpadEnter', 'Numpad0'], // Enter for laptops without a number pad
     },
   },
 

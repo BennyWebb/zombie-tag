@@ -42,8 +42,11 @@ let world = null; // its park, school, beach...
 
 // Both heroes always exist; in 1-player mode only the first one plays.
 // Each player picks the keyboard (with the mouse, if mouse controls are on) or a joypad on
-// "Who's playing?". Only one player can have the keyboard.
+// "Who's playing?". Two players can also share the keyboard (left half and right half).
 const KEYBOARD = CONFIG.keys.keyboard;
+const DEVICE_KEYS = { keyboard: KEYBOARD, keysLeft: CONFIG.keys.left, keysRight: CONFIG.keys.right };
+// the mouse goes with the whole keyboard, or with the left half when sharing
+const usesMouse = (p) => p.device === 'keyboard' || p.device === 'keysLeft';
 const padKeys = (n) => ({
   forward: [`Pad${n}Up`], back: [`Pad${n}Down`], left: [`Pad${n}Left`], right: [`Pad${n}Right`], attack: [`Pad${n}A`],
 });
@@ -151,7 +154,7 @@ function setPadMode(on) {
 // Simple keys: A/D turn. Mouse: A/D step sideways, the mouse turns, click to attack.
 function setMouseLook(on) {
   mouseLook = on;
-  for (const p of players) p.mouseLook = on && p.device === 'keyboard';
+  for (const p of players) p.mouseLook = on && usesMouse(p);
   try {
     localStorage.setItem(CONTROLS_KEY, on ? 'mouse' : 'keys');
   } catch {
@@ -253,14 +256,15 @@ function beginGame(everyone) {
   startWho(0);
 }
 
-// Whether the keyboard is still free for the player choosing now (only one player can have it).
-const keyboardFree = () => !players.slice(0, whoSlot).some((p) => p.device === 'keyboard');
+// Whether the keyboard is still free for the player choosing now, or who has it.
+const keyboardOwner = () => players.slice(0, whoSlot).find((p) => p.device === 'keyboard');
+const keyboardFree = () => !keyboardOwner();
 
-// Gives a player the keyboard (and the mouse) or the joypad(s) she pressed fire on.
+// Gives a player the keyboard (and the mouse), half the keyboard, or the joypad(s) she pressed fire on.
 function setDevice(p, device, pads = []) {
   p.device = device;
-  p.keys = device === 'keyboard' ? KEYBOARD : padKeys(p.index + 1);
-  p.mouseLook = mouseLook && device === 'keyboard';
+  p.keys = DEVICE_KEYS[device] || padKeys(p.index + 1);
+  p.mouseLook = mouseLook && usesMouse(p);
   for (const pad of pads) givePad(pad, p.index);
 }
 
@@ -300,7 +304,9 @@ function drawWho() {
   // the button you pick with decides what you play with
   $('who-keys').innerHTML = keyboardFree()
     ? '<kbd>Space</kbd> to play with the ⌨️ keyboard, or 🎮 fire to play with a joypad'
-    : 'Player 1 has the keyboard, so press 🎮 fire on your joypad';
+    : '🎮 fire to play with a joypad, or <kbd>Enter</kbd> to share the ⌨️ keyboard'
+      + '<br><small style="font-size: 0.7em">Sharing: Player 1 uses <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + <kbd>Space</kbd>,'
+      + ' Player 2 uses the arrows + <kbd>Enter</kbd></small>';
 }
 
 function chooseWho(device, pads) {
@@ -312,6 +318,8 @@ function chooseWho(device, pads) {
     return;
   }
   sfx('select');
+  // sharing: whoever had the whole keyboard moves over to the left half
+  if (device === 'keysRight') setDevice(keyboardOwner(), 'keysLeft');
   setDevice(p, device, pads);
   if (r.newHero) p.blank(`hero${Date.now().toString(36)}${whoSlot}`);
   else p.fromSave(r.profile);
@@ -466,6 +474,16 @@ function spawnBoss() {
     boss.type = { ...boss.type, ...king };
     boss.maxHealth = king.health * level.healthMultiplier;
     boss.health = boss.maxHealth;
+  }
+  // his guards arrive with him, in a ring round him
+  const guards = boss.type.guards * (difficulty().zombies || 1);
+  for (let i = 0; i < guards; i++) {
+    const a = (i / guards) * Math.PI * 2;
+    const x = boss.pos.x + Math.cos(a) * 4;
+    const z = boss.pos.z + Math.sin(a) * 4;
+    if (!world.isClear(x, z, 0.8)) continue;
+    addZombie(pickKind(), x, z);
+    levelZombies++;
   }
   sfx('king');
   toastAll(king && king.instantTag
@@ -724,7 +742,7 @@ function update(dt) {
   pollPads();
   // Player 1's mouse turns her (read every frame, so moves made in menus don't pile up)
   const mouseX = takeMouseX();
-  const kb = active.find((p) => p.device === 'keyboard');
+  const kb = active.find(usesMouse);
   if (mouseLook && state === 'playing' && kb && !kb.inside && !kb.tagged) {
     kb.yaw -= mouseX * CONFIG.controls.mouseTurn;
   }
@@ -789,8 +807,9 @@ function update(dt) {
   if (state === 'who') {
     // The hero choosing uses the keyboard (if Player 1 hasn't taken it) or any joypad nobody has yet.
     // Picking with Space gives her the keyboard; picking with fire on a joypad gives her that joypad.
+    // If Player 1 has the keyboard, Player 2 can share it: she chooses with the arrows and Enter.
     const kbFree = keyboardFree();
-    const kb = (keys) => (kbFree ? keys : []);
+    const kb = (keys) => (kbFree ? keys : keys.filter((k) => k.startsWith('Arrow')));
     const n = whoRows().length;
     const before = whoChoice;
     if (wasPressed([...kb(KEYBOARD.forward), ...kb(KEYBOARD.left), 'PadAnyUp', 'PadAnyLeft'])) whoChoice = (whoChoice + n - 1) % n;
@@ -803,7 +822,8 @@ function update(dt) {
     if (pads.length) chooseWho('pad', pads);
     else if (wasPressed(KEYBOARD.attack)) {
       if (kbFree) chooseWho('keyboard');
-      else sfx('nope'); // the keyboard is Player 1's
+      else if (wasPressed(CONFIG.keys.right.attack)) chooseWho('keysRight');
+      else sfx('nope'); // Space is Player 1's
     }
     else if (wasPressed(['KeyX', 'Delete'])) {
       const r = whoRows()[whoChoice];

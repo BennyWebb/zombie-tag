@@ -153,7 +153,7 @@ Zombies are goofy, colourful cartoons that wander towards the nearest hero and e
 | Bouncy Bob | 5 | 3 | Medium | 15 | Hops like a kangaroo. Can jump over small fences. |
 | Big Bertha | 6 | 8 | Very slow | 25 | Huge and tough. Takes 2 hearts per touch. |
 | Slime Zombie | 8 | 4 | Medium | 20 | Splits into two small Shufflers when popped. |
-| Zombie King (boss) | 10 | 60 | Slow | 300 | Wears a wonky crown and calls in Shufflers to help. |
+| Zombie King (boss) | 10 | 60 | Slow | 300 | Wears a wonky crown, arrives with 6 guards and calls in Shufflers to help. 1000 health (times the level's) on Hard and Hardcore. |
 
 **How zombies behave**
 

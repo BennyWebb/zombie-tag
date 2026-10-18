@@ -354,7 +354,7 @@ export class Shots {
       let hit = null;
       for (const z of zombies) {
         if (!z.alive || s.hitSet.has(z)) continue;
-        if (p.y < 2.5 && Math.hypot(p.x - z.pos.x, p.z - z.pos.z) < z.radius + 0.3) {
+        if (p.y < Math.max(2.5, 2.2 * z.type.size + z.lift) && Math.hypot(p.x - z.pos.x, p.z - z.pos.z) < z.radius + 0.3) {
           hit = z;
           break;
         }

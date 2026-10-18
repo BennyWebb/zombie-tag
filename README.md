@@ -26,10 +26,11 @@ On the start screen, choose **1 Player** or **2 Players** with W / S (or the arr
 Then each player picks her hero on **Who's playing?**, Player 1 first, chooses how hard, and picks a level.
 
 **Keyboard or joypad:** on **Who's playing?** the button you pick your hero with decides what you play
-with: **Space** for the ⌨️ keyboard (and mouse), or **fire on a joypad** for that 🎮 joypad. Only one
-player can have the keyboard: if Player 1 picks with the keyboard, Player 2 has to pick with a joypad.
-If Player 1 picks with a joypad, Player 2 can have the keyboard or another joypad. Each name tag
-(top right) shows 🎮, 🖱️ or ⌨️.
+with: **Space** for the ⌨️ keyboard (and mouse), or **fire on a joypad** for that 🎮 joypad. If
+Player 1 picks with the keyboard, Player 2 can pick with a joypad, or press **Enter** to share the
+keyboard: Player 1 then uses W A S D + Space (and the mouse, if mouse controls are on) and Player 2 uses
+the arrows + Enter. If Player 1 picks with a joypad, Player 2 can have the keyboard or another joypad.
+Each name tag (top right) shows 🎮, 🖱️ or ⌨️.
 
 **Who's playing?** Everyone has their own saved hero, with her own looks, Tag Bux, weapons, outfits,
 training and levels reached, so anyone can play as Player 1 or Player 2. Choose **➕ New hero** to make
@@ -40,8 +41,8 @@ another one (up to 8). Press **X** on a hero to delete it (it asks first).
 | | Getting tagged | The Zombie King |
 | --- | --- | --- |
 | 🙂 **Easy** | Back at the start, keeping everything | As below |
-| 😬 **Hard** | Back at the start, but your weapons and armour are gone (you get a new Spiky Stick) | Tougher, faster, and tags you in one go, even through armour |
-| 💀 **Hardcore** | Only 1 life! Game over, and your Hardcore game starts again from level 1 | Tougher, faster, and tags you in one go |
+| 😬 **Hard** | Back at the start, but your weapons and armour are gone (you get a new Spiky Stick) | 10 times the health, faster, and tags you in one go, even through armour |
+| 💀 **Hardcore** | Only 1 life! Game over, and your Hardcore game starts again from level 1 | 10 times the health, faster, and tags you in one go |
 
 On Easy and Hard you always keep your looks, outfits, training and levels.
 
@@ -59,7 +60,7 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 
 | Action | ⌨️ Keyboard | 🎮 Joypad (Simple) |
 | --- | --- | --- |
-| Walk forward / back | W / S (or ↑ / ↓) | left stick or d-pad up / down |
+| Walk forward / back | W / S (or ↑ / ↓; sharing: Player 2 uses only the arrows and Enter) | left stick or d-pad up / down |
 | Turn left / right | A / D (or ← / →) | left stick or d-pad left / right |
 | Attack (hold it down for shooting weapons and the laser) | Space (or Enter) | any face button (A B X Y, ✕ ○ □ △) or right trigger |
 | Shop and gym: choose / go | W / S, then Space | up / down, then fire |
@@ -105,7 +106,7 @@ reached again from the level picker to earn more Tag Bux. The shop and gym are i
 | 7 | 🧸 Toy Factory | 20 | |
 | 8 | 🍄 Haunted Forest | 22 | Slime Zombie: splits into two little Shufflers |
 | 9 | 🎃 Graveyard at Night | 25 | |
-| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: the final battle once every other zombie is popped. He calls Shufflers to help |
+| 10 | 🏰 Zombie King's Castle | 30 + the King | 👑 The Zombie King: the final battle once every other zombie is popped. He arrives with 6 guards (12 on Hardcore) and calls Shufflers to help |
 
 Zombies get tougher on each level, so keep training and upgrading. Beat the Zombie King and all the
 zombies become your friends for a big party!

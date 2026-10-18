@@ -312,7 +312,7 @@ kbd {
   background: repeating-linear-gradient(90deg, #555 0 24px, #777 24px 48px);
 }
 .runner { position: absolute; left: 50%; bottom: calc(12% + 30px); margin-left: -70px; width: 140px; text-align: center; }
-.runner .who { font-size: 130px; line-height: 1; display: block; }
+.runner .trainee { font-size: 130px; line-height: 1; display: block; }
 .sweat { position: absolute; top: -10px; right: -10px; font-size: 44px; opacity: 0; transition: opacity 0.3s; }
 
 /* weights: the dumbbell goes up as you tap */
@@ -331,7 +331,7 @@ kbd {
 .lift.medium .bell span { width: 44px; height: 90px; background: #ff8a3d; }
 .lift.heavy .bell span { width: 56px; height: 120px; background: #ff4f6b; }
 .lifter { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); }
-.lifter .who { font-size: 110px; line-height: 1; display: block; }
+.lifter .trainee { font-size: 110px; line-height: 1; display: block; }
 
 .meter {
   position: relative;

@@ -179,7 +179,7 @@ export class GymMenu {
     const k = this.player.keys;
     this.el.innerHTML = `<div class="shop-top"><h2>🏃 Treadmill</h2><div class="shop-bux timer">⏱ <b>${t.time}</b></div></div>`
       + `<div class="train"><div class="scene">`
-      + `<div class="runner"><span class="sweat">💦</span><span class="who">🏃</span></div><div class="belt"></div></div>`
+      + `<div class="runner"><span class="sweat">💦</span><span class="trainee">🏃</span></div><div class="belt"></div></div>`
       + `<div class="meter"><div class="fill"></div></div></div>`
       + `<div class="shop-msg">Press <kbd class="key-l">${keyName(k.left[0])}</kbd> then <kbd class="key-r">${keyName(k.right[0])}</kbd>`
       + ` then <kbd>${keyName(k.left[0])}</kbd>… as fast as you can!</div>`
@@ -238,7 +238,7 @@ export class GymMenu {
     this.el.innerHTML = `<div class="shop-top"><h2>🏋️ ${w.name} dumbbell</h2>`
       + `<div class="shop-bux timer">⏱ <b>${G.weights.time}</b></div></div>`
       + `<div class="train"><div class="scene lift ${id}"><div class="bell"><span></span><i></i><span></span></div>`
-      + `<div class="lifter"><span class="sweat">💦</span><span class="who">😐</span></div></div>`
+      + `<div class="lifter"><span class="sweat">💦</span><span class="trainee">😐</span></div></div>`
       + `<div class="meter"><div class="fill"></div></div></div>`
       + `<div class="shop-msg">Tap <kbd class="key-l next">${keyName(k.attack[0])}</kbd> super fast to lift it!</div>`
       + `<div class="shop-help">Get it to the top before the time runs out. It sinks if you stop!</div>`;
@@ -275,7 +275,7 @@ export class GymMenu {
     const q = (sel) => this.el.querySelector(sel);
     this.ui = {
       fill: q('.fill'), timer: q('.timer b'), belt: q('.belt'), runner: q('.runner'), sweat: q('.sweat'),
-      who: q('.who'), bell: q('.bell'), keyL: q('.key-l'), keyR: q('.key-r'),
+      who: q('.trainee'), bell: q('.bell'), keyL: q('.key-l'), keyR: q('.key-r'),
     };
     this.showProgress();
   }
