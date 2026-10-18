@@ -73,7 +73,7 @@ export class Hud {
     this.q('.tagged-back').classList.toggle('hidden', !!d.oneLife);
     let keep = 'You keep your Tag Bux and weapons';
     if (d.loseItems) keep = 'Your weapons and armour are gone! You keep your Tag Bux';
-    if (d.oneLife) keep = 'Your weapons, armour and Tag Bux are all gone! 💀';
+    if (d.oneLife) keep = 'Your Hardcore game starts again from level 1! 💀';
     this.q('.tagged-keep').textContent = keep;
   }
 

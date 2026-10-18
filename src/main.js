@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { endFrame, keyName, pollPads, takeMouseX, wasPressed } from './input.js';
+import { endFrame, keyName, pollPads, setTwoSticks, takeMouseX, wasPressed } from './input.js';
 import { buildWorld } from './world.js';
 import { THEMES } from './themes.js';
 import { Zombie } from './zombie.js';
@@ -72,15 +72,20 @@ let spawned = 0;
 let popped = 0;
 let boss = null; // the Zombie King, once he arrives
 let friends = []; // the zombies at the party
-let pauseRow = 0; // which row of the pause menu is chosen: music, sounds or Player 1's controls
+let pauseRow = 0; // which row of the pause menu is chosen: music, sounds, Player 1's controls or joypads
+const PAUSE_ROWS = 4;
 const CONTROLS_KEY = 'zombie-tag-controls';
+const PADS_KEY = 'zombie-tag-joypads';
 let mouseLook = false; // Player 1 uses the mouse to turn (the browser remembers this choice)
+let twoSticks = false; // joypads use the right stick to turn, instead of the simple left stick
 try {
   mouseLook = localStorage.getItem(CONTROLS_KEY) === 'mouse';
+  twoSticks = localStorage.getItem(PADS_KEY) === 'twoSticks';
 } catch {
-  // no saved choice: simple keyboard controls
+  // no saved choice: simple keyboard and joypad controls
 }
 players[0].mouseLook = mouseLook;
+setTwoSticks(twoSticks);
 let lockLostAt = -1; // when the mouse was last let go, so the same Esc doesn't pause and unpause
 let coinStreak = 0; // coins picked up one after another go up in pitch
 let lastCoin = 0;
@@ -114,7 +119,20 @@ function drawVolume() {
   $('volume').innerHTML = [['music', '🎵 Music'], ['sounds', '🔊 Sounds']].map(([key, label], i) => (
     `<div class="vol${i === pauseRow ? ' selected' : ''}"><span>${label}</span><b>${bar(v[key])}</b></div>`
   )).join('') + `<div class="vol${pauseRow === 2 ? ' selected' : ''}"><span>🖱️ Player 1</span>`
-    + `<b class="mode">${mouseLook ? 'Mouse' : 'Simple keys'}</b></div>`;
+    + `<b class="mode">${mouseLook ? 'Mouse' : 'Simple keys'}</b></div>`
+    + `<div class="vol${pauseRow === 3 ? ' selected' : ''}"><span>🎮 Joypads</span>`
+    + `<b class="mode">${twoSticks ? 'Two sticks' : 'Simple'}</b></div>`;
+}
+
+// Simple joypads: the left stick walks and turns. Two sticks: the right stick turns.
+function setPadMode(on) {
+  twoSticks = on;
+  setTwoSticks(on);
+  try {
+    localStorage.setItem(PADS_KEY, on ? 'twoSticks' : 'simple');
+  } catch {
+    // the browser won't let us remember it
+  }
 }
 
 // Simple keys: A/D turn. Mouse: A/D step sideways, the mouse turns, click to attack.
@@ -196,6 +214,7 @@ function drawTitle() {
     ? '<div><kbd>W</kbd> <kbd>S</kbd> walk, <kbd>A</kbd> <kbd>D</kbd> step</div><div>🖱️ mouse turns</div><div>click bonk!</div>'
     : '<div><kbd>W</kbd> <kbd>S</kbd> walk</div><div><kbd>A</kbd> <kbd>D</kbd> turn</div><div><kbd>Space</kbd> bonk!</div>');
   $('controls-mode').textContent = mouseLook ? 'mouse' : 'simple keys';
+  $('pads-mode').textContent = twoSticks ? 'two sticks' : 'simple';
 }
 
 function drawLevels() {
@@ -346,7 +365,7 @@ function startLevel(i) {
 
   const two = playerCount === 2;
   active = players.slice(0, playerCount);
-  regulars = Math.round(level.zombies * (two ? CONFIG.twoPlayerZombies : 1));
+  regulars = Math.round(level.zombies * (two ? CONFIG.twoPlayerZombies : 1) * (difficulty().zombies || 1));
   levelZombies = regulars + (level.boss ? 1 : 0);
   $('hud').classList.toggle('split', two);
   huds[1].el.classList.toggle('hidden', !two);
@@ -401,7 +420,7 @@ function spawnSpot(radius) {
 }
 
 function spawnWave() {
-  const count = Math.min(CONFIG.arena.waveSize, regulars - spawned);
+  const count = Math.min(CONFIG.arena.waveSize * (difficulty().zombies || 1), regulars - spawned);
   for (let i = 0; i < count; i++) {
     const kind = pickKind();
     const spot = spawnSpot(CONFIG.zombies[kind].radius + 0.5);
@@ -548,9 +567,9 @@ function gotTagged(p) {
   if (d.oneLife) {
     p.out = true;
     p.tagged = Infinity; // out until the level ends; zombies leave her alone
+    p.freshRun(); // her Hardcore game starts again from nothing (outfits are kept)
     if (active.every((h) => h.out)) gameOverIn = 3;
-  }
-  if (d.loseItems) p.loseItems(!!d.oneLife);
+  } else if (d.loseItems) p.loseItems();
   huds[p.index].showTagged(true, d);
   saveGame();
 }
@@ -600,6 +619,7 @@ function updatePlayer(p, dt) {
 
 function levelDone() {
   for (const p of active) {
+    if (p.out) continue; // tagged on Hardcore: her game has already started again
     p.finished.add(levelIndex);
     p.unlocked = Math.max(p.unlocked, Math.min(CONFIG.levels.length, levelIndex + 2));
   }
@@ -692,10 +712,13 @@ function update(dt) {
     const k = CONFIG.keys;
     const before = pauseRow;
     if (wasPressed([...k.p1.forward, ...k.p2.forward])) pauseRow = Math.max(0, pauseRow - 1);
-    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = Math.min(2, pauseRow + 1);
+    if (wasPressed([...k.p1.back, ...k.p2.back])) pauseRow = Math.min(PAUSE_ROWS - 1, pauseRow + 1);
     const change = (wasPressed([...k.p1.right, ...k.p2.right]) ? 1 : 0) - (wasPressed([...k.p1.left, ...k.p2.left]) ? 1 : 0);
     if (change && pauseRow === 2) {
       setMouseLook(!mouseLook);
+      sfx('tick');
+    } else if (change && pauseRow === 3) {
+      setPadMode(!twoSticks);
       sfx('tick');
     } else if (change) {
       const which = pauseRow === 0 ? 'music' : 'sounds';
@@ -723,6 +746,11 @@ function update(dt) {
     drawTitle();
     if (wasPressed(['KeyM'])) {
       setMouseLook(!mouseLook);
+      sfx('tick');
+      drawTitle();
+    }
+    if (wasPressed(['KeyJ'])) {
+      setPadMode(!twoSticks);
       sfx('tick');
       drawTitle();
     }
@@ -780,6 +808,8 @@ function update(dt) {
     }
     if (wasPressed(go)) {
       sfx('select');
+      // Hardcore is a separate game that starts fresh; Easy and Hard share the normal one
+      for (const p of active) p.useRun(difficulty().fresh ? 'hardcore' : 'normal');
       saveGame();
       levelChoice = Math.min(unlockedNow(), CONFIG.levels.length) - 1;
       show('levels');

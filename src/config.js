@@ -362,7 +362,9 @@ export const CONFIG = {
 
   // Chosen before picking a level. Easy is how the game started out.
   // loseItems: getting tagged takes your weapons and armour (you get a new Spiky Stick).
-  // oneLife: getting tagged is game over: weapons, armour and Tag Bux are all gone.
+  // oneLife: getting tagged is game over, and your Hardcore game starts again from nothing.
+  // fresh: a separate game from Easy and Hard, starting with nothing (outfits are kept).
+  // zombies: how many times as many zombies (and as many at once).
   // king: changes to the Zombie King (health is before the level's healthMultiplier).
   difficulties: {
     easy: { name: 'Easy', icon: '🙂', about: 'Get tagged and you keep everything' },
@@ -372,9 +374,10 @@ export const CONFIG = {
       king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
     },
     hardcore: {
-      name: 'Hardcore', icon: '💀', about: 'Only 1 life! Get tagged and you lose your weapons, armour and Tag Bux',
-      loseItems: true,
+      name: 'Hardcore', icon: '💀', about: 'A fresh start with twice the zombies. Only 1 life: get tagged and it starts again!',
       oneLife: true,
+      fresh: true,
+      zombies: 2,
       king: { health: 100, chaseSpeed: 3.3, wanderSpeed: 1.4, instantTag: true },
     },
   },

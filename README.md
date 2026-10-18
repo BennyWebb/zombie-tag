@@ -18,7 +18,7 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
 - [ ] **9. Refinement:** tuning from play-testing. Done so far: Easy, Hard and Hardcore, a hero for
   everyone on "Who's playing?", the gym limited to one upgrade per place, the Zombie King as the final battle,
-  joypads, and mouse controls for Player 1.
+  joypads (simple or two sticks), mouse controls for Player 1, and Hardcore as its own fresh game with twice the zombies.
 
 ## How to play
 
@@ -36,9 +36,15 @@ another one (up to 8). Press **X** on a hero to delete it (it asks first).
 | --- | --- | --- |
 | 🙂 **Easy** | Back at the start, keeping everything | As below |
 | 😬 **Hard** | Back at the start, but your weapons and armour are gone (you get a new Spiky Stick) | Tougher, faster, and tags you in one go, even through armour |
-| 💀 **Hardcore** | Only 1 life! Game over: your weapons, armour and Tag Bux are gone | Tougher, faster, and tags you in one go |
+| 💀 **Hardcore** | Only 1 life! Game over, and your Hardcore game starts again from level 1 | Tougher, faster, and tags you in one go |
 
-You always keep your looks, outfits, training and levels. On Hardcore with 2 players, a tagged sister
+On Easy and Hard you always keep your looks, outfits, training and levels.
+
+**Hardcore is a separate game.** Each hero starts it fresh, with only a Spiky Stick, no Tag Bux,
+Speed and Strength 1 and only level 1 open; nothing comes across from Easy or Hard except your
+outfits. There are **twice as many zombies**, with twice as many about at once. Your Hardcore game is
+saved like the normal one, so you can stop and come back, until you get tagged: then it starts again
+from nothing. Your Easy and Hard game is never touched. On Hardcore with 2 players, a tagged sister
 is out until the other one finishes the level; if you're both tagged it's game over.
 
 The first time, each new hero is made in the **character creator**: type your name (up to 12 letters)
@@ -63,13 +69,16 @@ You don't need to aim exactly: your weapon goes for the nearest zombie in front 
 **Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work in every
 screen, alongside the keyboard. Press a button once after connecting so the browser notices it.
 
-| Joypad | |
-| --- | --- |
-| Left stick | walk, and step sideways |
-| Right stick | turn |
-| D-pad | walk and turn, and choose in menus |
-| A (✕ on PlayStation) or right trigger | attack, choose, buy |
-| Start | pause |
+| Joypad | Simple (the start) | Two sticks |
+| --- | --- | --- |
+| Left stick | walk and turn | walk, and step sideways |
+| Right stick | not used | turn |
+| D-pad | walk and turn, and choose in menus | the same |
+| A (✕ on PlayStation) or right trigger | attack, choose, buy | the same |
+| Start | pause | the same |
+
+Switch between **Simple** and **Two sticks** with **J** on the start screen or "🎮 Joypads" in the
+pause menu. The browser remembers your choice, and it's the same for both joypads.
 
 With one joypad it belongs to Player 1, except in 2-player mode, where it's Player 2's so Player 1
 keeps the keyboard. With two joypads, the first is Player 1's. Typing a new hero's name still needs the keyboard.

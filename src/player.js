@@ -28,6 +28,8 @@ export class Player {
     this.finished = new Set(); // levels this hero has finished
     this.trained = {}; // gym upgrades on each level: { 0: { speed: 1, strength: 1 } }
     this.out = false; // Hardcore: tagged, so out until the level ends
+    this.run = 'normal'; // which game is loaded: 'normal' (Easy and Hard) or 'hardcore'
+    this.otherRun = null; // the game put aside (see useRun)
     this.mouseLook = false; // Player 1's mouse controls: A/D step sideways and main turns you with the mouse
     this.outfits = []; // cool outfits you own
     this.wearing = []; // the ones you have on
@@ -133,13 +135,12 @@ export class Player {
     this.refillShields();
   }
 
-  // Hard and Hardcore: getting tagged takes your weapons and armour, leaving a new Spiky Stick.
-  // Hardcore takes your Tag Bux too. Outfits, looks and training are always kept.
-  loseItems(tagBuxToo) {
+  // Hard: getting tagged takes your weapons and armour, leaving a new Spiky Stick.
+  // Tag Bux, outfits, looks and training are kept.
+  loseItems() {
     this.weapons = [];
     this.armour = [];
     this.shields = 0;
-    if (tagBuxToo) this.tagBux = 0;
     this.giveStick();
   }
 
@@ -171,25 +172,76 @@ export class Player {
     return 1 + CONFIG.player.strengthPerLevel * (this.strengthLevel - 1);
   }
 
-  // Everything worth keeping between days: looks, Tag Bux, weapons, armour, outfits, training
-  // and levels reached.
-  toSave() {
+  // Each hero has two games going: the normal one (Easy and Hard share it) and a Hardcore one,
+  // which starts fresh and never mixes with the other. Looks and outfits belong to both.
+  // A "run" is everything that belongs to just one of them.
+  runToSave() {
     return {
-      id: this.profileId,
-      look: this.look,
-      created: this.created,
       tagBux: this.tagBux,
       weapons: this.weapons.map((w) => ({ id: w.id, hitsLeft: w.hitsLeft })),
       holding: this.weapon ? this.weapon.id : null,
       armour: this.armour,
-      outfits: this.outfits,
-      wearing: this.wearing,
       speedLevel: this.speedLevel,
       strengthLevel: this.strengthLevel,
       bests: this.bests,
       unlocked: this.unlocked,
       finished: [...this.finished],
       trained: this.trained,
+    };
+  }
+
+  runFromSave(d) {
+    this.tagBux = d.tagBux;
+    // only things that still exist in config.js, in case the numbers have changed
+    this.weapons = d.weapons.filter((w) => CONFIG.weapons[w.id]).map((w) => {
+      const weapon = { id: w.id, ...CONFIG.weapons[w.id] };
+      if (weapon.maxHits) weapon.hitsLeft = w.hitsLeft ?? weapon.maxHits;
+      return weapon;
+    });
+    this.hold(this.weapons.some((w) => w.id === d.holding) ? d.holding : null);
+    this.armour = d.armour.filter((id) => CONFIG.armour[id]);
+    this.speedLevel = d.speedLevel;
+    this.strengthLevel = d.strengthLevel;
+    this.bests = d.bests || {};
+    this.unlocked = Math.min(CONFIG.levels.length, d.unlocked || 1);
+    this.finished = new Set(d.finished || []);
+    this.trained = d.trained || {};
+    this.refillShields();
+  }
+
+  // Starting from nothing: a Spiky Stick, no Tag Bux, Speed and Strength 1, level 1.
+  freshRun() {
+    this.runFromSave({
+      tagBux: 0,
+      weapons: [{ id: 'spikyStick' }],
+      holding: 'spikyStick',
+      armour: [],
+      speedLevel: CONFIG.player.startSpeed,
+      strengthLevel: CONFIG.player.startStrength,
+    });
+  }
+
+  // Swaps to the normal or the Hardcore game, putting the other one aside.
+  useRun(kind) {
+    if (kind === this.run) return;
+    const aside = this.otherRun;
+    this.otherRun = this.runToSave();
+    this.run = kind;
+    if (aside) this.runFromSave(aside);
+    else this.freshRun();
+  }
+
+  // Everything worth keeping between days: looks and outfits, and both games.
+  toSave() {
+    const current = this.runToSave();
+    return {
+      id: this.profileId,
+      look: this.look,
+      created: this.created,
+      outfits: this.outfits,
+      wearing: this.wearing,
+      ...(this.run === 'hardcore' ? this.otherRun : current),
+      hardcore: this.run === 'hardcore' ? current : this.otherRun,
     };
   }
 
@@ -210,29 +262,17 @@ export class Player {
     });
   }
 
+  // Loads a hero in her normal game; main switches to the Hardcore one if that's chosen.
   fromSave(d) {
     this.profileId = d.id ?? null;
     // the name tag colour belongs to the slot, so a hero can play as Player 1 or Player 2
     this.look = { ...this.slotLook, ...d.look, tagColour: this.slotLook.tagColour };
     this.created = d.created;
-    this.tagBux = d.tagBux;
-    // only things that still exist in config.js, in case the numbers have changed
-    this.weapons = d.weapons.filter((w) => CONFIG.weapons[w.id]).map((w) => {
-      const weapon = { id: w.id, ...CONFIG.weapons[w.id] };
-      if (weapon.maxHits) weapon.hitsLeft = w.hitsLeft ?? weapon.maxHits;
-      return weapon;
-    });
-    this.hold(this.weapons.some((w) => w.id === d.holding) ? d.holding : null);
-    this.armour = d.armour.filter((id) => CONFIG.armour[id]);
     this.outfits = d.outfits.filter((id) => CONFIG.outfits[id]);
     this.wearing = d.wearing.filter((id) => this.outfits.includes(id));
-    this.speedLevel = d.speedLevel;
-    this.strengthLevel = d.strengthLevel;
-    this.bests = d.bests || {};
-    this.unlocked = Math.min(CONFIG.levels.length, d.unlocked || 1);
-    this.finished = new Set(d.finished || []);
-    this.trained = d.trained || {};
-    this.refillShields();
+    this.runFromSave(d);
+    this.run = 'normal';
+    this.otherRun = d.hardcore || null; // null until she first plays Hardcore
     this.rebuildBody();
   }
 

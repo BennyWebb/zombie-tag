@@ -49,6 +49,13 @@ const padSticks = [null, null]; // each player's sticks: { move, strafe, turn },
 
 const stick = (v) => (Math.abs(v) < CONFIG.controls.deadzone ? 0 : v);
 
+// Simple joypads: the left stick (or d-pad) walks and turns, like the arrow keys.
+// Two sticks: the left stick walks and steps sideways, the right stick turns.
+let twoSticks = false;
+export function setTwoSticks(on) {
+  twoSticks = on;
+}
+
 // Reads the joypads once a frame. With 2 players and only one joypad, the joypad is Player 2's,
 // so Player 1 can stay on the keyboard (or mouse).
 export function pollPads(playerCount) {
@@ -68,12 +75,12 @@ export function pollPads(playerCount) {
     if (held(B.right) || lx > 0.5) now.add(`Pad${n}Right`);
     if (held(B.a) || held(B.rt)) now.add(`Pad${n}A`);
     if (held(B.start)) now.add('PadStart');
-    // in the game: left stick walks and steps sideways, right stick turns; the d-pad walks and turns
+    // in the game the d-pad always walks and turns
     const dpad = (plus, minus) => (held(plus) ? 1 : 0) - (held(minus) ? 1 : 0);
     padSticks[i] = {
       move: -stick(ly) + dpad(B.up, B.down),
-      strafe: stick(lx),
-      turn: -stick(rx) + dpad(B.left, B.right),
+      strafe: twoSticks ? stick(lx) : 0,
+      turn: -stick(twoSticks ? rx : lx) + dpad(B.left, B.right),
     };
   });
   for (const code of now) if (!padDown.has(code)) pressed.add(code);
