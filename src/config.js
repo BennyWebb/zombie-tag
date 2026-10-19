@@ -456,10 +456,8 @@ export const CONFIG = {
   controls: {
     mouseTurn: 0.0025, // how far you turn for each dot the mouse moves (radians)
     deadzone: 0.2, // joypad sticks ignore tiny wobbles below this
-    padTurnSpeed: 2.8, // turning with the right stick pushed all the way (radians per second)
-    // The d-pad (or a stick pushed all the way) starts turning slowly, so a tap turns a little,
-    // and speeds up to padTurnSpeed the longer it's held.
-    padTurnStart: 0.3, // how fast it starts, as a share of padTurnSpeed
-    padTurnRampTime: 0.6, // seconds of holding to reach full speed
+    // turning with the d-pad, or a stick pushed all the way (radians per second); a steady speed,
+    // a bit slower than the keyboard's, so the d-pad doesn't overshoot
+    padTurnSpeed: 1.8,
   },
 };

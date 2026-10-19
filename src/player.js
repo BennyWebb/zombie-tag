@@ -422,12 +422,7 @@ export class Player {
     if (pad) {
       walk += pad.move > 0 ? pad.move : pad.move * 0.7;
       side += pad.strafe * 0.8;
-      const c = CONFIG.controls;
-      const t = THREE.MathUtils.clamp(pad.turn, -1, 1);
-      // all the way over (always, on a d-pad) starts slow and speeds up
-      this.padTurnHeld = Math.abs(t) > 0.95 ? (this.padTurnHeld || 0) + dt : 0;
-      const ramp = Math.abs(t) > 0.95 ? Math.min(1, c.padTurnStart + (1 - c.padTurnStart) * (this.padTurnHeld / c.padTurnRampTime)) : 1;
-      this.yaw += t * ramp * c.padTurnSpeed * dt;
+      this.yaw += THREE.MathUtils.clamp(pad.turn, -1, 1) * CONFIG.controls.padTurnSpeed * dt;
     }
     walk = THREE.MathUtils.clamp(walk, -0.7, 1);
     side = THREE.MathUtils.clamp(side, -0.8, 0.8);
