@@ -3,6 +3,12 @@
 A silly, cartoony 3D first-person game invented by Chloe and Naomi.
 Bonk goofy zombies, pop them into confetti and Tag Bux, spend your Tag Bux at the shop and get strong at the gym!
 
+| | |
+| --- | --- |
+| ![The Zombie Tag start screen](screenshots/title.png) | ![Making a hero in the character creator](screenshots/character-creator.png) |
+| ![Picking a level: ten places from Sunny Park to the Zombie King's Castle](screenshots/pick-a-level.png) | ![Two players at the Funfair in split screen](screenshots/funfair-two-players.png) |
+| ![Zombies coming along the Beach and Pier, with the Sparkle Star Laser Gun ready](screenshots/beach.png) | ![The shop and the gym, side by side in a 2-player game](screenshots/shop-and-gym.png) |
+
 The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small steps, play-testing after each one.
 
 ## Build steps
