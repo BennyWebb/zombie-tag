@@ -79,6 +79,7 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
 
 **Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work every menu.
+Simple joypads with only a d-pad work too: up and down walk, left and right turn.
 Press a button once after connecting so the browser notices it; the start screen shows how many it can
 see. A joypad only moves a hero once someone has picked with it on **Who's playing?**. A hero picked with a
 joypad chooses her name's letters from a grid (✔ when done), so you don't need a keyboard at all.

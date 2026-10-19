@@ -78,6 +78,22 @@ export const unownedPadsFired = () => firedPads;
 export const playerHasPad = (player) => [...padOwner.values()].includes(player);
 export const padsFound = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((p) => p && p.connected).length;
 
+// Some joypads (often ones with only a d-pad) report the d-pad as a "hat": one axis that goes round
+// in eighths, from -1 (up) clockwise to 1 (up-left), and rests at about 1.29. An axis seen resting
+// above 1 is a hat, as no stick goes past 1.
+const hats = new Map(); // joypad number -> which axis is its hat
+const HAT_DIRS = [['up'], ['up', 'right'], ['right'], ['down', 'right'], ['down'], ['down', 'left'], ['left'], ['up', 'left']];
+function readHat(pad) {
+  if (!hats.has(pad.index)) {
+    const i = pad.axes.findIndex((v) => v > 1.1);
+    if (i < 0) return [];
+    hats.set(pad.index, i);
+  }
+  const v = pad.axes[hats.get(pad.index)];
+  if (v === undefined || Math.abs(v) > 1.05) return []; // resting
+  return HAT_DIRS[Math.round(((v + 1) * 7) / 2)] || [];
+}
+
 // Reads the joypads once a frame.
 export function pollPads() {
   const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((p) => p && p.connected);
@@ -85,8 +101,15 @@ export function pollPads() {
   firedPads = [];
   padSticks = [null, null];
   for (const pad of pads) {
-    const held = (b) => !!(pad.buttons[b] && pad.buttons[b].pressed);
+    const hat = readHat(pad);
+    // the d-pad's buttons, or its hat
+    const held = (b) => !!(pad.buttons[b] && pad.buttons[b].pressed)
+      || (b === B.up && hat.includes('up')) || (b === B.down && hat.includes('down'))
+      || (b === B.left && hat.includes('left')) || (b === B.right && hat.includes('right'));
     const [lx = 0, ly = 0, rx = 0] = pad.axes;
+    // A joypad without a right stick (often a d-pad that shows up as the left stick) always plays
+    // Simple, so left and right turn even when joypads are set to Two sticks.
+    const sticks2 = twoSticks && pad.axes.length >= 4 && !hats.has(pad.index);
     const owner = padOwner.get(pad.index);
     const n = owner === undefined ? 'Any' : owner + 1;
     // the d-pad or the left stick choose things in menus
@@ -106,8 +129,8 @@ export function pollPads() {
     const dpad = (plus, minus) => (held(plus) ? 1 : 0) - (held(minus) ? 1 : 0);
     const sticks = {
       move: -stick(ly) + dpad(B.up, B.down),
-      strafe: twoSticks ? stick(lx) : 0,
-      turn: -stick(twoSticks ? rx : lx) + dpad(B.left, B.right),
+      strafe: sticks2 ? stick(lx) : 0,
+      turn: -stick(sticks2 ? rx : lx) + dpad(B.left, B.right),
     };
     // a player with two joypads (one controller showing up twice) gets whichever is pushed
     const had = padSticks[owner];
