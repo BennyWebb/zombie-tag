@@ -35,6 +35,16 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false; // drawn once a frame, even when the screen is split
 document.getElementById('game').appendChild(renderer.domElement);
 
+// The screens and menus are laid out for a window at least 1280 x 720. Smaller ones, like a TV
+// (which shows the game at 960 x 540), shrink them all to fit.
+let uiZoom = 1;
+function fitScreens() {
+  uiZoom = Math.min(1, window.innerWidth / 1280, window.innerHeight / 720);
+  document.documentElement.style.zoom = uiZoom;
+}
+fitScreens();
+window.addEventListener('resize', fitScreens);
+
 const $ = (id) => document.getElementById(id);
 const screens = {
   title: $('title'), who: $('who'), remove: $('remove'), create: $('creator'), difficulty: $('difficulty'),
@@ -548,8 +558,13 @@ function callHelpers(king) {
 
 // Coins fly across the screen from the giver's shop to her sister's Tag Bux counter.
 function flyCoins(giver, receiver) {
-  const from = huds[giver.index].q('.shop-bux').getBoundingClientRect();
-  const to = huds[receiver.index].q('.bux').getBoundingClientRect();
+  // (measured on screen, so undo the shrinking for small screens)
+  const box = (el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left / uiZoom, top: r.top / uiZoom, width: r.width / uiZoom, height: r.height / uiZoom };
+  };
+  const from = box(huds[giver.index].q('.shop-bux'));
+  const to = box(huds[receiver.index].q('.bux'));
   for (let i = 0; i < 5; i++) {
     const c = document.createElement('span');
     c.className = 'coin flying';
