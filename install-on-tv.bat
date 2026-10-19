@@ -4,8 +4,25 @@ rem You need Android Studio installed once, and Network debugging turned on on t
 rem (see "Playing on the TV" in README.md).
 cd /d "%~dp0"
 
-rem the Java and adb that come with Android Studio
-if not defined JAVA_HOME if exist "%ProgramFiles%\Android\Android Studio\jbr" set "JAVA_HOME=%ProgramFiles%\Android\Android Studio\jbr"
+rem The build needs Java 21 to 24 (Java 25 and newer are too new for it). Use JAVA_HOME if it's one
+rem of those, else the Java that comes with Android Studio, else another Java 21 to 24 on this computer.
+set "JDK="
+call :tryjdk "%JAVA_HOME%"
+call :tryjdk "%ProgramFiles%\Android\Android Studio\jbr"
+for /d %%d in ("%ProgramFiles%\Microsoft\jdk-*" "%ProgramFiles%\Eclipse Adoptium\jdk-*" "%ProgramFiles%\Java\jdk-*" "%ProgramFiles%\Zulu\zulu-*" "%USERPROFILE%\.jdks\*") do call :tryjdk "%%~d"
+if not defined JDK (
+  echo The build needs Java 21, and this computer only has a newer or older Java.
+  echo Install Java 21 by typing this in a terminal, then run this file again:
+  echo.
+  echo     winget install Microsoft.OpenJDK.21
+  echo.
+  pause
+  exit /b 1
+)
+set "JAVA_HOME=%JDK%"
+echo Building with the Java in %JAVA_HOME%
+
+rem the adb that comes with Android Studio
 if not defined ANDROID_HOME set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
 set "ADB=%ANDROID_HOME%\platform-tools\adb.exe"
 if not exist "%ADB%" (
@@ -41,3 +58,11 @@ echo.
 echo Something went wrong (see above).
 pause
 exit /b 1
+
+rem Picks the Java in folder %1 if it's version 21 to 24 (and no Java has been picked yet).
+:tryjdk
+if defined JDK exit /b 0
+if "%~1"=="" exit /b 0
+if not exist "%~1\release" exit /b 0
+findstr /b /r /c:"JAVA_VERSION=.2[1-4]" "%~1\release" >nul && set "JDK=%~1"
+exit /b 0

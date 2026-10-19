@@ -299,7 +299,9 @@ On the TV:
 
 1. **On the computer:** install **Node.js 22 or newer** (<https://nodejs.org>) and
    **Android Studio** (<https://developer.android.com/studio>). Open Android Studio once and let it
-   finish its setup, so it downloads the Android SDK.
+   finish its setup, so it downloads the Android SDK. The build needs **Java 21** (21 to 24 work; 25
+   and newer are too new for it). `install-on-tv.bat` looks for one by itself and tells you if it can't
+   find one: then install it with `winget install Microsoft.OpenJDK.21` in a terminal.
 2. **On the Shield:** turn on developer options: **Settings → Device Preferences → About**, then select
    **Build** 7 times until it says you're a developer.
 3. Go to **Settings → Device Preferences → Developer options** and turn on **Network debugging**.
@@ -313,7 +315,8 @@ On the TV:
 first time, the TV asks *"Allow network debugging?"*: tick **Always allow from this computer** and
 choose OK. The first build downloads a lot and takes several minutes; later ones are quicker.
 
-**Mac or Linux:** in a terminal in the game folder (with `adb` from the Android SDK's `platform-tools`):
+**Mac or Linux:** in a terminal in the game folder (with `adb` from the Android SDK's `platform-tools`,
+and `JAVA_HOME` set to a Java 21):
 
 ```
 npm install
