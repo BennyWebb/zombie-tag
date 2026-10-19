@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import {
-  clearPads, endFrame, givePad, padsFound, pollPads, setTwoSticks, takeMouseX,
+  anyPadPressed, clearPads, endFrame, givePad, padsFound, pollPads, pressKey, setTwoSticks, takeMouseX,
   unownedPadsFired, wasPressed,
 } from './input.js';
 import { buildWorld } from './world.js';
@@ -16,10 +16,20 @@ import { GymMenu } from './gym.js';
 import { Hud } from './hud.js';
 import { Creator } from './creator.js';
 import { loadSave, writeSave } from './save.js';
-import { getVolumes, loudness, music, setVolume, sfx } from './audio.js';
+import { getVolumes, loudness, music, setVolume, sfx, wakeSound } from './audio.js';
+import { exitApp, onBackButton } from './tv.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const GRAPHICS_KEY = 'zombie-tag-graphics';
+let fastGraphics = false; // draws fewer pixels, for slower computers and TV boxes (the browser remembers this)
+try {
+  fastGraphics = localStorage.getItem(GRAPHICS_KEY) === 'fast';
+} catch {
+  // no saved choice: best graphics
+}
+// Fast draws two thirds as many dots across (on a 1080p TV, 720p stretched to fit)
+const pixelRatio = () => Math.min(window.devicePixelRatio, 2) * (fastGraphics ? 2 / 3 : 1);
+renderer.setPixelRatio(pixelRatio());
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false; // drawn once a frame, even when the screen is split
@@ -89,8 +99,8 @@ let spawned = 0;
 let popped = 0;
 let boss = null; // the Zombie King, once he arrives
 let friends = []; // the zombies at the party
-let pauseRow = 0; // which row of the pause menu is chosen: music, sounds, Player 1's controls or joypads
-const PAUSE_ROWS = 4;
+let pauseRow = 0; // which row of the pause menu is chosen: music, sounds, controls, graphics or the start screen
+const PAUSE_ROWS = 6; // music, sounds, keyboard, joypads, graphics, back to the start screen
 const CONTROLS_KEY = 'zombie-tag-controls';
 const PADS_KEY = 'zombie-tag-joypads';
 let mouseLook = false; // Player 1 uses the mouse to turn (the browser remembers this choice)
@@ -124,7 +134,10 @@ function show(name) {
   if (name === 'remove') drawRemove();
   if (name === 'difficulty') drawDifficulty();
   if (name === 'levels') drawLevels();
-  if (name === 'paused') drawVolume();
+  if (name === 'paused') {
+    pauseRow = 0; // back at the top, so a stray fire never quits to the start screen
+    drawVolume();
+  }
   if (['title', 'who', 'remove', 'difficulty', 'levels', 'create', 'gameover'].includes(name)) music('title');
 }
 
@@ -137,7 +150,29 @@ function drawVolume() {
   )).join('') + `<div class="vol${pauseRow === 2 ? ' selected' : ''}"><span>🖱️ Keyboard</span>`
     + `<b class="mode">${mouseLook ? 'Mouse' : 'Simple keys'}</b></div>`
     + `<div class="vol${pauseRow === 3 ? ' selected' : ''}"><span>🎮 Joypads</span>`
-    + `<b class="mode">${twoSticks ? 'Two sticks' : 'Simple'}</b></div>`;
+    + `<b class="mode">${twoSticks ? 'Two sticks' : 'Simple'}</b></div>`
+    + `<div class="vol${pauseRow === 4 ? ' selected' : ''}"><span>✨ Graphics</span>`
+    + `<b class="mode">${fastGraphics ? 'Fast' : 'Best'}</b></div>`
+    + `<div class="vol${pauseRow === 5 ? ' selected' : ''}"><span>🏠 Start screen</span>`
+    + '<b class="mode">Q or 🎮 fire</b></div>';
+}
+
+// Fast graphics draw fewer dots, so slower machines (like a TV box) keep up.
+function setFastGraphics(on) {
+  fastGraphics = on;
+  renderer.setPixelRatio(pixelRatio());
+  try {
+    localStorage.setItem(GRAPHICS_KEY, on ? 'fast' : 'best');
+  } catch {
+    // the browser won't let us remember it
+  }
+}
+
+// Q in the pause menu (or its last row) goes back to the start screen.
+function quitToTitle() {
+  for (const p of players) if (p.inside) p.menu.close();
+  saveGame();
+  show('title');
 }
 
 // Simple joypads: the left stick walks and turns. Two sticks: the right stick turns.
@@ -744,6 +779,7 @@ function updateParty(dt) {
 
 function update(dt) {
   pollPads();
+  if (anyPadPressed()) wakeSound(); // a joypad button starts the sound, like a key does
   // Player 1's mouse turns her (read every frame, so moves made in menus don't pile up)
   const mouseX = takeMouseX();
   const kb = active.find(usesMouse);
@@ -768,20 +804,22 @@ function update(dt) {
     } else if (change && pauseRow === 3) {
       setPadMode(!twoSticks);
       sfx('tick');
-    } else if (change) {
+    } else if (change && pauseRow === 4) {
+      setFastGraphics(!fastGraphics);
+      sfx('tick');
+    } else if (change && pauseRow < 2) {
       const which = pauseRow === 0 ? 'music' : 'sounds';
       setVolume(which, getVolumes()[which] + change);
       sfx('tick');
     }
     if (change || pauseRow !== before) drawVolume();
   }
-  if (state === 'paused' && wasPressed(['KeyQ'])) {
-    for (const p of players) if (p.inside) p.menu.close();
-    saveGame();
-    show('title');
+  const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A', 'PadAnyA'];
+  if (state === 'paused' && (wasPressed(['KeyQ']) || (pauseRow === 5 && wasPressed(go)))) {
+    sfx('select');
+    quitToTitle();
     return;
   }
-  const go = ['Space', 'Enter', 'NumpadEnter', 'Pad1A', 'Pad2A', 'PadAnyA'];
   if (state === 'title') {
     // choose 1 or 2 players with W/S or the arrows (or just press 1 or 2)
     if (wasPressed([...menu.forward, ...menu.left])) titleChoice = 0;
@@ -801,10 +839,12 @@ function update(dt) {
       sfx('tick');
       drawTitle();
     }
-    if (wasPressed([...go, 'Digit1', 'Digit2', 'Numpad1', 'Numpad2', 'KeyC'])) {
+    // C (or Back / View / Select on a joypad) to change how your hero looks
+    const looks = ['KeyC', 'PadSelect'];
+    if (wasPressed([...go, 'Digit1', 'Digit2', 'Numpad1', 'Numpad2', ...looks])) {
       sfx('select');
       playerCount = titleChoice + 1;
-      beginGame(wasPressed(['KeyC']));
+      beginGame(wasPressed(looks));
     }
     return;
   }
@@ -829,7 +869,7 @@ function update(dt) {
       else if (wasPressed(CONFIG.keys.right.attack)) chooseWho('keysRight');
       else sfx('nope'); // Space is Player 1's
     }
-    else if (wasPressed(['KeyX', 'Delete'])) {
+    else if (wasPressed(['KeyX', 'Delete', 'PadSelect'])) {
       const r = whoRows()[whoChoice];
       if (r.profile && !r.taken) {
         removing = r.profile;
@@ -846,7 +886,8 @@ function update(dt) {
     return;
   }
   if (state === 'remove') {
-    if (wasPressed(['KeyY'])) {
+    // a joypad says yes with fire, and no with Start (or Back)
+    if (wasPressed(['KeyY', 'Pad1A', 'Pad2A', 'PadAnyA'])) {
       sfx('select');
       profiles = profiles.filter((d) => d !== removing);
       chosen = chosen.map((id) => (id === removing.id ? null : id));
@@ -878,7 +919,7 @@ function update(dt) {
     return;
   }
   if (state === 'gameover') {
-    if (wasPressed(go)) show('levels');
+    if (wasPressed([...go, 'Escape'])) show('levels');
     return;
   }
   if (state === 'create') {
@@ -906,12 +947,12 @@ function update(dt) {
   }
   if (state === 'won') {
     if (wasPressed(go)) startLevel(levelIndex + 1);
-    if (wasPressed(['KeyL'])) show('levels');
+    if (wasPressed(['KeyL', 'Escape'])) show('levels'); // Start on a joypad
     return;
   }
   if (state === 'party') {
     updateParty(dt);
-    if (wasPressed(go)) show('levels');
+    if (wasPressed([...go, 'Escape'])) show('levels');
     return;
   }
   if (state !== 'playing') return;
@@ -1053,6 +1094,12 @@ function frame() {
   endFrame();
   requestAnimationFrame(frame);
 }
+
+// On the TV, the remote's Back button works like Esc, and leaves the game from the start screen.
+onBackButton(() => {
+  if (state === 'title') exitApp();
+  else pressKey('Escape');
+});
 
 restoreSave();
 // the start screen shows the furthest level last time's heroes reached

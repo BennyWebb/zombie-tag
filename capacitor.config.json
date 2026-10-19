@@ -1,0 +1,8 @@
+{
+  "appId": "com.webb.zombietag",
+  "appName": "Zombie Tag",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#000000"
+  }
+}

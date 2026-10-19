@@ -43,9 +43,10 @@ export function takeMouseX() {
 // ---------- joypads ----------
 
 // Buttons on a standard joypad (Xbox layout). All four face buttons and the right trigger fire.
-const B = { rt: 7, start: 9, up: 12, down: 13, left: 14, right: 15 };
+const B = { rt: 7, select: 8, start: 9, up: 12, down: 13, left: 14, right: 15 };
 const FIRE = [0, 1, 2, 3, B.rt];
 let padDown = new Set(); // pretend keys held on joypads this frame
+let padPressed = false; // any joypad button pressed this frame (sound starts on it, like on a key)
 let padSticks = [null, null]; // each player's sticks: { move, strafe, turn }, from -1 to 1
 
 const stick = (v) => (Math.abs(v) < CONFIG.controls.deadzone ? 0 : v);
@@ -99,6 +100,7 @@ export function pollPads() {
     if (fire) firing.add(pad.index);
     else firing.delete(pad.index);
     if (held(B.start)) now.add('PadStart');
+    if (held(B.select)) now.add('PadSelect'); // Back / View / Share / Select
     if (owner === undefined) continue;
     // in the game the d-pad always walks and turns
     const dpad = (plus, minus) => (held(plus) ? 1 : 0) - (held(minus) ? 1 : 0);
@@ -114,13 +116,21 @@ export function pollPads() {
       ? { move: bigger(had.move, sticks.move), strafe: bigger(had.strafe, sticks.strafe), turn: bigger(had.turn, sticks.turn) }
       : sticks;
   }
-  for (const code of now) if (!padDown.has(code)) pressed.add(code);
+  padPressed = false;
+  for (const code of now) {
+    if (padDown.has(code)) continue;
+    pressed.add(code);
+    padPressed = true;
+  }
   // Start pauses, like Esc
   if (now.has('PadStart') && !padDown.has('PadStart')) pressed.add('Escape');
   padDown = now;
 }
 
 export const padFor = (index) => padSticks[index];
+export const anyPadPressed = () => padPressed;
+// Pretends a key was pressed, e.g. Escape for the TV remote's Back button.
+export const pressKey = (code) => pressed.add(code);
 
 export const isDown = (codes) => codes.some((c) => down.has(c) || padDown.has(c));
 export const wasPressed = (codes) => codes.some((c) => pressed.has(c));

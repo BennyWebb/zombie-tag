@@ -4,7 +4,8 @@
 //   sfx('groan', { volume: 0.4, pitch: 1.2 })
 //   music('park')           switch to a level's tune (or 'title', 'party')
 //
-// Browsers only allow sound after a key press, so nothing plays until the first key.
+// Browsers only allow sound after a key press, so nothing plays until the first key
+// (or joypad button, which main.js passes on to wakeSound()).
 
 import { CONFIG } from './config.js';
 
@@ -43,10 +44,11 @@ function start() {
   setInterval(scheduleMusic, 25);
   if (wantedSong) music(wantedSong);
 }
-window.addEventListener('keydown', () => {
+export function wakeSound() {
   start();
   if (ctx.state === 'suspended') ctx.resume();
-});
+}
+window.addEventListener('keydown', wakeSound);
 
 function applyVolumes() {
   if (!ctx) return;

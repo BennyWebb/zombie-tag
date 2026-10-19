@@ -24,7 +24,7 @@ The full plan is in [DESIGN.md](DESIGN.md). The game is being built in small ste
 - [x] **8b. Sound and music:** boings, pops, ka-chings, squawks and a tune for every place.
 - [ ] **9. Refinement:** tuning from play-testing. Done so far: Easy, Hard and Hardcore, a hero for
   everyone on "Who's playing?", the gym limited to one upgrade per place, the Zombie King as the final battle,
-  joypads (simple or two sticks), keyboard or joypad for each player, mouse controls, and Hardcore as its own fresh game with twice the zombies.
+  joypads (simple or two sticks), keyboard or joypad for each player, mouse controls, and Hardcore as its own fresh game with twice the zombies, and an Android TV app for the Nvidia Shield.
 
 ## How to play
 
@@ -40,7 +40,8 @@ Each name tag (top right) shows 🎮, 🖱️ or ⌨️.
 
 **Who's playing?** Everyone has their own saved hero, with her own looks, Tag Bux, weapons, outfits,
 training and levels reached, so anyone can play as Player 1 or Player 2. Choose **➕ New hero** to make
-another one (up to 8). Press **X** on a hero to delete it (it asks first).
+another one (up to 8). Press **X** on a hero to delete it (it asks first). On a joypad, that's the Back / View / Share button,
+then fire for yes or Start for no.
 
 **How hard?** Choose with A / D and press Space. The game remembers your choice for next time.
 
@@ -72,15 +73,16 @@ With 2 players the screen splits down the middle: Player 1 on the left, Player 2
 | Shop and gym: choose / go | W / S, then Space | up / down, then fire |
 | Treadmill | A, D, A, D… as fast as you can | left, right, left, right… |
 | Weights | tap Space as fast as you can | tap fire |
-| Pause: volume, controls, or Q to go back to the start screen | Esc | Start |
+| Pause: volume, controls, graphics, or back to the start screen | Esc (Q for the start screen) | Start (fire on 🏠 Start screen) |
 | Level picker: choose / play | W A S D, then Space | stick, then fire |
 
 You don't need to aim exactly: your weapon goes for the nearest zombie in front of you.
 
 **Joypads** (Xbox, PlayStation or Switch Pro controllers, plugged in or Bluetooth) work every menu.
 Press a button once after connecting so the browser notices it; the start screen shows how many it can
-see. A joypad only moves a hero once someone has picked with it on **Who's playing?**. Typing a new
-hero's name still needs the keyboard. One controller sometimes shows up as two (for example with Steam
+see. A joypad only moves a hero once someone has picked with it on **Who's playing?**. A hero picked with a
+joypad chooses her name's letters from a grid (✔ when done), so you don't need a keyboard at all.
+The Back / View / Share button does what **C** does on the start screen. One controller sometimes shows up as two (for example with Steam
 running); that's fine, both go to the same player.
 
 **Two sticks:** press **J** on the start screen, or change "🎮 Joypads" in the pause menu, to switch
@@ -279,6 +281,50 @@ Next time, just do steps 2, 3 and 5.
 If you used git, run `git pull` in the game folder, then `npm install` (in case anything new is needed)
 and start the game as usual. If you downloaded the ZIP, download it again. Your progress is kept
 either way, because it's saved in the browser, not in the game folder.
+
+## Playing on the TV (Nvidia Shield)
+
+The game can be put on an **Nvidia Shield TV** (or another Android TV box) as an app, so you can play on
+the big TV with Bluetooth joypads (Xbox or PlayStation controllers work well). It's the same game in an
+Android "wrapper" made with [Capacitor](https://capacitorjs.com); the Android project is in `android/`.
+
+On the TV:
+
+- The remote's **Back** button works like Esc (pause, or go back), and on the start screen it closes
+  the game. **Home** leaves it too.
+- If the TV struggles, pause and set **✨ Graphics** to **Fast**: it draws fewer dots, so it runs smoother.
+- Heroes and progress are saved on the Shield, separately from the computer, so make new heroes there.
+
+### Setting it up (once)
+
+1. **On the computer:** install **Node.js 22 or newer** (<https://nodejs.org>) and
+   **Android Studio** (<https://developer.android.com/studio>). Open Android Studio once and let it
+   finish its setup, so it downloads the Android SDK.
+2. **On the Shield:** turn on developer options: **Settings → Device Preferences → About**, then select
+   **Build** 7 times until it says you're a developer.
+3. Go to **Settings → Device Preferences → Developer options** and turn on **Network debugging**.
+   Note the Shield's IP address (it's under **Settings → Device Preferences → About → Status**, or
+   shown next to Network debugging).
+4. Pair the joypads: **Settings → Remotes & Accessories → Add accessory**.
+
+### Putting the game on the Shield
+
+**Windows:** double-click **`install-on-tv.bat`** and type the Shield's IP address when it asks. The
+first time, the TV asks *"Allow network debugging?"*: tick **Always allow from this computer** and
+choose OK. The first build downloads a lot and takes several minutes; later ones are quicker.
+
+**Mac or Linux:** in a terminal in the game folder (with `adb` from the Android SDK's `platform-tools`):
+
+```
+npm install
+npm run tv
+cd android && ./gradlew assembleDebug && cd ..
+adb connect <the Shield's IP address>:5555
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Zombie Tag then appears in the Shield's **Apps** row (you can move it onto the home screen's favourites).
+After changing the game, do the same again to update it: the saved heroes are kept.
 
 ## Changing the numbers
 

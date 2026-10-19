@@ -4,6 +4,8 @@ import { sfx } from './audio.js';
 
 // The character creator: type a name, then pick skin, hair and clothes from big buttons
 // while your hero turns round on the right. In 2-player mode Player 1 goes first, then Player 2.
+// A hero on a joypad picks her name's letters from a grid instead of typing (on the TV there's
+// often no keyboard).
 
 const C = CONFIG.creator;
 const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
@@ -15,6 +17,10 @@ const ROWS = [
   { key: 'outfit', label: 'Clothes', options: C.outfitColours },
   { key: 'done', label: '' },
 ];
+
+// the joypad letter grid: A to Z, then rub out and done
+const LETTERS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '⌫', '✔'];
+const GRID_WIDTH = 7;
 
 export class Creator {
   constructor(el) {
@@ -36,6 +42,14 @@ export class Creator {
       return;
     }
     this.step = 'name';
+    if (this.player.device === 'pad') {
+      this.step = 'letters';
+      this.typed = this.player.created ? this.player.name : '';
+      this.cell = 0;
+      this.wait = 0.3; // so the fire that picked the hero doesn't also pick a letter
+      this.drawn = '';
+      return;
+    }
     this.drawName();
   }
 
@@ -55,13 +69,14 @@ export class Creator {
       if (box.value) box.value = box.value[0].toUpperCase() + box.value.slice(1);
     });
     box.addEventListener('keydown', (e) => {
-      if (e.code === 'Enter' || e.code === 'NumpadEnter') this.finishName(box.value);
+      // on-screen keyboards (like the TV's) often leave e.code empty, so check e.key too
+      if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.key === 'Enter') this.finishName(box.value);
     });
     setTimeout(() => box.focus(), 50);
   }
 
   finishName(name) {
-    if (this.step !== 'name') return;
+    if (this.step !== 'name' && this.step !== 'letters') return;
     const p = this.player;
     p.setLook({ name: name || `Player ${p.index + 1}` });
     this.step = 'look';
@@ -71,7 +86,61 @@ export class Creator {
     document.activeElement.blur();
   }
 
+  // Picking a name with a joypad: move round the letters, fire adds one.
+  updateLetters(dt) {
+    const k = this.player.keys;
+    this.wait -= dt;
+    if (this.wait <= 0) {
+      const before = this.cell;
+      const n = LETTERS.length;
+      if (wasPressed(k.left)) this.cell = Math.max(0, this.cell - 1);
+      if (wasPressed(k.right)) this.cell = Math.min(n - 1, this.cell + 1);
+      if (wasPressed(k.forward) && this.cell >= GRID_WIDTH) this.cell -= GRID_WIDTH;
+      if (wasPressed(k.back)) this.cell = Math.min(n - 1, this.cell + GRID_WIDTH);
+      if (this.cell !== before) sfx('tick');
+      if (wasPressed(k.attack)) {
+        const letter = LETTERS[this.cell];
+        if (letter === '✔') {
+          sfx('select');
+          this.finishName(this.typed);
+          return;
+        }
+        if (letter === '⌫') {
+          sfx(this.typed ? 'tick' : 'nope');
+          this.typed = this.typed.slice(0, -1);
+        } else if (this.typed.length < C.maxNameLength) {
+          sfx('tick');
+          this.typed += this.typed ? letter.toLowerCase() : letter;
+        } else sfx('nope');
+      }
+    }
+    this.drawLetters();
+  }
+
+  drawLetters() {
+    const p = this.player;
+    const cells = LETTERS.map((l, i) => {
+      const kind = l === '✔' ? ' done' : l === '⌫' ? ' rub' : '';
+      return `<span class="letter${kind}${i === this.cell ? ' current' : ''}">${l}</span>`;
+    }).join('');
+    const html = `<div class="panel">
+      <div class="who-badge p${p.index + 1}">Player ${p.index + 1}</div>
+      <h2>What's your name?</h2>
+      <div class="name-box">${this.typed || '&nbsp;'}</div>
+      <div class="letters">${cells}</div>
+      <p class="hint">🎮 stick to choose, fire to pick a letter, ✔ when you're done</p>
+    </div>`;
+    if (html !== this.drawn) {
+      this.el.innerHTML = html;
+      this.drawn = html;
+    }
+  }
+
   update(dt) {
+    if (this.step === 'letters') {
+      this.updateLetters(dt);
+      return;
+    }
     if (this.step !== 'look') return;
     const p = this.player;
     const k = p.keys;

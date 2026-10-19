@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "vite --open",
     "build": "vite build",
-    "preview": "vite preview --open"
+    "preview": "vite preview --open",
+    "tv": "vite build && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
     "three": "0.185.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "vite": "6.4.3"
   }
 }
