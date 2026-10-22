@@ -87,7 +87,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },
@@ -111,7 +112,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars",
         "tongue"
       ]
@@ -135,7 +137,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },
@@ -158,7 +161,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },
@@ -181,7 +185,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },
@@ -204,7 +209,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },
@@ -227,7 +233,8 @@
         "armR",
         "legL",
         "legR",
-        "pupil",
+        "pupilL",
+        "pupilR",
         "stars"
       ]
     },

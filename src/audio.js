@@ -16,6 +16,7 @@ let sfxGain;
 let noiseBuffer;
 let wantedSong = null;
 let meter = null; // measures how loud it is, for testing
+let random = Math.random; // for the noise (recordings use a fixed sequence, so they come out the same)
 const VOLUME_KEY = 'zombie-tag-volume';
 const volumes = { music: CONFIG.sound.music, sounds: CONFIG.sound.sounds }; // 0 to 10
 
@@ -46,7 +47,7 @@ function start() {
 function makeNoise(c) {
   const buffer = c.createBuffer(1, c.sampleRate, c.sampleRate);
   const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  for (let i = 0; i < data.length; i++) data[i] = random() * 2 - 1;
   return buffer;
 }
 
@@ -136,7 +137,7 @@ function noise(when, dur, o = {}) {
   gain.gain.exponentialRampToValueAtTime(o.vol ?? 0.2, when + 0.005);
   gain.gain.exponentialRampToValueAtTime(0.0001, when + dur);
   src.connect(f).connect(gain).connect(o.out || sfxGain);
-  src.start(when, Math.random() * 0.5);
+  src.start(when, random() * 0.5);
   src.stop(when + dur + 0.05);
 }
 
@@ -370,7 +371,8 @@ export const SOUND_NAMES = Object.keys(SOUNDS);
 export const SONG_IDS = Object.keys(SONGS);
 
 function record(seconds, sampleRate, play) {
-  const saved = { ctx, musicGain, sfxGain, noiseBuffer };
+  const saved = { ctx, musicGain, sfxGain, noiseBuffer, random };
+  random = makeRandom(1);
   const offline = new OfflineAudioContext(1, Math.ceil(seconds * sampleRate), sampleRate);
   ctx = offline;
   sfxGain = offline.createGain();
@@ -383,7 +385,7 @@ function record(seconds, sampleRate, play) {
   try {
     play();
   } finally {
-    ({ ctx, musicGain, sfxGain, noiseBuffer } = saved);
+    ({ ctx, musicGain, sfxGain, noiseBuffer, random } = saved);
   }
   return offline.startRendering();
 }

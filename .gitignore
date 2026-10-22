@@ -3,3 +3,9 @@ dist/
 
 # Godot keeps its imported copies of models and sounds here
 godot/.godot/
+
+# Godot remakes these when it imports, and each computer can have its own
+godot/**/*.import
+
+# Godot writes the levels' palette pictures out of the models when it imports them
+godot/models/**/*_[0-9].png

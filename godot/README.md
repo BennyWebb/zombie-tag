@@ -1,7 +1,46 @@
 # Zombie Tag for Godot
 
-This is where the Godot version of Zombie Tag will live. So far it holds everything exported from the
-browser game, so the Godot version looks, sounds and plays the same:
+The Godot version of Zombie Tag, being built a step at a time. It uses everything exported from the
+browser game, so it looks, sounds and plays the same.
+
+Open this folder in Godot 4 (**Import**, then pick `project.godot`) and press **F5** (or the ▶ button)
+to play.
+
+## Building it up
+
+| Phase | | |
+| --- | --- | --- |
+| 0 | ✅ | Export the browser game's levels, characters, sounds and numbers |
+| 1 | ✅ | Walk and bonk in Sunny Park: the level, sky and sun, a hero, Shufflers that chase you and pop into confetti |
+| 2 | | Tag Bux coins, hearts and the HUD |
+| 3 | | The shop and gym |
+| 4 | | All the weapons |
+| 5 | | Two players, split screen |
+| 6 | | All ten levels and the Zombie King |
+| 7 | | Menus, the character creator, saving, sound settings |
+| 8 | | The Android TV app for the Shield, and speed-ups |
+
+**Controls (phase 1):** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks. On a joypad: the
+left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. **F3** (or
+Back / View / Select) shows the frame rate and how many things are drawn, for checking speed on the TV.
+
+## The scripts
+
+Everything is made in code, so you can read how it fits together, starting from `scripts/main.gd`:
+
+| Script | What it does | From the browser game's |
+| --- | --- | --- |
+| `main.gd` | Runs a level: zombies arrive in waves, bonks and pops, the exit gate | `src/main.js` |
+| `level.gd` | The scenery, sky, fog and sun, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
+| `hero.gd` | You: walking, turning, and swinging your weapon at the nearest zombie in front of you | `src/player.js` |
+| `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked | `src/zombie.js` |
+| `effects.gd` | Confetti and words that float up, like "POP!" | `src/effects.js` |
+| `hud.gd` | What's drawn over the game | `src/hud.js` |
+| `data.gd` | Reads the exported numbers and helps with the models (an autoload: use it anywhere as `Data`) | |
+| `controls.gd` | The keys and joypad buttons for each action (an autoload: `Controls`) | `src/input.js` |
+| `sound.gd` | Plays sound effects and music (an autoload: `Sound`) | `src/audio.js` |
+
+## What's in the other folders
 
 | Folder | What's in it |
 | --- | --- |
@@ -25,35 +64,28 @@ That writes `data/config.json`, then opens an export page in the browser that ma
 Leave it open until it says it's finished. If you only changed numbers in `src/config.js`, `npm run
 export:config` is enough.
 
-## Using them in Godot
+## Using the exported files
 
-Make a new Godot 4 project in this folder (choose the **Compatibility** renderer, which suits the
-Shield). Godot imports the `.glb` and `.wav` files by itself.
+Godot imports the `.glb` and `.wav` files by itself. The project uses the **Compatibility** renderer,
+which suits the Shield.
 
 **Models.** Drag a `.glb` into a scene. Each one is a little tree of named parts, for example a zombie
-has `body`, `head`, `armL`, `armR`, `legL`, `legR`, `pupil`, `stars`, `bubble`, `ice` and `healthBar`.
+has `body`, `head`, `armL`, `armR`, `legL`, `legR`, `pupilL`, `pupilR`, `stars`, `bubble`, `ice` and `healthBar`.
 The game moves those parts to make it wobble and walk.
 
 - **Hidden parts.** A `.glb` can't say that a part starts hidden, so `data/models.json` lists them
-  (`hidden`), like a zombie's bubble, ice block and stars. Hide them when the model is loaded.
+  (`hidden`), like a zombie's bubble, ice block and stars. `Data.hide_parts()` hides them.
 - **Recolouring.** Zombies and heroes get their colours when they're made. The materials to change are
-  named `skin`, `shirt`, `trousers`, `clothes` and `hair` (`recolour` in `data/models.json`).
+  named `skin`, `shirt`, `trousers`, `clothes` and `hair` (`recolour` in `data/models.json`);
+  `Data.own_material()` gives a model its own copy of one to change.
 - **Level scenery** is merged into one mesh per 20 x 20 m square, so Godot can skip squares that are out
   of view. Its colours come from a small palette texture (a grid of coloured squares) in the same file.
   Things that move are kept separate: the `gate` (hide `gate/open` until it opens) and, on the Funfair,
   the `carousel` and `ferrisWheel`.
 - **Shadows.** Godot gives everything a shadow, but in the game some things have none: clouds, the
   gate's light beam, the Ferris wheel, coins and a few more. Those meshes have `noShadow: true` in their
-  extras metadata (merged scenery also has "no shadow" in its name). Turn their shadows off when
-  loading, for example:
-
-  ```gdscript
-  func remove_extra_shadows(node: Node) -> void:
-      if node is GeometryInstance3D and node.get_meta("extras", {}).get("noShadow", false):
-          node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-      for child in node.get_children():
-          remove_extra_shadows(child)
-  ```
+  extras metadata (merged scenery also has "no shadow" in its name). `Data.remove_extra_shadows()`
+  turns their shadows off.
 - The shop and gym aren't in the levels. Put them at two of the level's `buildingSpots`, at least 30 m
   apart, like the browser game does.
 

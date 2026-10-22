@@ -297,9 +297,10 @@ function nameZombie(z, kind) {
   const [torso, head] = z.body.children;
   torso.name = 'torso';
   head.name = 'head';
-  ['eyeL', 'eyeR'].forEach((n, i) => {
-    z.eyes[i].name = n;
-    z.eyes[i].userData.pupil.name = 'pupil';
+  // (names must be different, or Godot changes them)
+  ['L', 'R'].forEach((side, i) => {
+    z.eyes[i].name = `eye${side}`;
+    z.eyes[i].userData.pupil.name = `pupil${side}`;
   });
   ['armL', 'armR'].forEach((n, i) => { z.arms[i].name = n; });
   ['legL', 'legR'].forEach((n, i) => { z.legs[i].name = n; });
@@ -317,12 +318,17 @@ async function exportZombies() {
   for (const kind of kinds) {
     const z = makeZombieMesh(kind);
     nameZombie(z, kind);
+    // the game picks colours at random; use each kind's first, so exporting again changes nothing
+    // (Godot picks its own, from zombieColours in models.json)
+    const look = LOOKS[kind] || { skins: SKINS, shirts: SHIRTS };
+    z.flashMats[0].color.set(look.skins[0]);
+    z.flashMats[1].color.set(look.shirts[0]);
     z.root.scale.setScalar(CONFIG.zombies[kind].size);
     models[`zombies/${kind}`] = {
       file: `models/zombies/${kind}.glb`,
       recolour: { skin: 'skin', shirt: 'shirt', trousers: 'trousers' },
       hidden: hiddenParts(z.root),
-      animated: ['body', 'armL', 'armR', 'legL', 'legR', 'pupil', 'stars', ...Object.keys(z.extras)],
+      animated: ['body', 'armL', 'armR', 'legL', 'legR', 'pupilL', 'pupilR', 'stars', ...Object.keys(z.extras)],
     };
     await saveModel(`models/zombies/${kind}.glb`, z.root);
   }
