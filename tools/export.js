@@ -59,7 +59,9 @@ function standardMaterial(m) {
 const exporter = new GLTFExporter();
 async function saveModel(path, object) {
   object.traverse((o) => {
-    o.userData = {}; // nothing in userData is needed, and some can't be saved
+    // Nothing else in userData is needed (and some can't be saved). What is saved shows up in Godot
+    // as the node's "extras" metadata.
+    o.userData = o.isMesh && !o.castShadow ? { noShadow: true } : {};
     if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(standardMaterial) : standardMaterial(o.material);
   });
   const glb = await exporter.parseAsync(object, { binary: true, onlyVisible: false });
@@ -227,7 +229,8 @@ async function exportLevel(level, i) {
   group.traverse((o) => {
     if (!o.isMesh) return;
     meshes++;
-    const kind = materialKind(o.material);
+    // (things that don't cast a shadow in the game, like clouds, are kept apart)
+    const kind = `${materialKind(o.material)}${o.castShadow ? '' : ', no shadow'}`;
     if (!kinds.has(kind)) kinds.set(kind, o.material);
     o.geometry.computeBoundingSphere();
     const sphere = o.geometry.boundingSphere.clone().applyMatrix4(o.matrixWorld);
@@ -245,6 +248,7 @@ async function exportLevel(level, i) {
   for (const { square, kind, geos } of buckets.values()) {
     const merged = new THREE.Mesh(mergeGeometries(geos), kinds.get(kind));
     merged.name = `${square === 'big' ? 'big' : `square ${square}`} (${kind})`;
+    merged.castShadow = !kind.endsWith('no shadow');
     scenery.add(merged);
   }
 

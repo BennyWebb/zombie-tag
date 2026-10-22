@@ -42,6 +42,18 @@ The game moves those parts to make it wobble and walk.
   of view. Its colours come from a small palette texture (a grid of coloured squares) in the same file.
   Things that move are kept separate: the `gate` (hide `gate/open` until it opens) and, on the Funfair,
   the `carousel` and `ferrisWheel`.
+- **Shadows.** Godot gives everything a shadow, but in the game some things have none: clouds, the
+  gate's light beam, the Ferris wheel, coins and a few more. Those meshes have `noShadow: true` in their
+  extras metadata (merged scenery also has "no shadow" in its name). Turn their shadows off when
+  loading, for example:
+
+  ```gdscript
+  func remove_extra_shadows(node: Node) -> void:
+      if node is GeometryInstance3D and node.get_meta("extras", {}).get("noShadow", false):
+          node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+      for child in node.get_children():
+          remove_extra_shadows(child)
+  ```
 - The shop and gym aren't in the levels. Put them at two of the level's `buildingSpots`, at least 30 m
   apart, like the browser game does.
 
