@@ -7,7 +7,9 @@
     "dev": "vite --open",
     "build": "vite build",
     "preview": "vite preview --open",
-    "tv": "vite build && cap sync android"
+    "tv": "vite build && cap sync android",
+    "export:config": "node tools/export-config.js",
+    "export:godot": "node tools/export-config.js && vite --config tools/vite.export.config.js"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

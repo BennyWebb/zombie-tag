@@ -257,7 +257,7 @@ export const WEAPON_MODELS = {
 };
 
 // What each kind of shot looks like as it flies.
-const SHOT_LOOKS = {
+export const SHOT_LOOKS = {
   water: () => new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0x4fc3f7 })),
   slime: () => new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0x7dff4f })),
   bubble: () => new THREE.Mesh(

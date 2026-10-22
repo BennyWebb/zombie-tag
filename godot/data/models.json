@@ -1,0 +1,465 @@
+{
+  "about": "Made by tools/export.js. Colours are numbers like 0xff4f8b; in Godot use Color.hex((c << 8) | 0xff).",
+  "zombieColours": {
+    "default": {
+      "skins": [
+        9428058,
+        7327920,
+        8370431,
+        10936410
+      ],
+      "shirts": [
+        11701759,
+        16747069,
+        16740270,
+        16769126,
+        5227511
+      ]
+    },
+    "speedySid": {
+      "skins": [
+        7327968,
+        8370431
+      ],
+      "shirts": [
+        16777215
+      ],
+      "trousers": 1994710
+    },
+    "bouncyBob": {
+      "skins": [
+        13164634,
+        10936410
+      ],
+      "shirts": [
+        16747069
+      ],
+      "trousers": 9067050
+    },
+    "bigBertha": {
+      "skins": [
+        10476682,
+        9428058
+      ],
+      "shirts": [
+        16740270,
+        16752338
+      ],
+      "trousers": 16740270
+    },
+    "slimeZombie": {
+      "skins": [
+        8257359
+      ],
+      "shirts": [
+        5234495
+      ],
+      "trousers": 4177695,
+      "slime": true
+    },
+    "zombieKing": {
+      "skins": [
+        9428058
+      ],
+      "shirts": [
+        9329622
+      ],
+      "trousers": 5909130
+    }
+  },
+  "models": {
+    "zombies/shuffler": {
+      "file": "models/zombies/shuffler.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "zombies/speedySid": {
+      "file": "models/zombies/speedySid.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "tongue",
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars",
+        "tongue"
+      ]
+    },
+    "zombies/bouncyBob": {
+      "file": "models/zombies/bouncyBob.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "zombies/bigBertha": {
+      "file": "models/zombies/bigBertha.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "zombies/slimeZombie": {
+      "file": "models/zombies/slimeZombie.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "zombies/smallShuffler": {
+      "file": "models/zombies/smallShuffler.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "zombies/zombieKing": {
+      "file": "models/zombies/zombieKing.glb",
+      "recolour": {
+        "skin": "skin",
+        "shirt": "shirt",
+        "trousers": "trousers"
+      },
+      "hidden": [
+        "healthBar",
+        "stars",
+        "bubble",
+        "ice"
+      ],
+      "animated": [
+        "body",
+        "armL",
+        "armR",
+        "legL",
+        "legR",
+        "pupil",
+        "stars"
+      ]
+    },
+    "heroes/hair-short": {
+      "file": "models/heroes/hair-short.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/hair-long": {
+      "file": "models/heroes/hair-long.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/hair-ponytail": {
+      "file": "models/heroes/hair-ponytail.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/hair-pigtails": {
+      "file": "models/heroes/hair-pigtails.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/hair-bun": {
+      "file": "models/heroes/hair-bun.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/hair-curly": {
+      "file": "models/heroes/hair-curly.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-pirateHat": {
+      "file": "models/heroes/outfit-pirateHat.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-superheroCape": {
+      "file": "models/heroes/outfit-superheroCape.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-unicornOnesie": {
+      "file": "models/heroes/outfit-unicornOnesie.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-dancerOutfit": {
+      "file": "models/heroes/outfit-dancerOutfit.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-astronautSuit": {
+      "file": "models/heroes/outfit-astronautSuit.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "heroes/outfit-goldenCrown": {
+      "file": "models/heroes/outfit-goldenCrown.glb",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes",
+        "trousers": "trousers",
+        "hair": "hair"
+      },
+      "hidden": []
+    },
+    "hand": {
+      "file": "models/hand.glb",
+      "note": "Sits at (0.38, -0.42, -0.65) from the camera. Show only the weapon being held.",
+      "recolour": {
+        "skin": "skin",
+        "clothes": "clothes"
+      },
+      "weapons": [
+        "spikyStick",
+        "noodleBat",
+        "waterBlaster",
+        "chickenHammer",
+        "slimeSlinger",
+        "bubbleBlaster",
+        "snowballCannon",
+        "boomerangBanana",
+        "pumpkinLauncher",
+        "starLaser"
+      ],
+      "hidden": [
+        "noodleBat",
+        "waterBlaster",
+        "chickenHammer",
+        "slimeSlinger",
+        "bubbleBlaster",
+        "snowballCannon",
+        "boomerangBanana",
+        "pumpkinLauncher",
+        "starLaser"
+      ]
+    },
+    "shop": {
+      "file": "models/shop.glb",
+      "note": "The door faces +z. The sign spins (1.2 radians a second) and glows; it had a point light (colour 16732043, energy 25, range 16).",
+      "animated": [
+        "sign"
+      ]
+    },
+    "gym": {
+      "file": "models/gym.glb",
+      "note": "The door faces +z. The sign spins (1.2 radians a second) and glows; it had a point light (colour 5227511, energy 25, range 16).",
+      "animated": [
+        "sign"
+      ]
+    },
+    "gate": {
+      "file": "models/gate.glb",
+      "note": "Closed: 'bars' showing. Open: hide 'bars', show 'open', spin 'beam' and pulse 'glow'.",
+      "hidden": [
+        "open"
+      ],
+      "animated": [
+        "bars",
+        "open",
+        "beam",
+        "glow"
+      ]
+    },
+    "shots/water": {
+      "file": "models/shots/water.glb",
+      "splashColours": [
+        5227511,
+        12577535,
+        16777215
+      ]
+    },
+    "shots/slime": {
+      "file": "models/shots/slime.glb",
+      "splashColours": [
+        8257359,
+        4177695,
+        13172634
+      ]
+    },
+    "shots/bubble": {
+      "file": "models/shots/bubble.glb",
+      "splashColours": [
+        14731519,
+        16777215,
+        16747224
+      ]
+    },
+    "shots/snowball": {
+      "file": "models/shots/snowball.glb",
+      "splashColours": [
+        16777215,
+        14217471,
+        12575999
+      ]
+    },
+    "shots/banana": {
+      "file": "models/shots/banana.glb",
+      "splashColours": [
+        16769333,
+        16774048
+      ]
+    },
+    "shots/pumpkin": {
+      "file": "models/shots/pumpkin.glb",
+      "splashColours": [
+        16747039,
+        16757594,
+        4165439,
+        16769126
+      ]
+    },
+    "coin": {
+      "file": "models/coin.glb",
+      "note": "Spins round its y axis and bobs up and down."
+    }
+  }
+}

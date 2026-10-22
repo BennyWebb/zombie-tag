@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { resolveCollisions } from './world.js';
 
-const SKINS = [0x8fdc5a, 0x6fd0b0, 0x7fb8ff, 0xa6e05a];
-const SHIRTS = [0xb28dff, 0xff8a3d, 0xff6fae, 0xffe066, 0x4fc3f7];
+export const SKINS = [0x8fdc5a, 0x6fd0b0, 0x7fb8ff, 0xa6e05a];
+export const SHIRTS = [0xb28dff, 0xff8a3d, 0xff6fae, 0xffe066, 0x4fc3f7];
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 function makeEye(size) {
@@ -36,7 +36,7 @@ const glowSlime = new THREE.Color(0x2f7a10);
 const glowNone = new THREE.Color(0x000000);
 
 // Each kind of zombie has its own colours and silly extras.
-const LOOKS = {
+export const LOOKS = {
   speedySid: { skins: [0x6fd0e0, 0x7fb8ff], shirts: [0xffffff], trousers: 0x1e6fd6 },
   bouncyBob: { skins: [0xc8e05a, 0xa6e05a], shirts: [0xff8a3d], trousers: 0x8a5a2a },
   bigBertha: { skins: [0x9fdc8a, 0x8fdc5a], shirts: [0xff6fae, 0xff9ed2], trousers: 0xff6fae },
@@ -115,7 +115,7 @@ function addExtras(kind, body, mats) {
   return extras;
 }
 
-function makeZombieMesh(kind) {
+export function makeZombieMesh(kind) {
   const look = LOOKS[kind] || { skins: SKINS, shirts: SHIRTS, trousers: 0x5a4a8a };
   const goo = look.slime ? { transparent: true, opacity: 0.8 } : {};
   const skin = new THREE.MeshLambertMaterial({ color: pick(look.skins), ...goo });

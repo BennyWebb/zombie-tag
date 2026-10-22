@@ -25,10 +25,10 @@ function coinFaceTexture() {
   return tex;
 }
 
-const coinGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.07, 24);
+export const coinGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.07, 24);
 const edgeMat = new THREE.MeshLambertMaterial({ color: 0xe0a800, emissive: 0x553300 });
 const faceMat = new THREE.MeshLambertMaterial({ map: coinFaceTexture(), emissive: 0x443300 });
-const coinMats = [edgeMat, faceMat, faceMat];
+export const coinMats = [edgeMat, faceMat, faceMat];
 
 export class Coins {
   constructor(scene) {

@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# Godot keeps its imported copies of models and sounds here
+godot/.godot/

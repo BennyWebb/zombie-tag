@@ -330,6 +330,13 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 Zombie Tag then appears in the Shield's **Apps** row (you can move it onto the home screen's favourites).
 After changing the game, do the same again to update it: the saved heroes are kept.
 
+## The Godot version (just started)
+
+Zombie Tag is being remade in the [Godot](https://godotengine.org) game engine, to learn how a game
+engine works and to run faster on the TV. The `godot` folder holds everything exported from this
+version so far: the levels, characters, weapons, sounds, music and numbers. `npm run export:godot`
+exports them again after a change. See [godot/README.md](godot/README.md).
+
 ## Changing the numbers
 
 Speeds, damage, prices, hearts, gym difficulty, zombies, and each level's zombie count, toughness and mix are all in [`src/config.js`](src/config.js).

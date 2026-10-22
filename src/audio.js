@@ -37,13 +37,19 @@ function start() {
   musicGain.connect(master);
   sfxGain.connect(master);
   applyVolumes();
-  // one second of white noise, for whooshes, splats and drums
-  noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  noiseBuffer = makeNoise(ctx);
   setInterval(scheduleMusic, 25);
   if (wantedSong) music(wantedSong);
 }
+
+// one second of white noise, for whooshes, splats and drums
+function makeNoise(c) {
+  const buffer = c.createBuffer(1, c.sampleRate, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return buffer;
+}
+
 export function wakeSound() {
   start();
   if (ctx.state === 'suspended') ctx.resume();
@@ -326,27 +332,77 @@ function scheduleMusic() {
   if (!song || ctx.state !== 'running') return;
   const stepTime = 60 / song.bpm / 4;
   while (nextTime < ctx.currentTime + 0.15) {
-    const bar = Math.floor(step / 16) % 8;
-    const s = step % 16;
-    const n = tune.bars[bar][s];
-    const t = nextTime;
-    const out = musicGain;
-    if (n.lead) {
-      const o = { type: song.lead, vol: song.lead === 'sine' ? 0.22 : 0.09, out };
-      if (song.spooky) o.vibrato = { rate: 5, depth: 6 };
-      tone(midi(n.lead), t, stepTime * (song.spooky ? 3 : 1.6), o);
-      if (song.bells) tone(midi(n.lead + 12), t, stepTime * 2, { type: 'sine', vol: 0.04, out });
-    }
-    if (n.bass) tone(midi(n.bass), t, stepTime * 3, { type: 'triangle', vol: 0.28, out });
-    if (n.chord !== null && song.spooky) {
-      // a soft spooky "ooo" chord under everything
-      for (const d of [0, 2, 4]) tone(midi(tune.noteIn(n.chord + d, 0)), t, stepTime * 15, { type: 'sine', vol: 0.05, attack: 0.4, out });
-    }
-    // drums
-    if (s % 8 === 0) tone(150, t, 0.18, { slideTo: 45, vol: song.spooky ? 0.35 : 0.5, out });
-    if (!song.spooky && s % 8 === 4) noise(t, 0.12, { freq: 1800, Q: 0.8, vol: 0.12, out });
-    if (s % 2 === 0) noise(t, 0.04, { type: 'highpass', freq: 7000, vol: song.spooky ? 0.025 : 0.05, out });
+    playStep(song, tune, step, nextTime);
     nextTime += stepTime;
     step++;
   }
+}
+
+// Plays one step of a tune (a sixteenth of a bar) at time t.
+function playStep(song, tune, step, t) {
+  const stepTime = 60 / song.bpm / 4;
+  const bar = Math.floor(step / 16) % 8;
+  const s = step % 16;
+  const n = tune.bars[bar][s];
+  const out = musicGain;
+  if (n.lead) {
+    const o = { type: song.lead, vol: song.lead === 'sine' ? 0.22 : 0.09, out };
+    if (song.spooky) o.vibrato = { rate: 5, depth: 6 };
+    tone(midi(n.lead), t, stepTime * (song.spooky ? 3 : 1.6), o);
+    if (song.bells) tone(midi(n.lead + 12), t, stepTime * 2, { type: 'sine', vol: 0.04, out });
+  }
+  if (n.bass) tone(midi(n.bass), t, stepTime * 3, { type: 'triangle', vol: 0.28, out });
+  if (n.chord !== null && song.spooky) {
+    // a soft spooky "ooo" chord under everything
+    for (const d of [0, 2, 4]) tone(midi(tune.noteIn(n.chord + d, 0)), t, stepTime * 15, { type: 'sine', vol: 0.05, attack: 0.4, out });
+  }
+  // drums
+  if (s % 8 === 0) tone(150, t, 0.18, { slideTo: 45, vol: song.spooky ? 0.35 : 0.5, out });
+  if (!song.spooky && s % 8 === 4) noise(t, 0.12, { freq: 1800, Q: 0.8, vol: 0.12, out });
+  if (s % 2 === 0) noise(t, 0.04, { type: 'highpass', freq: 7000, vol: song.spooky ? 0.025 : 0.05, out });
+}
+
+// ---------- recording, for the Godot version ----------
+// tools/export.js records every sound and tune to a file. These play them into an
+// OfflineAudioContext instead of the speakers, mixed as the game does at full volume.
+
+export const SOUND_NAMES = Object.keys(SOUNDS);
+export const SONG_IDS = Object.keys(SONGS);
+
+function record(seconds, sampleRate, play) {
+  const saved = { ctx, musicGain, sfxGain, noiseBuffer };
+  const offline = new OfflineAudioContext(1, Math.ceil(seconds * sampleRate), sampleRate);
+  ctx = offline;
+  sfxGain = offline.createGain();
+  sfxGain.gain.value = 0.9;
+  sfxGain.connect(offline.destination);
+  musicGain = offline.createGain();
+  musicGain.gain.value = 0.32;
+  musicGain.connect(offline.destination);
+  noiseBuffer = makeNoise(offline);
+  try {
+    play();
+  } finally {
+    ({ ctx, musicGain, sfxGain, noiseBuffer } = saved);
+  }
+  return offline.startRendering();
+}
+
+// Records a sound effect (2.5 seconds, the longest is under 2). Resolves to an AudioBuffer.
+export function recordSound(name, sampleRate) {
+  return record(2.5, sampleRate, () => SOUNDS[name](0.01, 1));
+}
+
+// Records one loop of a tune that joins up with itself: it plays the tune twice and keeps the
+// second time round, which already has the end of the first time's notes ringing into it.
+// Resolves to { buffer, loopStart, loopLength } (in samples).
+export async function recordSong(id, sampleRate) {
+  const s = { id, ...SONGS[id] };
+  const t = compose(s);
+  const steps = 8 * 16;
+  const stepTime = 60 / s.bpm / 4;
+  const buffer = await record(steps * stepTime * 2, sampleRate, () => {
+    for (let i = 0; i < steps * 2; i++) playStep(s, t, i, i * stepTime);
+  });
+  return { buffer, loopStart: Math.round(steps * stepTime * sampleRate), loopLength: Math.round(steps * stepTime * sampleRate) };
 }

@@ -136,6 +136,9 @@ function addFloaters(ctx, { count, colour, size, area = 90, fall = 0, wander = 0
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: colour, size, transparent: true, opacity: 0.9 }));
+  // the settings, for the Godot export (tools/export.js)
+  points.name = 'floaters';
+  points.userData.floaters = { count, colour, size, area, fall, wander, low, high };
   ctx.group.add(points);
   ctx.animate((dt, t) => {
     for (let i = 0; i < count; i++) {
@@ -350,6 +353,7 @@ function funfairCentre(ctx) {
     spin.add(horse);
   }
   spin.add(roof);
+  spin.name = 'carousel'; // for the Godot export
   ctx.add(group(base, pole, spin), 0, 0, { r: 5.2 });
   ctx.animate((dt, t) => {
     spin.rotation.y += dt * 0.6;
@@ -374,6 +378,7 @@ function addFerrisWheel(ctx) {
     cars.push(car);
   }
   wheel.position.set(0, 13, -ctx.half - 10);
+  wheel.name = 'ferrisWheel'; // for the Godot export
   const legs = new THREE.Group();
   for (const x of [-4, 4]) {
     const leg = mesh(new THREE.BoxGeometry(0.5, 14, 0.5), mat(0xaaaaaa), x, 6.5, -ctx.half - 10);

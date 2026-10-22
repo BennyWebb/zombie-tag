@@ -92,8 +92,18 @@ function makeDumbbellSign() {
   return bell;
 }
 
+// What the shop and the gym look like.
+export const SHOP_LOOK = {
+  walls: 0xffa8cc, trim: 0x8e5bd6, stripe: 0xff4f8b, stripeGlow: 0x661a38,
+  text: 'SHOP', textColour: '#ff4f8b', glow: 0xff4f8b, makeSign: makeBagSign,
+};
+export const GYM_LOOK = {
+  walls: 0xa8e6ff, trim: 0x1e6fd6, stripe: 0x4fc3f7, stripeGlow: 0x14506e,
+  text: 'GYM', textColour: '#1e6fd6', glow: 0x4fc3f7, makeSign: makeDumbbellSign,
+};
+
 // A safe building that zombies can't get into (the shop or the gym). The door is on the +z side.
-function makeBuilding(look) {
+export function makeBuilding(look) {
   const g = new THREE.Group();
   const w = 8;
   const d = 6;
@@ -149,6 +159,7 @@ function makeBuilding(look) {
   const topper = look.makeSign();
   topper.scale.setScalar(1.6);
   topper.position.y = h + 9.2;
+  topper.name = 'sign'; // for the Godot export
   g.add(topper);
   const glow = new THREE.PointLight(look.glow, 25, 16);
   glow.position.y = h + 9.2;
@@ -160,7 +171,7 @@ function makeBuilding(look) {
 }
 
 // The exit gate: closed with bars until every zombie is popped, then it opens and sparkles.
-function makeGate() {
+export function makeGate() {
   const g = new THREE.Group();
   const stone = mat(0xb28dff);
   for (const x of [-2.6, 2.6]) g.add(meshAt(new THREE.BoxGeometry(1, 5, 1), stone, x, 2.5, 0));
@@ -187,6 +198,11 @@ function makeGate() {
   open.add(glow, beam);
   open.visible = false;
   g.add(open);
+  // names for the Godot export (tools/export.js)
+  bars.name = 'bars';
+  open.name = 'open';
+  glow.name = 'glow';
+  beam.name = 'beam';
   return { group: g, bars, open, beam };
 }
 
@@ -198,9 +214,11 @@ function meshAt(geo, material, x, y, z) {
 
 // Where the shop and gym can go (their doors face +z). Two are picked at random each level,
 // never right next to the start or next to each other.
-const BUILDING_SPOTS = [[-25, 11], [25, 12], [-25, -14], [25, -14], [-12, -27], [12, -27]];
+export const BUILDING_SPOTS = [[-25, 11], [25, 12], [-25, -14], [25, -14], [-12, -27], [12, -27]];
 
-export function buildWorld(scene, level, theme) {
+// forExport (tools/export.js, for the Godot version): leave out the shop and gym, and keep all
+// their spots clear, so they can go at any two spots later.
+export function buildWorld(scene, level, theme, { forExport = false } = {}) {
   const rand = makeRandom(1234 + level.number * 77);
   const size = CONFIG.arena.size;
   const half = size / 2;
@@ -289,14 +307,19 @@ export function buildWorld(scene, level, theme) {
   const spots = [...BUILDING_SPOTS].sort(() => Math.random() - 0.5);
   const shopSpot = spots[0];
   const gymSpot = spots.find((s) => Math.hypot(s[0] - shopSpot[0], s[1] - shopSpot[1]) > 30);
-  const shop = placeBuilding({
-    walls: 0xffa8cc, trim: 0x8e5bd6, stripe: 0xff4f8b, stripeGlow: 0x661a38,
-    text: 'SHOP', textColour: '#ff4f8b', glow: 0xff4f8b, makeSign: makeBagSign,
-  }, shopSpot);
-  const gym = placeBuilding({
-    walls: 0xa8e6ff, trim: 0x1e6fd6, stripe: 0x4fc3f7, stripeGlow: 0x14506e,
-    text: 'GYM', textColour: '#1e6fd6', glow: 0x4fc3f7, makeSign: makeDumbbellSign,
-  }, gymSpot);
+  let shop;
+  let gym;
+  const reserved = []; // forExport: every spot's door, kept clear
+  if (forExport) {
+    const half = { halfW: 4, halfD: 3 }; // makeBuilding's size
+    for (const [x, z] of BUILDING_SPOTS) {
+      colliders.push({ x, z, hw: half.halfW, hd: half.halfD, building: true });
+      reserved.push({ x, z: z + half.halfD });
+    }
+  } else {
+    shop = placeBuilding(SHOP_LOOK, shopSpot);
+    gym = placeBuilding(GYM_LOOK, gymSpot);
+  }
 
   // the exit gate, at the far end of the path from the start
   const gate = makeGate();
@@ -304,10 +327,11 @@ export function buildWorld(scene, level, theme) {
   gate.group.position.set(gatePos.x, 0, gatePos.z);
   group.add(shadows(gate.group));
   gate.beam.castShadow = false;
+  gate.group.name = 'gate';
   for (const x of [-2.6, 2.6]) colliders.push({ x: gatePos.x + x, z: gatePos.z, r: 0.8 });
 
   const playerStart = { x: 0, z: half - 6, yaw: 0 }; // yaw 0 faces the middle
-  const doors = [shop.door, gym.door];
+  const doors = forExport ? reserved : [shop.door, gym.door];
 
   // keep things off the paths, the middle, the start, the doors and the gate
   const onPath = (x, z) => {
@@ -380,8 +404,8 @@ export function buildWorld(scene, level, theme) {
     // spinning signs, rides, snow and so on
     update(dt) {
       time += dt;
-      shop.sign.rotation.y += dt * 1.2;
-      gym.sign.rotation.y += dt * 1.2;
+      if (shop) shop.sign.rotation.y += dt * 1.2;
+      if (gym) gym.sign.rotation.y += dt * 1.2;
       if (gate.open.visible) {
         gate.beam.rotation.y += dt;
         gate.open.children[0].material.opacity = 0.65 + Math.sin(time * 4) * 0.2;

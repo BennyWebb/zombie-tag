@@ -1,0 +1,713 @@
+{
+  "player": {
+    "eyeHeight": 1.6,
+    "radius": 0.5,
+    "baseSpeed": 4,
+    "speedPerLevel": 0.1,
+    "turnSpeed": 2.4,
+    "strengthPerLevel": 0.2,
+    "startSpeed": 1,
+    "startStrength": 1,
+    "hearts": 3,
+    "safeTime": 2,
+    "leaveShopSafeTime": 2,
+    "taggedTime": 3,
+    "taggedTimeTwoPlayers": 10,
+    "touchDistance": 0.3
+  },
+  "weapons": {
+    "spikyStick": {
+      "name": "Spiky Stick",
+      "icon": "🪵",
+      "about": "Breaks after 4 hits",
+      "price": 0,
+      "kind": "swing",
+      "damage": 1,
+      "maxHits": 4,
+      "range": 3.2,
+      "aimAngle": 60,
+      "swingTime": 0.35
+    },
+    "noodleBat": {
+      "name": "Foam Noodle Bat",
+      "icon": "🏏",
+      "about": "Never breaks. Bonks zombies back!",
+      "price": 25,
+      "word": "BONK!",
+      "kind": "swing",
+      "damage": 2,
+      "range": 3.4,
+      "aimAngle": 60,
+      "swingTime": 0.4,
+      "knockback": 9
+    },
+    "waterBlaster": {
+      "name": "Squirty Water Blaster",
+      "icon": "💦",
+      "about": "Shoots super fast. Pushes zombies away!",
+      "price": 60,
+      "word": "SPLOSH!",
+      "kind": "shoot",
+      "damage": 0.3333333333333333,
+      "range": 14,
+      "aimAngle": 25,
+      "fireInterval": 0.13,
+      "shotSpeed": 26,
+      "shot": "water",
+      "knockback": 4
+    },
+    "chickenHammer": {
+      "name": "Rubber Chicken Hammer",
+      "icon": "🐔",
+      "about": "SQUAWK! Bonks every zombie in front of you",
+      "price": 120,
+      "word": "SQUAWK!",
+      "kind": "swing",
+      "damage": 4,
+      "range": 3.8,
+      "aimAngle": 70,
+      "swingTime": 0.45,
+      "hitsAll": true,
+      "knockback": 7
+    },
+    "slimeSlinger": {
+      "name": "Slime Slinger",
+      "icon": "🧪",
+      "about": "Green goo makes zombies slow for 3 seconds",
+      "price": 200,
+      "word": "SPLAT!",
+      "kind": "shoot",
+      "damage": 3,
+      "range": 14,
+      "aimAngle": 25,
+      "fireInterval": 0.5,
+      "shotSpeed": 18,
+      "shot": "slime",
+      "slowTime": 3,
+      "slowSpeed": 0.35
+    },
+    "bubbleBlaster": {
+      "name": "Bubble Blaster",
+      "icon": "🧼",
+      "about": "Traps a zombie in a floating bubble for 3 seconds",
+      "price": 350,
+      "word": "BLOOP!",
+      "kind": "shoot",
+      "damage": 3,
+      "range": 13,
+      "aimAngle": 25,
+      "fireInterval": 0.6,
+      "shotSpeed": 12,
+      "shot": "bubble",
+      "bubbleTime": 3
+    },
+    "snowballCannon": {
+      "name": "Snowball Cannon",
+      "icon": "❄️",
+      "about": "Freezes zombies solid for 2 seconds",
+      "price": 500,
+      "word": "BRRR!",
+      "kind": "shoot",
+      "damage": 5,
+      "range": 15,
+      "aimAngle": 25,
+      "fireInterval": 0.7,
+      "shotSpeed": 20,
+      "shot": "snowball",
+      "freezeTime": 2
+    },
+    "boomerangBanana": {
+      "name": "Boomerang Banana",
+      "icon": "🍌",
+      "about": "Flies out and comes back, hitting zombies both ways",
+      "price": 700,
+      "word": "BONK!",
+      "kind": "throw",
+      "damage": 6,
+      "range": 12,
+      "aimAngle": 30,
+      "shotSpeed": 16,
+      "shot": "banana"
+    },
+    "pumpkinLauncher": {
+      "name": "Pumpkin Launcher",
+      "icon": "🎃",
+      "about": "Slow, but each pumpkin splats every zombie nearby",
+      "price": 1000,
+      "word": "SPLAT!",
+      "kind": "shoot",
+      "damage": 10,
+      "range": 16,
+      "aimAngle": 30,
+      "fireInterval": 1.4,
+      "shotSpeed": 14,
+      "shot": "pumpkin",
+      "gravity": 9,
+      "splashRadius": 4
+    },
+    "starLaser": {
+      "name": "Sparkle Star Laser Gun",
+      "icon": "🌟",
+      "about": "The best weapon! A sparkly laser with swirling stars",
+      "price": 1600,
+      "word": "ZAP!",
+      "kind": "beam",
+      "damage": 8,
+      "range": 16,
+      "aimAngle": 20,
+      "fireInterval": 0.25,
+      "starsPerSecond": 40
+    }
+  },
+  "items": {
+    "medicine": {
+      "name": "Heart Medicine",
+      "icon": "💊",
+      "about": "Gives back 1 heart",
+      "price": 15,
+      "hearts": 1
+    }
+  },
+  "armour": {
+    "cardboardBox": {
+      "name": "Cardboard Box Armour",
+      "icon": "📦",
+      "price": 40,
+      "blocks": 1
+    },
+    "sportsPads": {
+      "name": "Sports Pads and Helmet",
+      "icon": "🏈",
+      "price": 150,
+      "blocks": 2
+    },
+    "knightArmour": {
+      "name": "Shiny Knight Armour",
+      "icon": "🛡️",
+      "price": 600,
+      "blocks": 3
+    }
+  },
+  "gym": {
+    "maxLevel": 10,
+    "upgradesPerLevel": 1,
+    "treadmill": {
+      "time": 15,
+      "presses": 20,
+      "morePressesPerLevel": 4,
+      "drainAfter": 0.4,
+      "drainPerSecond": 0.15
+    },
+    "weights": {
+      "time": 10,
+      "dumbbells": {
+        "small": {
+          "name": "Small",
+          "icon": "🔵",
+          "rise": 0.085,
+          "sink": 0.08,
+          "maxLevel": 4
+        },
+        "medium": {
+          "name": "Medium",
+          "icon": "🟠",
+          "rise": 0.075,
+          "sink": 0.16,
+          "maxLevel": 7
+        },
+        "heavy": {
+          "name": "Heavy",
+          "icon": "🔴",
+          "rise": 0.065,
+          "sink": 0.25,
+          "maxLevel": 10
+        }
+      }
+    }
+  },
+  "tagBux": {
+    "coinValue": 1,
+    "pickupDistance": 0.7,
+    "magnetDistance": 2.5,
+    "magnetSpeed": 12
+  },
+  "shop": {
+    "enterDistance": 1.4
+  },
+  "zombies": {
+    "shuffler": {
+      "name": "Shuffler",
+      "health": 1,
+      "wanderSpeed": 0.9,
+      "chaseSpeed": 3,
+      "noticeDistance": 15,
+      "radius": 0.55,
+      "size": 1,
+      "tagBux": 5,
+      "touchHearts": 1,
+      "bounceBack": 8,
+      "dizzyTime": 2.5
+    },
+    "speedySid": {
+      "name": "Speedy Sid",
+      "health": 2,
+      "wanderSpeed": 1.4,
+      "chaseSpeed": 6,
+      "sprintTime": 1.4,
+      "pantTime": 1.6,
+      "noticeDistance": 16,
+      "radius": 0.5,
+      "size": 0.95,
+      "tagBux": 10,
+      "touchHearts": 1,
+      "bounceBack": 8,
+      "dizzyTime": 2.5
+    },
+    "bouncyBob": {
+      "name": "Bouncy Bob",
+      "health": 3,
+      "wanderSpeed": 1.2,
+      "chaseSpeed": 3.3,
+      "hopHeight": 0.9,
+      "hopsPerSecond": 1.6,
+      "jumpsSmallThings": true,
+      "noticeDistance": 16,
+      "radius": 0.55,
+      "size": 1,
+      "tagBux": 15,
+      "touchHearts": 1,
+      "bounceBack": 8,
+      "dizzyTime": 2.5
+    },
+    "bigBertha": {
+      "name": "Big Bertha",
+      "health": 8,
+      "wanderSpeed": 0.6,
+      "chaseSpeed": 2,
+      "noticeDistance": 14,
+      "radius": 1,
+      "size": 1.8,
+      "tagBux": 25,
+      "touchHearts": 2,
+      "bounceBack": 5,
+      "dizzyTime": 2.5
+    },
+    "slimeZombie": {
+      "name": "Slime Zombie",
+      "health": 4,
+      "wanderSpeed": 1,
+      "chaseSpeed": 3.2,
+      "splitsInto": "smallShuffler",
+      "noticeDistance": 15,
+      "radius": 0.6,
+      "size": 1.05,
+      "tagBux": 20,
+      "touchHearts": 1,
+      "bounceBack": 8,
+      "dizzyTime": 2.5
+    },
+    "smallShuffler": {
+      "name": "Little Shuffler",
+      "health": 1,
+      "wanderSpeed": 1,
+      "chaseSpeed": 3,
+      "noticeDistance": 15,
+      "radius": 0.4,
+      "size": 0.65,
+      "tagBux": 3,
+      "touchHearts": 1,
+      "bounceBack": 8,
+      "dizzyTime": 2.5
+    },
+    "zombieKing": {
+      "name": "Zombie King",
+      "health": 60,
+      "wanderSpeed": 0.8,
+      "chaseSpeed": 2.2,
+      "noticeDistance": 30,
+      "radius": 1.2,
+      "size": 2.2,
+      "tagBux": 300,
+      "touchHearts": 2,
+      "bounceBack": 4,
+      "dizzyTime": 2.5,
+      "boss": true,
+      "callHelpEvery": 10,
+      "helpers": 2,
+      "maxHelpers": 6,
+      "guards": 6
+    }
+  },
+  "levels": [
+    {
+      "name": "Sunny Park",
+      "icon": "🌳",
+      "theme": "park",
+      "zombies": 8,
+      "healthMultiplier": 1,
+      "mix": {
+        "shuffler": 1
+      }
+    },
+    {
+      "name": "School and Playground",
+      "icon": "🏫",
+      "theme": "school",
+      "zombies": 10,
+      "healthMultiplier": 1.2,
+      "mix": {
+        "shuffler": 1
+      }
+    },
+    {
+      "name": "Supermarket Car Park",
+      "icon": "🛒",
+      "theme": "carPark",
+      "zombies": 12,
+      "healthMultiplier": 1.4,
+      "mix": {
+        "shuffler": 3,
+        "speedySid": 2
+      }
+    },
+    {
+      "name": "Beach and Pier",
+      "icon": "🏖️",
+      "theme": "beach",
+      "zombies": 14,
+      "healthMultiplier": 1.7,
+      "mix": {
+        "shuffler": 3,
+        "speedySid": 2
+      }
+    },
+    {
+      "name": "Funfair",
+      "icon": "🎡",
+      "theme": "funfair",
+      "zombies": 16,
+      "healthMultiplier": 2,
+      "mix": {
+        "shuffler": 3,
+        "speedySid": 2,
+        "bouncyBob": 2
+      }
+    },
+    {
+      "name": "Snowy Village",
+      "icon": "⛄",
+      "theme": "snow",
+      "zombies": 18,
+      "healthMultiplier": 2.4,
+      "mix": {
+        "shuffler": 3,
+        "speedySid": 2,
+        "bouncyBob": 2,
+        "bigBertha": 1
+      }
+    },
+    {
+      "name": "Toy Factory",
+      "icon": "🧸",
+      "theme": "toys",
+      "zombies": 20,
+      "healthMultiplier": 2.8,
+      "mix": {
+        "shuffler": 3,
+        "speedySid": 2,
+        "bouncyBob": 2,
+        "bigBertha": 1
+      }
+    },
+    {
+      "name": "Haunted Forest",
+      "icon": "🍄",
+      "theme": "forest",
+      "zombies": 22,
+      "healthMultiplier": 3.3,
+      "mix": {
+        "shuffler": 2,
+        "speedySid": 2,
+        "bouncyBob": 2,
+        "bigBertha": 1,
+        "slimeZombie": 2
+      }
+    },
+    {
+      "name": "Graveyard at Night",
+      "icon": "🎃",
+      "theme": "graveyard",
+      "zombies": 25,
+      "healthMultiplier": 3.8,
+      "mix": {
+        "shuffler": 2,
+        "speedySid": 2,
+        "bouncyBob": 2,
+        "bigBertha": 1,
+        "slimeZombie": 2
+      }
+    },
+    {
+      "name": "Zombie King's Castle",
+      "icon": "🏰",
+      "theme": "castle",
+      "zombies": 30,
+      "healthMultiplier": 4.5,
+      "mix": {
+        "shuffler": 2,
+        "speedySid": 2,
+        "bouncyBob": 2,
+        "bigBertha": 1,
+        "slimeZombie": 2
+      },
+      "boss": "zombieKing"
+    }
+  ],
+  "difficulties": {
+    "easy": {
+      "name": "Easy",
+      "icon": "🙂",
+      "about": "Get tagged and you keep everything"
+    },
+    "hard": {
+      "name": "Hard",
+      "icon": "😬",
+      "about": "Get tagged and you lose your weapons and armour",
+      "loseItems": true,
+      "king": {
+        "health": 1000,
+        "chaseSpeed": 3.3,
+        "wanderSpeed": 1.4,
+        "instantTag": true,
+        "helpers": 4,
+        "maxHelpers": 8
+      }
+    },
+    "hardcore": {
+      "name": "Hardcore",
+      "icon": "💀",
+      "about": "A fresh start with twice the zombies. Only 1 life: get tagged and it starts again!",
+      "oneLife": true,
+      "fresh": true,
+      "zombies": 2,
+      "king": {
+        "health": 1000,
+        "chaseSpeed": 3.3,
+        "wanderSpeed": 1.4,
+        "instantTag": true,
+        "helpers": 4,
+        "maxHelpers": 8
+      }
+    }
+  },
+  "maxProfiles": 8,
+  "sound": {
+    "music": 6,
+    "sounds": 8
+  },
+  "arena": {
+    "size": 80,
+    "waveSize": 4,
+    "nextWaveWhenLeft": 1,
+    "spawnAway": 22
+  },
+  "heroes": [
+    {
+      "name": "Player 1",
+      "skin": 15843965,
+      "hairStyle": "ponytail",
+      "hair": 7027226,
+      "outfit": 16740270,
+      "trousers": 5917322,
+      "tagColour": "#ff4f8b"
+    },
+    {
+      "name": "Player 2",
+      "skin": 14724201,
+      "hairStyle": "pigtails",
+      "hair": 2759184,
+      "outfit": 5227511,
+      "trousers": 3824266,
+      "tagColour": "#1e6fd6"
+    }
+  ],
+  "creator": {
+    "maxNameLength": 12,
+    "skins": [
+      16767940,
+      15843965,
+      14724201,
+      13010498,
+      9262372,
+      6044193
+    ],
+    "hairStyles": [
+      {
+        "id": "short",
+        "name": "Short"
+      },
+      {
+        "id": "long",
+        "name": "Long"
+      },
+      {
+        "id": "ponytail",
+        "name": "Ponytail"
+      },
+      {
+        "id": "pigtails",
+        "name": "Pigtails"
+      },
+      {
+        "id": "bun",
+        "name": "Bun"
+      },
+      {
+        "id": "curly",
+        "name": "Curly"
+      }
+    ],
+    "hairColours": [
+      2759184,
+      7027226,
+      13011514,
+      15979371,
+      13784363,
+      16740270,
+      9329622,
+      5227511
+    ],
+    "outfitColours": [
+      16740270,
+      5227511,
+      9329622,
+      5025616,
+      16765503,
+      16747069,
+      15022389,
+      16777215
+    ]
+  },
+  "outfits": {
+    "pirateHat": {
+      "name": "Pirate Hat",
+      "icon": "🏴‍☠️",
+      "price": 40,
+      "covers": [
+        "head"
+      ]
+    },
+    "superheroCape": {
+      "name": "Superhero Cape",
+      "icon": "🦸",
+      "price": 50,
+      "covers": [
+        "back"
+      ]
+    },
+    "unicornOnesie": {
+      "name": "Unicorn Onesie",
+      "icon": "🦄",
+      "price": 80,
+      "covers": [
+        "body",
+        "head"
+      ]
+    },
+    "dancerOutfit": {
+      "name": "Sparkly Dancer Outfit",
+      "icon": "🩰",
+      "price": 100,
+      "covers": [
+        "body"
+      ]
+    },
+    "astronautSuit": {
+      "name": "Astronaut Suit",
+      "icon": "🧑‍🚀",
+      "price": 150,
+      "covers": [
+        "body",
+        "head",
+        "back"
+      ]
+    },
+    "goldenCrown": {
+      "name": "Golden Crown",
+      "icon": "👑",
+      "price": 300,
+      "covers": [
+        "head"
+      ]
+    }
+  },
+  "twoPlayerZombies": 1.5,
+  "giveTagBux": 10,
+  "keys": {
+    "keyboard": {
+      "forward": [
+        "KeyW",
+        "ArrowUp"
+      ],
+      "back": [
+        "KeyS",
+        "ArrowDown"
+      ],
+      "left": [
+        "KeyA",
+        "ArrowLeft"
+      ],
+      "right": [
+        "KeyD",
+        "ArrowRight"
+      ],
+      "attack": [
+        "Space",
+        "Enter",
+        "NumpadEnter",
+        "Numpad0"
+      ]
+    },
+    "left": {
+      "forward": [
+        "KeyW"
+      ],
+      "back": [
+        "KeyS"
+      ],
+      "left": [
+        "KeyA"
+      ],
+      "right": [
+        "KeyD"
+      ],
+      "attack": [
+        "Space"
+      ]
+    },
+    "right": {
+      "forward": [
+        "ArrowUp"
+      ],
+      "back": [
+        "ArrowDown"
+      ],
+      "left": [
+        "ArrowLeft"
+      ],
+      "right": [
+        "ArrowRight"
+      ],
+      "attack": [
+        "Enter",
+        "NumpadEnter",
+        "Numpad0"
+      ]
+    }
+  },
+  "controls": {
+    "mouseTurn": 0.0025,
+    "deadzone": 0.2,
+    "padTurnSpeed": 1.8
+  }
+}
