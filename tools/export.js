@@ -100,7 +100,49 @@ function findMovingParts(world) {
   return [...moved].filter((o) => o !== world.group && !movedAbove(o));
 }
 
-// Meshes with the same kind of material can share one: the colours go into the mesh itself.
+// A level's colours as little squares in one small picture. Each merged mesh points at its colour's
+// square, so the colours come through as an ordinary texture. (Colours stored in the mesh's corners
+// would be smaller, but some Godot versions need a setting switched on before they show them.)
+const SQUARE = 8; // pixels
+const PALETTE_SIZE = 128; // pixels across and down: room for 256 colours
+class Palette {
+  constructor() {
+    this.colours = new Map(); // colour -> where its square is
+  }
+
+  // The texture coordinates of the middle of a colour's square.
+  uv(colour) {
+    const key = colour.getHex();
+    if (!this.colours.has(key)) {
+      const n = this.colours.size;
+      if (n >= (PALETTE_SIZE / SQUARE) ** 2) throw new Error('Too many colours for one palette');
+      this.colours.set(key, { colour, x: (n % (PALETTE_SIZE / SQUARE)) * SQUARE, y: Math.floor(n / (PALETTE_SIZE / SQUARE)) * SQUARE });
+    }
+    const { x, y } = this.colours.get(key);
+    // (three.js counts v up from the bottom of the picture; the exporter turns it round for glTF)
+    return [(x + SQUARE / 2) / PALETTE_SIZE, 1 - (y + SQUARE / 2) / PALETTE_SIZE];
+  }
+
+  texture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = PALETTE_SIZE;
+    canvas.height = PALETTE_SIZE;
+    const ctx = canvas.getContext('2d');
+    for (const { colour, x, y } of this.colours.values()) {
+      ctx.fillStyle = `#${colour.getHexString()}`;
+      ctx.fillRect(x, y, SQUARE, SQUARE);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    // each triangle only ever looks at the middle of one square, so no blending is needed
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  }
+}
+
+// Meshes with the same kind of material can share one, painted from the level's palette.
 function materialKind(m) {
   const lit = !m.isMeshBasicMaterial;
   const parts = [lit ? 'lit' : 'glow'];
@@ -111,9 +153,9 @@ function materialKind(m) {
   return parts.join(', ');
 }
 
-function kindMaterial(m, name) {
+function kindMaterial(m, name, map) {
   const options = {
-    color: 0xffffff, vertexColors: true, transparent: m.transparent, opacity: m.opacity, side: m.side,
+    color: 0xffffff, map, transparent: m.transparent, opacity: m.opacity, side: m.side,
   };
   const out = m.isMeshBasicMaterial
     ? new THREE.MeshBasicMaterial(options)
@@ -122,8 +164,8 @@ function kindMaterial(m, name) {
   return out;
 }
 
-// A copy of a mesh's shape, moved to where it is in the world and painted its colour.
-function bakedGeometry(mesh) {
+// A copy of a mesh's shape, moved to where it is in the world and pointing at its colour's square.
+function bakedGeometry(mesh, palette) {
   const g = mesh.geometry.clone();
   for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal') g.deleteAttribute(name);
   if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
@@ -133,10 +175,10 @@ function bakedGeometry(mesh) {
     const idx = g.index.array;
     for (let i = 0; i < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]];
   }
-  const c = mesh.material.color; // three.js keeps colours linear, which is what glTF wants
-  const colours = new Float32Array(g.attributes.position.count * 3);
-  for (let i = 0; i < colours.length; i += 3) colours.set([c.r, c.g, c.b], i);
-  g.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+  const [u, v] = palette.uv(mesh.material.color);
+  const uvs = new Float32Array(g.attributes.position.count * 2);
+  for (let i = 0; i < uvs.length; i += 2) uvs.set([u, v], i);
+  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   return g;
 }
 
@@ -178,22 +220,25 @@ async function exportLevel(level, i) {
 
   // everything else is still: merge it into one mesh per square of ground and kind of material
   const buckets = new Map();
-  const kinds = new Map();
+  const kinds = new Map(); // kind -> an example of its material
+  const palette = new Palette();
   let meshes = 0;
   group.updateMatrixWorld(true);
   group.traverse((o) => {
     if (!o.isMesh) return;
     meshes++;
     const kind = materialKind(o.material);
-    if (!kinds.has(kind)) kinds.set(kind, kindMaterial(o.material, kind));
+    if (!kinds.has(kind)) kinds.set(kind, o.material);
     o.geometry.computeBoundingSphere();
     const sphere = o.geometry.boundingSphere.clone().applyMatrix4(o.matrixWorld);
     // big things (the ground, the wall, the sea) go together instead of in a square
     const square = sphere.radius > TILE ? 'big' : `${Math.floor(sphere.center.x / TILE)},${Math.floor(sphere.center.z / TILE)}`;
     const key = `${square}|${kind}`;
     if (!buckets.has(key)) buckets.set(key, { square, kind, geos: [] });
-    buckets.get(key).geos.push(bakedGeometry(o));
+    buckets.get(key).geos.push(bakedGeometry(o, palette));
   });
+  const paletteTexture = palette.texture();
+  for (const [kind, example] of kinds) kinds.set(kind, kindMaterial(example, kind, paletteTexture));
   const scenery = new THREE.Group();
   scenery.name = 'scenery';
   out.add(scenery);

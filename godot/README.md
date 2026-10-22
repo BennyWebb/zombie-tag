@@ -39,8 +39,9 @@ The game moves those parts to make it wobble and walk.
 - **Recolouring.** Zombies and heroes get their colours when they're made. The materials to change are
   named `skin`, `shirt`, `trousers`, `clothes` and `hair` (`recolour` in `data/models.json`).
 - **Level scenery** is merged into one mesh per 20 x 20 m square, so Godot can skip squares that are out
-  of view. Each mesh is coloured per vertex. Things that move are kept separate: the `gate` (hide
-  `gate/open` until it opens) and, on the Funfair, the `carousel` and `ferrisWheel`.
+  of view. Its colours come from a small palette texture (a grid of coloured squares) in the same file.
+  Things that move are kept separate: the `gate` (hide `gate/open` until it opens) and, on the Funfair,
+  the `carousel` and `ferrisWheel`.
 - The shop and gym aren't in the levels. Put them at two of the level's `buildingSpots`, at least 30 m
   apart, like the browser game does.
 
