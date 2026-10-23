@@ -93,17 +93,9 @@ func handle_input(_event: InputEvent) -> bool:
 	return false
 
 
-## The help at the bottom. "{leave}" in it shows the leave button: Backspace, or the picture of
-## the joypad's right-hand button (Controls.leave_glyph).
+## The help at the bottom, with pictures of the buttons for "{go}" and "{leave}" (see ButtonText).
 func set_help(text: String) -> void:
-	help.clear()
-	var parts := text.split("{leave}")
-	for i in parts.size():
-		if i > 0:
-			if not OS.has_feature("android"):
-				help.append_text("Backspace or ")
-			help.add_image(Controls.leave_glyph(), 44, 44)
-		help.append_text(parts[i])
+	ButtonText.fill(help, text)
 
 
 static func shadow(label: Label, offset: int) -> void:

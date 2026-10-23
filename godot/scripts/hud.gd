@@ -38,7 +38,7 @@ var tagged_keep := Label.new()
 var level_done := ColorRect.new()
 var level_done_place := Label.new()
 var level_done_bux := Label.new()
-var level_done_go := Label.new()
+var level_done_go := RichTextLabel.new() # (with a picture of the buttons: see ButtonText)
 var speed := Label.new()
 var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for timing them
 # Asking Godot to time the drawing once crashed the Shield, and its graphics chip can't time itself
@@ -295,8 +295,7 @@ func make_level_done_screen() -> void:
 	bux_row.add_child(you_have)
 	bux_row.add_child(HudIcon.new(HudIcon.Kind.COIN, 32))
 	bux_row.add_child(level_done_bux)
-	level_done_go.add_theme_font_size_override("font_size", 38)
-	level_done_go.add_theme_color_override("font_color", YELLOW)
+	level_done_go = ButtonText.make("", 38, YELLOW)
 	var pick := Label.new()
 	pick.text = "%s: pick a level" % Screens.back_name()
 	pick.add_theme_font_size_override("font_size", 24)
@@ -318,7 +317,7 @@ func make_level_done_screen() -> void:
 func show_level_done(place: String, tag_bux: int, next: String) -> void:
 	level_done_place.text = "%s is safe again!" % place
 	level_done_bux.text = "%d Tag Bux to spend" % tag_bux
-	level_done_go.text = "Press %s %s" % [Controls.button(), next]
+	ButtonText.fill(level_done_go, "Press {go} %s" % next)
 	toast_time = 0
 	level_done.visible = true
 

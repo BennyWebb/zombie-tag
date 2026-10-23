@@ -182,7 +182,7 @@ func draw_list() -> void:
 	clear(top_right)
 	top_right.add_child(pill(label("🏃 %d   🏋️ %d" % [hero.speed_level, hero.strength_level], 40, YELLOW)))
 	show_rows(rows(), cursor)
-	set_help("🡑 🡓 choose  ·  %s: go  ·  {leave} %s" % [Controls.button(), "leave" if mode == "menu" else "back"])
+	set_help("🡑 🡓 choose  ·  {go} go  ·  {leave} %s" % ("leave" if mode == "menu" else "back"))
 
 
 # ---------- the mini-games ----------
@@ -244,7 +244,7 @@ func key_badge(text: String) -> PanelContainer:
 	box.content_margin_right = 14
 	var badge := PanelContainer.new()
 	badge.add_theme_stylebox_override("panel", box)
-	badge.add_child(label(text, 30, PURPLE))
+	badge.add_child(ButtonText.make(text, 30, PURPLE)) # (it can show the buttons: see ButtonText)
 	badge.resized.connect(func(): badge.pivot_offset = badge.size / 2)
 	return badge
 
@@ -304,8 +304,7 @@ func start_lift(id: String) -> void:
 	trainee.add_theme_font_size_override("font_size", 110)
 	scene.add_child(trainee)
 	scene.add_child(sweat)
-	key_left = key_badge(Controls.button())
-	key_left.get_theme_stylebox("panel").bg_color = YELLOW
+	key_left = key_badge("{go}") # (white, so the lit buttons show up)
 	keys_row([label("Tap", 26, Color.WHITE), key_left, label("super fast to lift it!", 26, Color.WHITE)])
 	say("")
 	set_help("Get it to the top before the time runs out. It sinks if you stop!")
@@ -401,7 +400,7 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 		shadow(oh, 5)
 		add.call(oh)
 		add.call(label("Try again? It's free!", 34, Color.WHITE))
-		add.call(label("Press %s" % Controls.button(), 34, YELLOW))
+		lines.add_child(ButtonText.make("Press {go}", 34, YELLOW))
 		return
 	var stat_name := stat.capitalize()
 	var level: int
@@ -437,7 +436,7 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 	add.call(up)
 	add.call(label("%s %d ➜ %d" % [stat_name, level - 1, level], 48, YELLOW))
 	add.call(label("You'll run faster now!" if stat == "speed" else "Your weapons hit harder now!", 34, Color.WHITE))
-	add.call(label("Press %s" % Controls.button(), 34, YELLOW))
+	lines.add_child(ButtonText.make("Press {go}", 34, YELLOW))
 
 
 ## The treadmill's belt: grey stripes sliding along.

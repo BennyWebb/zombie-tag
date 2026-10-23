@@ -260,9 +260,7 @@ func draw_name() -> void:
 			box.get_theme_stylebox("panel").bg_color = Color("2e9e4f")
 		grid.add_child(box)
 	panel.add_child(grid)
-	var hint := left(MenuScreen.label("🡐 🡑 🡒 🡓 choose  ·  %s picks a letter  ·  ✔ when done" % Controls.button(), 24, Color.WHITE))
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	panel.add_child(hint)
+	panel.add_child(ButtonText.make("🡐 🡑 🡒 🡓 choose  ·  {go} picks a letter  ·  ✔ when done", 24, Color.WHITE, false))
 
 
 ## Typed names are letters only, starting with a capital.
@@ -311,7 +309,7 @@ func draw_look() -> void:
 					swatch.custom_minimum_size = Vector2(34, 34)
 					line.add_child(swatch)
 		panel.add_child(Screens.card(line, chosen))
-	panel.add_child(left(MenuScreen.label("🡑 🡓 choose  ·  🡐 🡒 change  ·  %s next" % Controls.button(), 24, Color.WHITE)))
+	panel.add_child(ButtonText.make("🡑 🡓 choose  ·  🡐 🡒 change  ·  {go} next", 24, Color.WHITE, false))
 
 
 static func left(l: Label) -> Label:

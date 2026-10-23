@@ -363,7 +363,7 @@ func draw_title(column: VBoxContainer) -> void:
 	column.add_child(gap(10))
 	column.add_child(cards(["🧒 1 Player", "🧒🧒 2 Players"], choice, 300))
 	column.add_child(gap(10))
-	column.add_child(line("%s choose  ·  %s to play" % [arrows(), Controls.button()], 30, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to play" % arrows(), 30, YELLOW))
 	if Save.graphics_were_reset:
 		column.add_child(line("The game stopped last time, so the graphics settings are back to normal", 24, Color("ffb3b3")))
 	column.add_child(line("%s: change how your hero looks" % ("Back / Select" if OS.has_feature("android") else "C (🎮 Back / Select)"), 24, Color.WHITE))
@@ -410,15 +410,15 @@ func draw_who(column: VBoxContainer) -> void:
 				row.modulate.a = 0.5
 		list.add_child(card(row, chosen))
 	# the button you pick with decides what you play with
-	var how := "%s choose  ·  %s to play" % [arrows(), Controls.button()]
+	var how := "%s choose  ·  {go} to play" % arrows()
 	if player_count == 2 and not OS.has_feature("android"):
 		var keyboard_free: bool = slot == 0 or devices[0].keys == ""
-		how = "%s choose  ·  Space to play on the ⌨️ keyboard, or 🎮 fire on your joypad" % arrows() if keyboard_free \
-			else "%s choose  ·  🎮 fire on your joypad, or Enter to share the ⌨️ keyboard (arrows and Enter)" % arrows()
+		how = "%s choose  ·  Space to play on the ⌨️ keyboard, or {*go} on your joypad" % arrows() if keyboard_free \
+			else "%s choose  ·  {*go} on your joypad, or Enter to share the ⌨️ keyboard (arrows and Enter)" % arrows()
 	elif player_count == 2:
-		how = "%s choose  ·  A on your own controller to play" % arrows()
+		how = "%s choose  ·  {go} on your own controller to play" % arrows()
 	column.add_child(gap(6))
-	column.add_child(line(how, 26, YELLOW))
+	column.add_child(ButtonText.make(how, 26, YELLOW))
 	column.add_child(line("%s delete a hero  ·  %s back" % [extra_name(), back_name()], 22, Color.WHITE))
 
 
@@ -426,7 +426,7 @@ func draw_remove(column: VBoxContainer) -> void:
 	column.add_child(heading("Delete %s?" % removing.look.name, 80))
 	column.add_child(line("Their Tag Bux, weapons, outfits, training and levels will all be gone!", 30, Color.WHITE))
 	column.add_child(gap(10))
-	column.add_child(line("Press %s for yes, or %s to keep them" % [Controls.button(), back_name()], 30, YELLOW))
+	column.add_child(ButtonText.make("Press {go} for yes, or %s to keep them" % back_name(), 30, YELLOW))
 
 
 func draw_difficulty(column: VBoxContainer) -> void:
@@ -451,7 +451,7 @@ func draw_difficulty(column: VBoxContainer) -> void:
 		row.add_child(card(words, chosen))
 	column.add_child(row)
 	column.add_child(line("The Zombie King is tougher and faster on Hard and Hardcore, and tags you in one go!", 24, Color.WHITE))
-	column.add_child(line("%s choose  ·  %s to go" % [arrows(), Controls.button()], 30, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to go" % arrows(), 30, YELLOW))
 
 
 func draw_levels(column: VBoxContainer) -> void:
@@ -482,7 +482,7 @@ func draw_levels(column: VBoxContainer) -> void:
 		if locked:
 			tile.modulate.a = 0.5
 		grid.add_child(card(tile, chosen))
-	column.add_child(line("%s choose  ·  %s to play  ·  %s back" % [arrows(true), Controls.button(), back_name()], 28, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to play  ·  %s back" % [arrows(true), back_name()], 28, YELLOW))
 
 
 func draw_paused(column: VBoxContainer) -> void:
@@ -493,7 +493,7 @@ func draw_paused(column: VBoxContainer) -> void:
 		["🔊 Sounds", bar.call(Save.sounds)],
 		["🎮 Joypads", "Two sticks" if Save.two_sticks else "Simple"],
 		["✨ Graphics", "➜"],
-		["🏠 Start screen", Controls.button()],
+		["🏠 Start screen", "{go}"],
 	]
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 8)
@@ -505,7 +505,7 @@ func draw_paused(column: VBoxContainer) -> void:
 		var name_label := MenuScreen.label(rows[i][0], 32, PURPLE if i == choice else Color.WHITE)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
-		row.add_child(MenuScreen.label(rows[i][1], 30, PINK if i == choice else YELLOW))
+		row.add_child(ButtonText.make(rows[i][1], 30, PINK if i == choice else YELLOW))
 		list.add_child(card(row, i == choice))
 	column.add_child(line("%s choose  ·  %s change" % ["🡑 🡓", "🡐 🡒"], 26, Color.WHITE))
 	column.add_child(line("🎮 Simple: the left stick walks and turns.  Two sticks: the left stick walks and steps sideways, the right one turns.", 20, Color.WHITE))
@@ -552,7 +552,7 @@ func draw_gameover(column: VBoxContainer) -> void:
 	column.add_child(heading("GAME OVER!", 110))
 	column.add_child(line("Hardcore is tough! Your Hardcore game starts again from level 1.", 30, Color.WHITE))
 	column.add_child(line("Your Easy and Hard game and your outfits are safe.", 30, Color.WHITE))
-	column.add_child(line("Press %s to pick a level" % Controls.button(), 32, YELLOW))
+	column.add_child(ButtonText.make("Press {go} to pick a level", 32, YELLOW))
 
 
 # ---------- bits the screens are made of ----------

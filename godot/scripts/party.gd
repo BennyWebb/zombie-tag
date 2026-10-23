@@ -75,7 +75,11 @@ func make_screen() -> void:
 	column.add_child(line("All the zombies are your friends now. 🎉 PARTY TIME! 🎉", 36, Color.WHITE))
 	if hardcore_won:
 		column.add_child(line("💀 You beat Hardcore! Your next Hardcore game starts fresh from level 1.", 26, Color.WHITE))
-	column.add_child(line("Press %s when you've finished partying" % Controls.button(), 36, Color("ffe066")))
+	var go := ButtonText.make("Press {go} when you've finished partying", 36, Color("ffe066"))
+	go.add_theme_color_override("font_shadow_color", Color("4b1e8a"))
+	go.add_theme_constant_override("shadow_offset_x", 4)
+	go.add_theme_constant_override("shadow_offset_y", 4)
+	column.add_child(go)
 
 
 static func line(text: String, font_size: int, colour: Color) -> Label:
