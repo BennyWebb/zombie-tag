@@ -13,6 +13,10 @@ extends Node3D
 
 const START_LEVEL := 1
 const HUD_ZOOM_TWO_PLAYERS := 0.7 # with two players, everything on the HUD shrinks to fit half the screen
+# with two players, each half of the world is drawn at this much of the screen's resolution and
+# stretched to fit, so the graphics chip has fewer dots to colour in (0.75 across and down is just
+# over half as many); the HUD on top stays sharp
+const TWO_PLAYER_RESOLUTION := 0.75
 # the sound a shot makes when it hits (swinging weapons go "bonk")
 const HIT_SOUNDS := { slime = "splat", bubble = "bloop", snowball = "poof", banana = "bonk" }
 
@@ -107,6 +111,7 @@ func split_screen() -> void:
 	for hero in heroes:
 		var sub := SubViewport.new()
 		sub.msaa_3d = get_viewport().msaa_3d
+		sub.scaling_3d_scale = TWO_PLAYER_RESOLUTION
 		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		add_child(sub) # (it draws the same world as the main screen)
 		hero.camera.reparent(sub)
