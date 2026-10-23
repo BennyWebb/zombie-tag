@@ -11,6 +11,9 @@ const LIGHT_SCALE := 1.0 / TAU
 
 var info: Dictionary # the level's settings and layout (see Data.level)
 var colliders: Array = [] # circles { x, z, r } and boxes { x, z, hw, hd }
+# each collider's box (a circle's too) as plain numbers, x, z, half width and half depth, which are
+# much quicker to look at than the dictionaries: things far from a collider skip it straight away
+var collider_boxes := PackedFloat32Array()
 var bounds: float # how far from the middle you can go
 var gate: Node3D
 var gate_open := false
@@ -187,7 +190,14 @@ func at_gate(pos: Vector3) -> bool:
 ## Pushes a circle out of anything solid and keeps it inside the walls (resolveCollisions in
 ## src/world.js). hopper: Bouncy Bob, who jumps over small things like fences and benches.
 func resolve_collisions(pos: Vector3, radius: float, hopper := false) -> Vector3:
-	for c in colliders:
+	if collider_boxes.size() != colliders.size() * 4:
+		make_collider_boxes()
+	for i in colliders.size():
+		var k := i * 4
+		if absf(pos.x - collider_boxes[k]) >= collider_boxes[k + 2] + radius \
+				or absf(pos.z - collider_boxes[k + 1]) >= collider_boxes[k + 3] + radius:
+			continue # nowhere near it
+		var c: Dictionary = colliders[i]
 		if hopper and c.get("small", false):
 			continue
 		if c.has("r"):
@@ -203,6 +213,12 @@ func resolve_collisions(pos: Vector3, radius: float, hopper := false) -> Vector3
 	pos.x = clampf(pos.x, -b, b)
 	pos.z = clampf(pos.z, -b, b)
 	return pos
+
+
+func make_collider_boxes() -> void:
+	collider_boxes.clear()
+	for c in colliders:
+		collider_boxes.append_array([c.x, c.z, c.get("r", c.get("hw", 0.0)), c.get("r", c.get("hd", 0.0))])
 
 
 func push_out_of_box(pos: Vector3, radius: float, c: Dictionary) -> Vector3:

@@ -57,6 +57,7 @@ var ice: Node3D
 var health_bar: MeshInstance3D
 var tongue: Node3D # (Speedy Sid's)
 var flash_materials: Array[StandardMaterial3D] = []
+var glow := GLOW_NONE # the glow they have now (changing it costs the drawing a bit, so only when it changes)
 
 
 func _init(zombie_kind: String, the_level: Level, health_multiplier: float, x: float, z: float) -> void:
@@ -256,8 +257,7 @@ func animate(delta: float, speed: float, hop_up: float) -> void:
 	if frozen_time > 0:
 		# frozen solid: no wobbling at all
 		stars.visible = false
-		for m in flash_materials:
-			m.emission = GLOW_WHITE if flash > 0 else GLOW_ICE
+		set_glow(GLOW_WHITE if flash > 0 else GLOW_ICE)
 		return
 
 	var walk := time * (7.0 if speed > 2 else 4.0) if speed > 0 else 0.0
@@ -279,8 +279,15 @@ func animate(delta: float, speed: float, hop_up: float) -> void:
 	squash = maxf(0.0, squash - delta * 4.0)
 	var s := spawn_pop * (1.0 + sin(squash * PI * 3) * 0.15 * squash)
 	body.scale = Vector3(s, spawn_pop * (1.0 - squash * 0.2), s)
+	set_glow(GLOW_WHITE if flash > 0 else GLOW_SLIME if slow_time > 0 else GLOW_NONE)
+
+
+func set_glow(colour: Color) -> void:
+	if colour == glow:
+		return
+	glow = colour
 	for m in flash_materials:
-		m.emission = GLOW_WHITE if flash > 0 else GLOW_SLIME if slow_time > 0 else GLOW_NONE
+		m.emission = colour
 
 
 ## A health bar: a dark box with a green bar inside, as long as how much health is left ("fill",
