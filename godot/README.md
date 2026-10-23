@@ -79,13 +79,14 @@ and banner from the game's own models (`godot --path godot -s ../tools/make-icon
 ## Making it run smoothly
 
 **Pause → ✨ Graphics** changes how the game is drawn while you watch, with the frame rate at the top
-(60 fps needs each frame to take 16.7 ms or less). There's a set of settings for 1 player and another
+(60 fps needs each frame to take 16.7 ms or less). While playing only the heroes' views draw the
+world; the menus' camera stops drawing it behind them. There's a set of settings for 1 player and another
 for 2, since two players draw the world twice. Further down each list is quicker but not as nice:
 
 | Setting | What it does |
 | --- | --- |
 | 🖼️ Sharpness | Draws the world with fewer dots and stretches it to fit (the HUD and menus stay sharp) |
-| 🌳 Shadows | The sun's shadows in four layers near to far, two, one, or none (each layer draws everything that casts a shadow again) |
+| 🌳 Shadows | The sun's shadows in four layers near to far, two, one, or none (each layer draws everything that casts a shadow again). The first two use a sharper shadow map, and all of them soften the shadows' edges |
 | ✨ Smooth edges | Smoothing jagged edges ("anti-aliasing"): 4x, 2x or off |
 | 🔭 View distance | Brings the fog in, and doesn't draw anything past it (far things like the sun go too) |
 | ❄️ Snow and lamps | The snow, sparkles and fireflies, and the lamps and torches at night |

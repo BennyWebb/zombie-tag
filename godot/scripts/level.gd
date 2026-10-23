@@ -104,9 +104,12 @@ func set_graphics(g: Dictionary) -> float:
 	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS,
 		DirectionalLight3D.SHADOW_ORTHOGONAL, DirectionalLight3D.SHADOW_ORTHOGONAL][g.shadows]
 	sun.directional_shadow_max_distance = [60.0, 40.0, 30.0, 30.0][g.shadows]
-	# (the usual size is smaller on Android already: Godot's "size.mobile" setting)
-	var usual: int = ProjectSettings.get_setting_with_override("rendering/lights_and_shadows/directional_shadow/size")
-	RenderingServer.directional_shadow_atlas_set_size(usual if g.shadows == 0 else usual / 2, true)
+	# the shadow map: bigger is sharper. (Godot's usual on Android is half the size of a computer's,
+	# with hard edges, which made big jagged steps along the shadows' edges, so it's set here.)
+	RenderingServer.directional_shadow_atlas_set_size(2048 if g.shadows >= 2 else 4096, true)
+	# softening the edges, which hides the steps: a few more looks into the shadow map for each dot
+	RenderingServer.directional_soft_shadow_filter_set_quality(
+		RenderingServer.SHADOW_QUALITY_SOFT_LOW if g.shadows == 0 else RenderingServer.SHADOW_QUALITY_SOFT_VERY_LOW)
 	# how far: nothing past the end of the fog is drawn, so bringing the fog in draws less (things
 	# far away, like the sun, the moon and far clouds, go too)
 	var fog_end: float = [info.fog.end, minf(info.fog.end, 70.0), minf(info.fog.end, 45.0)][g.distance]

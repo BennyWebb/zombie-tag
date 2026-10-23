@@ -249,8 +249,9 @@ func play(number: int) -> void:
 	view_layer.visible = true
 	for sub in sub_views:
 		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	if not two_players():
-		heroes[0].camera.make_current()
+	# while playing, the heroes' views draw the world, so the main screen doesn't (it only shows
+	# them, and the HUDs); otherwise it would draw the world again from the menus' camera, unseen
+	get_viewport().disable_3d = true
 	start_level(number)
 
 
@@ -279,6 +280,7 @@ func show_background() -> void:
 	for sub in sub_views:
 		sub.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	view_layer.visible = false
+	get_viewport().disable_3d = false # (the menus' camera draws the level behind them)
 	if level == null:
 		var furthest := 1
 		var d := Save.profile(Save.chosen[0] if Save.chosen else null)
@@ -540,6 +542,7 @@ func start_party(hardcore_won: bool) -> void:
 	for sub in sub_views:
 		sub.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	view_layer.visible = false
+	get_viewport().disable_3d = false # (the party's camera draws it)
 	party = Party.new(level, heroes, effects, hardcore_won)
 	add_child(party)
 
