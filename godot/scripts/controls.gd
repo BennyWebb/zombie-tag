@@ -20,7 +20,7 @@ extends Node
 
 const DEADZONE := 0.2 # joypad sticks ignore tiny wobbles below this
 const PLAYER_ACTIONS := ["walk_forward", "walk_back", "turn_left", "turn_right", "step_left", "step_right", "attack",
-	"nav_up", "nav_down", "nav_left", "nav_right"]
+	"nav_up", "nav_down", "nav_left", "nav_right", "leave"]
 # the menu moves use the same keys as walking and turning
 const NAV_KEYS := { nav_up = "walk_forward", nav_down = "walk_back", nav_left = "turn_left", nav_right = "turn_right" }
 const STICK_PUSHED := 0.6 # a stick counts as pushed past this...
@@ -31,14 +31,15 @@ const KEYS := {
 	all = {
 		walk_forward = [KEY_W, KEY_UP], walk_back = [KEY_S, KEY_DOWN], turn_left = [KEY_A, KEY_LEFT],
 		turn_right = [KEY_D, KEY_RIGHT], attack = [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER],
+		leave = [KEY_BACKSPACE, KEY_Q],
 	},
 	left = {
 		walk_forward = [KEY_W], walk_back = [KEY_S], turn_left = [KEY_A], turn_right = [KEY_D],
-		attack = [KEY_SPACE, KEY_SHIFT],
+		attack = [KEY_SPACE, KEY_SHIFT], leave = [KEY_Q],
 	},
 	right = {
 		walk_forward = [KEY_UP], walk_back = [KEY_DOWN], turn_left = [KEY_LEFT], turn_right = [KEY_RIGHT],
-		attack = [KEY_ENTER, KEY_KP_ENTER],
+		attack = [KEY_ENTER, KEY_KP_ENTER], leave = [KEY_BACKSPACE],
 	},
 }
 # the joypad buttons for each action (the sticks are in pad_sticks); any face button (A B X Y, or
@@ -50,6 +51,9 @@ const PAD := {
 	nav_up = [JOY_BUTTON_DPAD_UP], nav_down = [JOY_BUTTON_DPAD_DOWN],
 	nav_left = [JOY_BUTTON_DPAD_LEFT], nav_right = [JOY_BUTTON_DPAD_RIGHT],
 	attack = [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y],
+	# leaving the shop or gym: the right-hand button (B on an Xbox pad, A on a Nintendo-style one;
+	# Godot names the buttons by where they are). In the game it still bonks, like the others.
+	leave = [JOY_BUTTON_B],
 }
 const ANY_PAD := -1
 const NO_PAD := -2
@@ -136,6 +140,11 @@ func pad_sticks(a: String) -> Array:
 		"step_right": return [[JOY_AXIS_LEFT_X, 1.0]] if two_sticks else []
 		"attack": return [[JOY_AXIS_TRIGGER_RIGHT, 1.0]]
 	return []
+
+
+## What to call the leave button in the shop and gym.
+static func leave_button() -> String:
+	return "B" if OS.has_feature("android") else "Backspace (🎮 B)"
 
 
 ## Sets each player's actions to their keys and joypad.

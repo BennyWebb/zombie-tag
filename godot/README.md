@@ -23,7 +23,8 @@ to play.
 **Controls:** on a joypad, the left stick or d-pad walks and turns, and any face button or the right
 trigger bonks (hold it to keep shooting). Start pauses. On a keyboard: W / S or ↑ / ↓ walk, A / D or
 ← / → turn, Space or Enter bonks, Esc pauses. Walk in through the shop's or gym's door to go in;
-inside, up and down choose and bonk picks. **F3** (or Back / View / Select) shows the frame rate and
+inside, up and down choose, bonk picks, and **B** (the right-hand button: B on an Xbox pad, A on a
+Nintendo-style one) or Backspace leaves. **F3** (or Back / View / Select) shows the frame rate and
 how many things are drawn, for checking speed on the TV.
 
 **The menus:** the title screen picks 1 or 2 players, then "Who's playing?" picks each player's saved

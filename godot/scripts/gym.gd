@@ -101,6 +101,14 @@ func handle_input(event: InputEvent) -> bool:
 	match mode:
 		"menu", "pick":
 			var list := rows()
+			if event.is_action_pressed(hero.act("leave")):
+				if mode == "menu":
+					return true # straight out
+				menu("") # (picking a dumbbell: back to the gym's list)
+				cursor = 1
+				Sound.play("select")
+				draw_list()
+				return false
 			if event.is_action_pressed(hero.act("walk_forward")):
 				cursor = (cursor + list.size() - 1) % list.size()
 				Sound.play("tick")
@@ -174,7 +182,7 @@ func draw_list() -> void:
 	clear(top_right)
 	top_right.add_child(pill(label("🏃 %d   🏋️ %d" % [hero.speed_level, hero.strength_level], 40, YELLOW)))
 	show_rows(rows(), cursor)
-	help.text = "🡑 🡓 choose  ·  %s: go" % Controls.button()
+	help.text = "🡑 🡓 choose  ·  %s: go  ·  %s: %s" % [Controls.button(), Controls.leave_button(), "leave" if mode == "menu" else "back"]
 
 
 # ---------- the mini-games ----------

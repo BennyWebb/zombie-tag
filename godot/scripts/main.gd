@@ -44,6 +44,7 @@ var party: Party = null # the party after beating him
 var screens: Screens # the start screens and menus
 var in_game := false # false while the menus are up, with the level turning behind them
 var menu_camera := Camera3D.new() # the camera going slowly round the level behind the menus
+var left_building_at := -9999 # when someone last left the shop or gym (ms), see _notification
 var game_over_in := 0.0 # Hardcore: counts down to the GAME OVER! screen once everyone's out
 var zombie_scenes := [] # this level's kinds of zombie, loaded at the start (see warm_up)
 var to_spawn := 0 # zombies still to arrive this level
@@ -365,6 +366,8 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if screens.active():
 			screens.remote_back = true
+		elif heroes.any(func(h): return h.inside) or Time.get_ticks_msec() - left_building_at < 500:
+			pass # (B leaves the shop or gym, and on some joypads Android sends "go back" for it too)
 		else:
 			pause()
 
@@ -586,6 +589,7 @@ func enter_building(hero: Hero, menu: MenuScreen) -> void:
 
 
 func leave_building(hero: Hero) -> void:
+	left_building_at = Time.get_ticks_msec()
 	var menu: MenuScreen = hero.inside
 	menu.visible = false
 	hero.inside = null

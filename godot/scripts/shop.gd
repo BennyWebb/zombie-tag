@@ -94,6 +94,8 @@ func handle_input(event: InputEvent) -> bool:
 	if wait > 0 or event is InputEventJoypadMotion:
 		return false # (sticks come through as pushes instead: see MenuScreen._process)
 	var n := ids().size()
+	if event.is_action_pressed(hero.act("leave")):
+		return true # straight out, from anywhere in the list
 	if event.is_action_pressed(hero.act("walk_forward")):
 		cursor = (cursor + n - 1) % n
 		Sound.play("tick")
@@ -218,4 +220,4 @@ func draw() -> void:
 	# scroll so the chosen row is always on screen
 	first = clampi(first, cursor - ROWS_SHOWN + 1, cursor)
 	show_rows(rows, cursor, first, ROWS_SHOWN)
-	help.text = "🡑 🡓 choose  ·  %s: buy" % Controls.button()
+	help.text = "🡑 🡓 choose  ·  %s: buy  ·  %s: leave" % [Controls.button(), Controls.leave_button()]
