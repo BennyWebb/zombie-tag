@@ -131,10 +131,10 @@ func _process(delta: float) -> void:
 	wait -= delta
 	if wait > 0 or step == "name":
 		return
-	var up := Input.is_action_just_pressed(hero.act("walk_forward"))
-	var down := Input.is_action_just_pressed(hero.act("walk_back"))
-	var left := Input.is_action_just_pressed(hero.act("turn_left"))
-	var right := Input.is_action_just_pressed(hero.act("turn_right"))
+	var up := Controls.nav("up", hero.index)
+	var down := Controls.nav("down", hero.index)
+	var left := Controls.nav("left", hero.index)
+	var right := Controls.nav("right", hero.index)
 	var go := Input.is_action_just_pressed(hero.act("attack"))
 	if step == "letters":
 		update_letters(up, down, left, right, go)

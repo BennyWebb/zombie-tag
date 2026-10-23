@@ -96,8 +96,8 @@ func rows() -> Array:
 
 ## Returns true when you chose "Leave".
 func handle_input(event: InputEvent) -> bool:
-	if wait > 0:
-		return false
+	if wait > 0 or event is InputEventJoypadMotion:
+		return false # (sticks come through as pushes instead: see MenuScreen._process)
 	match mode:
 		"menu", "pick":
 			var list := rows()

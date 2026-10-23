@@ -89,7 +89,9 @@ for 2, since two players draw the world twice. Further down each list is quicker
 | 🔭 View distance | Brings the fog in, and doesn't draw anything past it (far things like the sun go too) |
 | ❄️ Snow and lamps | The snow, sparkles and fireflies, and the lamps and torches at night |
 
-They're saved with the game. **F3** (Back / View / Select on a joypad) shows the frame rate and draw
+They're saved with the game. If the game stops while starting or just after a setting changes
+(a crash), it starts next time with the graphics back to normal, and says so on the title screen.
+**F3** (Back / View / Select on a joypad) shows the frame rate and draw
 calls while playing.
 
 **Pause → 🎮 Joypads** chooses how joypads play: **Simple** (the left stick or d-pad walks and turns,

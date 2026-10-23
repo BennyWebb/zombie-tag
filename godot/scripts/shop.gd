@@ -91,8 +91,8 @@ func status(id: String) -> Dictionary:
 
 ## Returns true when you chose "Leave".
 func handle_input(event: InputEvent) -> bool:
-	if wait > 0:
-		return false
+	if wait > 0 or event is InputEventJoypadMotion:
+		return false # (sticks come through as pushes instead: see MenuScreen._process)
 	var n := ids().size()
 	if event.is_action_pressed(hero.act("walk_forward")):
 		cursor = (cursor + n - 1) % n

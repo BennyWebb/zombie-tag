@@ -73,6 +73,20 @@ func _init(inner: Color, outer: Color, border_colour: Color, arrow_colour: Color
 func _process(delta: float) -> void:
 	wait -= delta
 	message.pivot_offset = message.size / 2
+	# a push of the stick works like a press of the d-pad (see Controls.nav); the stick's own
+	# wobbly events are left out in handle_input
+	if visible and hero:
+		for pair in [["up", "walk_forward"], ["down", "walk_back"], ["left", "turn_left"], ["right", "turn_right"]]:
+			if Controls.stick_pushed(pair[0], Controls.pads[hero.index]):
+				var press := InputEventAction.new()
+				press.action = hero.act(pair[1])
+				press.pressed = true
+				handle_input(press)
+
+
+## What a key or button press does (ShopMenu and GymMenu say). Returns true for "Leave".
+func handle_input(_event: InputEvent) -> bool:
+	return false
 
 
 static func shadow(label: Label, offset: int) -> void:

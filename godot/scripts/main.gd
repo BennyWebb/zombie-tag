@@ -67,7 +67,7 @@ func _ready() -> void:
 	menu_camera.fov = 70
 	add_child(menu_camera)
 	add_hero()
-	huds[0].views = [get_viewport().get_viewport_rid()]
+	make_views()
 	Controls.set_one_player()
 	get_viewport().size_changed.connect(arrange_views)
 	screens = Screens.new(self)
@@ -111,8 +111,6 @@ func remove_hero() -> void:
 
 ## 1 or 2 players, chosen on the title screen: with two the screen splits in two.
 func set_player_count(count: int) -> void:
-	if count == 1 and two_players():
-		join_screen()
 	while heroes.size() > count:
 		remove_hero()
 	while heroes.size() < count:
@@ -124,16 +122,28 @@ func set_player_count(count: int) -> void:
 	shops[0].partner = heroes[1] if count == 2 else null
 	if count == 2:
 		shops[1].partner = heroes[0]
-		if sub_views.is_empty():
-			split_screen()
-	apply_graphics()
+	make_views()
 
 
-## Gives each hero her own half of the screen.
-func split_screen() -> void:
+## Each hero's view of the world is drawn by its own SubViewport (with her camera in it), at the
+## size the graphics settings say ("Sharpness"), and shown on view_layer under the HUDs, stretched
+## to fill her part of the screen: all of it, or half with two players. (Drawing into a smaller
+## picture like this is steadier on the Shield than Godot's own 3D scaling, which crashed it.)
+func make_views() -> void:
+	for hero in heroes:
+		if hero.camera.get_parent() != hero:
+			hero.camera.reparent(hero)
+	for sub in sub_views:
+		sub.queue_free()
+	for rect in view_rects:
+		rect.queue_free()
+	sub_views.clear()
+	view_rects.clear()
+	if divider.get_parent():
+		view_layer.remove_child(divider)
 	for hero in heroes:
 		var sub := SubViewport.new()
-		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS if view_layer.visible else SubViewport.UPDATE_DISABLED
 		add_child(sub) # (it draws the same world as the main screen)
 		hero.camera.reparent(sub)
 		hero.camera.make_current()
@@ -144,40 +154,30 @@ func split_screen() -> void:
 		rect.stretch_mode = TextureRect.STRETCH_SCALE
 		view_layer.add_child(rect)
 		view_rects.append(rect)
-	divider.color = Color.WHITE
-	view_layer.add_child(divider)
-	arrange_views()
+	if two_players():
+		divider.color = Color.WHITE
+		view_layer.add_child(divider)
+	apply_graphics()
 	huds[0].views.assign(sub_views.map(func(v): return v.get_viewport_rid()) + [get_viewport().get_viewport_rid()])
 	huds[0].time_views()
 
 
-## Back to one screen, for one player.
-func join_screen() -> void:
-	for hero in heroes:
-		hero.camera.reparent(hero)
-	for sub in sub_views:
-		sub.queue_free()
-	for rect in view_rects:
-		rect.queue_free()
-	sub_views.clear()
-	view_rects.clear()
-	view_layer.remove_child(divider)
-	huds[0].set_full_screen()
-	huds[0].views = [get_viewport().get_viewport_rid()]
-
-
-## Sizes the halves of the screen to fit the window (each draws at the window's real size, so it's
-## sharp on a big TV), with each hero's HUD on top of her half.
+## Sizes each view to fit the window (drawn at the window's real size times "Sharpness", so it's sharp
+## on a big TV unless that's turned down), with each hero's HUD on top of her part.
 func arrange_views() -> void:
-	if not two_players():
-		return
+	var g: Dictionary = Save.graphics[str(heroes.size())]
+	var sharpness := Graphics.resolution_scale(g)
 	var screen := get_viewport().get_visible_rect().size # (in the HUD's units, 1280 x 720 or so)
 	var pixels := Vector2(get_window().size)
-	for i in 2:
-		sub_views[i].size = Vector2i(roundi(pixels.x / 2), roundi(pixels.y))
-		view_rects[i].position = Vector2(screen.x / 2 * i, 0)
-		view_rects[i].size = Vector2(screen.x / 2, screen.y)
-		huds[i].set_view(Rect2(view_rects[i].position, view_rects[i].size), HUD_ZOOM_TWO_PLAYERS, true)
+	var n := heroes.size()
+	for i in n:
+		sub_views[i].size = Vector2i(maxi(1, roundi(pixels.x / n * sharpness)), maxi(1, roundi(pixels.y * sharpness)))
+		view_rects[i].position = Vector2(screen.x / n * i, 0)
+		view_rects[i].size = Vector2(screen.x / n, screen.y)
+		if n == 2:
+			huds[i].set_view(Rect2(view_rects[i].position, view_rects[i].size), HUD_ZOOM_TWO_PLAYERS, true)
+	if n == 1:
+		huds[0].set_full_screen()
 	divider.size = Vector2(3, screen.y)
 	divider.position = Vector2(screen.x / 2 - 1.5, 0)
 
@@ -228,13 +228,10 @@ func start_level(number: int) -> void:
 ## screen has them; with one, the whole screen.
 func apply_graphics() -> void:
 	var g: Dictionary = Save.graphics[str(heroes.size())]
-	var views: Array = sub_views if two_players() else [get_viewport()]
-	for v in views:
-		v.scaling_3d_scale = Graphics.resolution_scale(g)
-		v.msaa_3d = Graphics.msaa(g)
-	if two_players():
-		# the main screen only shows the halves (and the menus' background, at the full settings)
-		get_viewport().scaling_3d_scale = 1.0
+	if sub_views.size() == heroes.size():
+		arrange_views()
+		for sub in sub_views:
+			sub.msaa_3d = Graphics.msaa(g)
 	var far := level.set_graphics(g) if level else 300.0
 	for hero in heroes:
 		hero.camera.far = far

@@ -160,10 +160,10 @@ func _process(delta: float) -> void:
 	wait -= delta
 	if wait > 0 or screen == "creator":
 		return
-	var up := Input.is_action_just_pressed("menu_up")
-	var down := Input.is_action_just_pressed("menu_down")
-	var left := Input.is_action_just_pressed("menu_left")
-	var right := Input.is_action_just_pressed("menu_right")
+	var up := Controls.nav("up")
+	var down := Controls.nav("down")
+	var left := Controls.nav("left")
+	var right := Controls.nav("right")
 	var go := Input.is_action_just_pressed("menu_go")
 	var back := Input.is_action_just_pressed("menu_back") or remote_back
 	remote_back = false
@@ -290,7 +290,7 @@ func _process(delta: float) -> void:
 				var n: int = Graphics.OPTIONS[keys[choice]].choices.size()
 				g[keys[choice]] = clampi(g[keys[choice]] + change, 0, n - 1) if change else (g[keys[choice]] + 1) % n
 				Sound.play("tick")
-				Save.write()
+				Save.try_out()
 				main.apply_graphics()
 				draw()
 			if back or (go and choice == keys.size()):
@@ -364,6 +364,8 @@ func draw_title(column: VBoxContainer) -> void:
 	column.add_child(cards(["🧒 1 Player", "🧒🧒 2 Players"], choice, 300))
 	column.add_child(gap(10))
 	column.add_child(line("%s choose  ·  %s to play" % [arrows(), Controls.button()], 30, YELLOW))
+	if Save.graphics_were_reset:
+		column.add_child(line("The game stopped last time, so the graphics settings are back to normal", 24, Color("ffb3b3")))
 	column.add_child(line("%s: change how your hero looks" % ("Back / Select" if OS.has_feature("android") else "C (🎮 Back / Select)"), 24, Color.WHITE))
 
 
