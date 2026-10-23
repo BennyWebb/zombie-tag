@@ -95,7 +95,8 @@ func set_devices(devices: Array) -> void:
 	for i in 2:
 		keys[i] = devices[i].keys if i < players else ""
 		pads[i] = devices[i].pad if i < players else NO_PAD
-		using_joypad[i] = pads[i] != NO_PAD and keys[i] == ""
+		if keys[i] == "":
+			using_joypad[i] = true # (otherwise it stays as it was: what she last used)
 	update_actions()
 
 

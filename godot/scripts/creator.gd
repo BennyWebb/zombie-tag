@@ -42,10 +42,10 @@ func _ready() -> void:
 	wash.color = Color(40 / 255.0, 15 / 255.0, 80 / 255.0, 0.7)
 	wash.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(wash)
-	panel.position = Vector2(50, 30)
-	panel.size = Vector2(700, 660)
+	panel.position = Vector2(50, 20)
+	panel.size = Vector2(700, 680)
 	panel.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_theme_constant_override("separation", 14)
+	panel.add_theme_constant_override("separation", 10)
 	add_child(panel)
 	make_preview()
 	next()
@@ -98,10 +98,21 @@ func next() -> void:
 	typed = hero.look.name if hero.created else ""
 	cell = 0
 	wait = 0.3 # so the button that picked the hero doesn't also pick a letter
-	var keyboard: bool = Controls.keys[hero.index] != "" and not Controls.using_joypad[hero.index]
-	step = "name" if keyboard and not OS.has_feature("android") else "letters"
+	# typing needs a keyboard: someone who picked her hero with a joypad (and everyone on the TV)
+	# spells her name on the letter grid
+	step = "letters" if hero.picked_with_pad or OS.has_feature("android") else "name"
 	update_preview()
 	draw()
+
+
+## A joypad button while the typing box is up: no keyboard, then, so over to the letter grid.
+func _input(event: InputEvent) -> void:
+	if step == "name" and event is InputEventJoypadButton and event.pressed:
+		get_viewport().set_input_as_handled() # (so the typing box doesn't get it too)
+		typed = name_box.text if name_box else typed
+		step = "letters"
+		wait = 0.3
+		draw()
 
 
 func finish_name(text: String) -> void:
@@ -216,7 +227,7 @@ func draw() -> void:
 
 
 func draw_name() -> void:
-	panel.add_child(left(Screens.heading("What's your name?", 64)))
+	panel.add_child(left(Screens.heading("What's your name?", 56)))
 	if step == "name":
 		# typing on a keyboard
 		name_box = LineEdit.new()
@@ -232,22 +243,26 @@ func draw_name() -> void:
 		panel.add_child(left(MenuScreen.label("Type your name, then press Enter", 28, Color.WHITE)))
 		return
 	# picking letters with a joypad
-	var shown := MenuScreen.label(typed if typed != "" else " ", 48, Screens.PURPLE)
+	var shown := MenuScreen.label(typed if typed != "" else " ", 40, Screens.PURPLE)
 	panel.add_child(Screens.card(shown, true))
 	var grid := GridContainer.new()
 	grid.columns = GRID_WIDTH
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	for i in LETTERS.size():
-		var l := MenuScreen.label(LETTERS[i], 34, Screens.PURPLE if i == cell else Color.WHITE)
+		var l := MenuScreen.label(LETTERS[i], 30, Screens.PURPLE if i == cell else Color.WHITE)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.custom_minimum_size = Vector2(44, 0)
+		l.custom_minimum_size = Vector2(40, 0)
 		var box := Screens.card(l, i == cell)
+		box.get_theme_stylebox("panel").content_margin_top = 2
+		box.get_theme_stylebox("panel").content_margin_bottom = 2
 		if LETTERS[i] == "✔" and i != cell:
 			box.get_theme_stylebox("panel").bg_color = Color("2e9e4f")
 		grid.add_child(box)
 	panel.add_child(grid)
-	panel.add_child(left(MenuScreen.label("🡐 🡑 🡒 🡓 choose  ·  %s picks a letter  ·  ✔ when you're done" % Controls.button(), 24, Color.WHITE)))
+	var hint := left(MenuScreen.label("🡐 🡑 🡒 🡓 choose  ·  %s picks a letter  ·  ✔ when done" % Controls.button(), 24, Color.WHITE))
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(hint)
 
 
 ## Typed names are letters only, starting with a capital.

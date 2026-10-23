@@ -114,6 +114,7 @@ func choose_who(device: Dictionary) -> void:
 	Sound.play("select")
 	devices.append(device)
 	var hero: Hero = main.heroes[slot]
+	hero.picked_with_pad = device.pad != Controls.NO_PAD
 	if r.has("new_hero"):
 		hero.blank("hero%s%d" % [String.num_int64(int(Time.get_unix_time_from_system() * 1000), 36), slot])
 	else:

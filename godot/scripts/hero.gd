@@ -45,6 +45,7 @@ var finished: Array[int] = [] # the levels she's finished (their numbers)
 var run := "normal" # which game is loaded: "normal" (Easy and Hard) or "hardcore"
 var other_run = null # the other game, put aside (see use_run), or null if she's never played it
 var out := false # Hardcore: tagged, so out until the level ends
+var picked_with_pad := false # whether she picked her hero with a joypad (so she spells her name with one)
 
 var tag_bux := 0
 var hearts: int = Data.config.player.hearts
