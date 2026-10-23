@@ -65,6 +65,10 @@ func _ready() -> void:
 	add_child(model)
 	Data.hide_parts(model, "zombies/" + kind)
 	Data.remove_extra_shadows(model)
+	# its eyes and mouth are too small for their shadows to show, but each shadow would be drawn
+	# again for every layer of the sun's shadows, so they have none
+	for part in model.find_child("head", true, false).find_children("*", "GeometryInstance3D", true, false):
+		part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body = model.find_child("body", true, false)
 	for side in ["L", "R"]:
 		arms.append(model.find_child("arm" + side, true, false))

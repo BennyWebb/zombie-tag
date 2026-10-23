@@ -244,6 +244,13 @@ func play_again() -> void:
 func _process(delta: float) -> void:
 	if paused or finished:
 		return
+	var started := Time.get_ticks_usec() # (for the F3 numbers)
+	update(delta)
+	huds[0].game_time = lerpf(huds[0].game_time, (Time.get_ticks_usec() - started) / 1000.0, 0.1)
+
+
+## Everything that happens in a frame of the game.
+func update(delta: float) -> void:
 	time += delta
 
 	# (popped zombies leave the list straight away, so it only holds ones still standing)

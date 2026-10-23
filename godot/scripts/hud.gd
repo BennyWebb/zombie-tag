@@ -37,6 +37,7 @@ var level_done_bux := Label.new()
 var level_done_go := Label.new()
 var speed := Label.new()
 var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for timing them
+var game_time := 0.0 # how long the game's own code took this frame, in ms (main.gd sets it)
 var hearts_shown := -1
 var blink_time := 0.0
 
@@ -400,18 +401,18 @@ func _process(delta: float) -> void:
 	toast_label.modulate.a = move_toward(toast_label.modulate.a, 1.0 if toast_time > 0 else 0.0, delta / 0.3)
 	if speed.visible:
 		var size := get_viewport().get_visible_rect().size * get_viewport().get_final_transform().get_scale()
-		# how long each frame takes, in milliseconds (a frame has 16.7 ms for 60 fps): running the
-		# game, the processor getting the drawing ready, and the graphics chip drawing it (that
-		# one shows 0 if the graphics chip can't time itself)
+		# how long things take, in milliseconds (for 60 fps a whole frame has 16.7 ms): the whole
+		# frame, the game's own code, the processor getting the drawing ready, and the graphics chip
+		# drawing it (that one shows 0 if the graphics chip can't time itself, like the Shield's)
 		var cpu := RenderingServer.get_frame_setup_time_cpu()
 		var gpu := 0.0
 		for rid in views:
 			cpu += RenderingServer.viewport_get_measured_render_time_cpu(rid)
 			gpu += RenderingServer.viewport_get_measured_render_time_gpu(rid)
-		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d\ngame %.1f ms · drawing: processor %.1f ms, graphics chip %.1f ms" % [
+		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d\nframe %.1f ms · game code %.1f ms · drawing: processor %.1f ms, graphics chip %.1f ms" % [
 			Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
 			size.x, size.y,
-			Performance.get_monitor(Performance.TIME_PROCESS) * 1000, cpu, gpu,
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000, game_time, cpu, gpu,
 		]

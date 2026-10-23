@@ -70,10 +70,11 @@ func add_sky_and_light() -> void:
 
 
 ## With two players the world is drawn twice, so the sun's shadows are made more simply: in two
-## layers rather than four (each layer draws everything that casts a shadow again), on a shadow map
-## half the usual size. The shadows close to you stay sharp.
+## layers rather than four (each layer draws everything that casts a shadow again), reaching 40 m
+## rather than 60, on a shadow map half the usual size. The shadows close to you stay sharp.
 func set_two_player_shadows(two: bool) -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if two else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = 40.0 if two else 60.0
 	# (the usual size is smaller on Android already: Godot's "size.mobile" setting)
 	var usual: int = ProjectSettings.get_setting_with_override("rendering/lights_and_shadows/directional_shadow/size")
 	RenderingServer.directional_shadow_atlas_set_size(usual / 2 if two else usual, true)
