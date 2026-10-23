@@ -47,8 +47,10 @@ func _process(delta: float) -> void:
 	message_time -= delta
 	message.visible = message_time > 0
 	if speed.visible:
-		speed.text = "%d fps · %d draw calls · %d objects" % [
+		var size := get_viewport().get_visible_rect().size * get_viewport().get_final_transform().get_scale()
+		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d" % [
 			Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+			size.x, size.y,
 		]

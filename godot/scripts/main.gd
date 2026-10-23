@@ -49,10 +49,20 @@ func start_level(number: int) -> void:
 	hud.say("Level %d: %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name], 4)
 
 
+# The TV remote's Back button (Android's "go back") pauses too, instead of closing the game.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		toggle_pause()
+
+
+func toggle_pause() -> void:
+	paused = not paused
+	hud.say("Paused" if paused else "", 9999 if paused else 0)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
-		paused = not paused
-		hud.say("Paused" if paused else "", 9999 if paused else 0)
+		toggle_pause()
 
 
 func _process(delta: float) -> void:

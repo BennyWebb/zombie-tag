@@ -24,6 +24,28 @@ to play.
 left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. **F3** (or
 Back / View / Select) shows the frame rate and how many things are drawn, for checking speed on the TV.
 
+## Trying it on the Shield
+
+Until phase 8 makes it a proper Android TV app (with a tile on the home screen), Godot's **one-click
+deploy** puts a test version on the Shield and starts it:
+
+1. In Godot: **Editor → Manage Export Templates → Download and Install** (once).
+2. **Editor → Editor Settings → Export → Android** (once):
+   - **Java SDK Path**: a Java 17 or newer, e.g. `C:\Program Files\Android\Android Studio\jbr` (the one
+     that comes with Android Studio) or the Java 21 from `winget install Microsoft.OpenJDK.21`.
+   - **Android SDK Path**: `C:\Users\<you>\AppData\Local\Android\Sdk`.
+   Godot makes its own debug key for signing the app.
+3. Connect to the Shield (with Network debugging on, as for the browser version's app):
+   ```
+   "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" connect <the Shield's IP address>:5555
+   ```
+4. An Android button appears at the top right of Godot. Click it: Godot builds the game, puts it on
+   the Shield and starts it. Next time, steps 3 and 4 are all you need.
+
+On the Shield, Back or Start pauses. To start it again later without the PC, it's in **Settings →
+Apps → See all apps → Zombie Tag (Godot)**. Press **Back / View / Select** on a joypad (F3 on a
+keyboard) to see the frame rate and how big it's drawn.
+
 ## The scripts
 
 Everything is made in code, so you can read how it fits together, starting from `scripts/main.gd`:
