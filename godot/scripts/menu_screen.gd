@@ -16,7 +16,7 @@ var title := Label.new()
 var top_right := HBoxContainer.new() # hearts, Tag Bux or stats, next to the title
 var body := VBoxContainer.new() # the list, or a mini-game
 var message := Label.new()
-var help := Label.new()
+var help := RichTextLabel.new() # (so it can show the leave button's picture: see set_help)
 var wait := 0.0 # ignores the button you were holding as you walked in
 
 
@@ -63,11 +63,15 @@ func _init(inner: Color, outer: Color, border_colour: Color, arrow_colour: Color
 	message.custom_minimum_size.y = 42
 	message.add_theme_font_size_override("font_size", 30)
 	shadow(message, 3)
-	help.add_theme_font_size_override("font_size", 26)
-	for label in [message, help]:
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # long ones go onto two lines (on half a screen)
-		column.add_child(label)
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # long ones go onto two lines (on half a screen)
+	column.add_child(message)
+	help.add_theme_font_size_override("normal_font_size", 26)
+	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	help.fit_content = true
+	help.scroll_active = false
+	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(help)
 
 
 func _process(delta: float) -> void:
@@ -87,6 +91,19 @@ func _process(delta: float) -> void:
 ## What a key or button press does (ShopMenu and GymMenu say). Returns true for "Leave".
 func handle_input(_event: InputEvent) -> bool:
 	return false
+
+
+## The help at the bottom. "{leave}" in it shows the leave button: Backspace, or the picture of
+## the joypad's right-hand button (Controls.leave_glyph).
+func set_help(text: String) -> void:
+	help.clear()
+	var parts := text.split("{leave}")
+	for i in parts.size():
+		if i > 0:
+			if not OS.has_feature("android"):
+				help.append_text("Backspace or ")
+			help.add_image(Controls.leave_glyph(), 44, 44)
+		help.append_text(parts[i])
 
 
 static func shadow(label: Label, offset: int) -> void:

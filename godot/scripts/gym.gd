@@ -182,7 +182,7 @@ func draw_list() -> void:
 	clear(top_right)
 	top_right.add_child(pill(label("🏃 %d   🏋️ %d" % [hero.speed_level, hero.strength_level], 40, YELLOW)))
 	show_rows(rows(), cursor)
-	help.text = "🡑 🡓 choose  ·  %s: go  ·  %s: %s" % [Controls.button(), Controls.leave_button(), "leave" if mode == "menu" else "back"]
+	set_help("🡑 🡓 choose  ·  %s: go  ·  {leave} %s" % [Controls.button(), "leave" if mode == "menu" else "back"])
 
 
 # ---------- the mini-games ----------
@@ -284,7 +284,7 @@ func start_treadmill() -> void:
 	key_right = key_badge("▶")
 	keys_row([key_left, label("then", 26, Color.WHITE), key_right, label("then", 26, Color.WHITE), key_badge("◀"), label("…", 26, Color.WHITE)])
 	say("Press left, then right, then left… as fast as you can!")
-	help.text = "Fill the bar before the time runs out"
+	set_help("Fill the bar before the time runs out")
 
 
 func start_lift(id: String) -> void:
@@ -308,7 +308,7 @@ func start_lift(id: String) -> void:
 	key_left.get_theme_stylebox("panel").bg_color = YELLOW
 	keys_row([label("Tap", 26, Color.WHITE), key_left, label("super fast to lift it!", 26, Color.WHITE)])
 	say("")
-	help.text = "Get it to the top before the time runs out. It sinks if you stop!"
+	set_help("Get it to the top before the time runs out. It sinks if you stop!")
 
 
 func _process(delta: float) -> void:
@@ -392,7 +392,7 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 	var add := func(l: Label) -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lines.add_child(l)
-	help.text = ""
+	set_help("")
 	say("")
 	if not won:
 		title.text = ""

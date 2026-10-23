@@ -220,4 +220,4 @@ func draw() -> void:
 	# scroll so the chosen row is always on screen
 	first = clampi(first, cursor - ROWS_SHOWN + 1, cursor)
 	show_rows(rows, cursor, first, ROWS_SHOWN)
-	help.text = "🡑 🡓 choose  ·  %s: buy  ·  %s: leave" % [Controls.button(), Controls.leave_button()]
+	set_help("🡑 🡓 choose  ·  %s: buy  ·  {leave} leave" % Controls.button())

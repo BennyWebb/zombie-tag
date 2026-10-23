@@ -142,9 +142,38 @@ func pad_sticks(a: String) -> Array:
 	return []
 
 
-## What to call the leave button in the shop and gym.
-static func leave_button() -> String:
-	return "B" if OS.has_feature("android") else "Backspace (🎮 B)"
+var leave_picture: ImageTexture # (made the first time it's needed, see leave_glyph)
+
+
+## A little picture of the leave button: a joypad's four face buttons in a diamond, with the
+## right-hand one lit up. (It's B on an Xbox pad and A on a Nintendo-style one, so a picture of
+## where it is says it better than a letter.)
+func leave_glyph() -> ImageTexture:
+	if leave_picture:
+		return leave_picture
+	const SIZE := 72
+	var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	var lit := Color("ffe066")
+	var dim := Color(1, 1, 1, 0.35)
+	var ring := Color("4b1e8a")
+	# top, right, bottom, left
+	var centres := [Vector2(36, 15), Vector2(57, 36), Vector2(36, 57), Vector2(15, 36)]
+	for y in SIZE:
+		for x in SIZE:
+			var p := Vector2(x + 0.5, y + 0.5)
+			var colour := Color(0, 0, 0, 0)
+			for i in centres.size():
+				# each button: a purple ring round it, filled yellow (the lit one) or see-through white
+				var d: float = p.distance_to(centres[i])
+				var edge := clampf(14.5 - d, 0, 1)
+				if edge > 0:
+					var fill: Color = lit if i == 1 else dim
+					var inside := clampf(11.5 - d, 0, 1)
+					colour = Color(ring, 0.9).lerp(fill, inside) if i == 1 or inside < 1 else Color(1, 1, 1, 0.35)
+					colour.a *= edge
+			img.set_pixel(x, y, colour)
+	leave_picture = ImageTexture.create_from_image(img)
+	return leave_picture
 
 
 ## Sets each player's actions to their keys and joypad.
