@@ -33,6 +33,8 @@ var toast_time := 0.0
 var hurt := TextureRect.new()
 var tagged := ColorRect.new()
 var tagged_count := Label.new()
+var tagged_title := Label.new()
+var tagged_keep := Label.new()
 var level_done := ColorRect.new()
 var level_done_place := Label.new()
 var level_done_bux := Label.new()
@@ -186,6 +188,12 @@ func _ready() -> void:
 
 ## Puts the HUD on part of the screen: all of it with one player, or her half with two. zoom: how
 ## big things are (the browser game shrinks them to 0.7 on half a screen).
+func set_full_screen() -> void:
+	root.scale = Vector2.ONE
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	who.get_parent().visible = false
+
+
 func set_view(rect: Rect2, zoom: float, show_name: bool) -> void:
 	root.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	root.position = rect.position
@@ -247,19 +255,17 @@ func make_tagged_screen() -> void:
 	lines.alignment = BoxContainer.ALIGNMENT_CENTER
 	lines.add_theme_constant_override("separation", 10)
 	tagged.add_child(lines)
-	var title := Label.new()
-	title.text = "TAGGED!"
+	var title := tagged_title
 	title.add_theme_font_size_override("font_size", 120)
 	title.add_theme_color_override("font_color", YELLOW)
 	title.add_theme_color_override("font_shadow_color", PURPLE)
 	title.add_theme_constant_override("shadow_offset_x", 6)
 	title.add_theme_constant_override("shadow_offset_y", 6)
-	var keep := Label.new()
-	keep.text = "You keep your Tag Bux and weapons"
-	for label in [title, tagged_count, keep]:
+	for label in [title, tagged_count, tagged_keep]:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lines.add_child(label)
-	for label in [tagged_count, keep]:
+	for label in [tagged_count, tagged_keep]:
 		label.add_theme_font_size_override("font_size", 34)
 
 
@@ -291,7 +297,11 @@ func make_level_done_screen() -> void:
 	bux_row.add_child(level_done_bux)
 	level_done_go.add_theme_font_size_override("font_size", 38)
 	level_done_go.add_theme_color_override("font_color", YELLOW)
-	for line in [title, level_done_place, bux_row, level_done_go]:
+	var pick := Label.new()
+	pick.text = "%s: pick a level" % Screens.back_name()
+	pick.add_theme_font_size_override("font_size", 24)
+	pick.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for line in [title, level_done_place, bux_row, level_done_go, pick]:
 		if line is Label:
 			line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lines.add_child(line)
@@ -330,10 +340,20 @@ func flash(kind: String) -> void:
 	create_tween().tween_property(hurt, "modulate:a", 0.0, 0.5)
 
 
-func show_tagged(on: bool) -> void:
+## difficulty: how hard it is (see config.json), which decides what you lose.
+func show_tagged(on: bool, difficulty := {}) -> void:
 	tagged.visible = on
-	if on:
-		toast_time = 0
+	if not on:
+		return
+	toast_time = 0
+	var one_life: bool = difficulty.get("oneLife", false)
+	tagged_title.text = "GAME OVER!" if one_life else "TAGGED!"
+	tagged_count.visible = not one_life
+	tagged_keep.text = "You keep your Tag Bux and weapons"
+	if difficulty.get("loseItems", false):
+		tagged_keep.text = "Your weapons and armour are gone! You keep your Tag Bux"
+	if one_life:
+		tagged_keep.text = "Your Hardcore game starts again from level 1! 💀"
 
 
 func show_tagged_countdown(seconds_left: float) -> void:
@@ -415,7 +435,7 @@ func update(hero: Hero) -> void:
 		for i in 3:
 			get_tree().create_timer(i * 0.4).timeout.connect(bump.bind(badge.get_parent(), 1.25, 0.4))
 		hero.stat_up = ""
-	if hero.tagged > 0:
+	if hero.tagged > 0 and not hero.out:
 		show_tagged_countdown(hero.tagged)
 
 

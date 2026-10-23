@@ -38,6 +38,14 @@ var shots: Shots # where shots fly (main.gd sets it)
 var thrown = null # the boomerang banana while it's flying (one of shots.list)
 var beam: Beam # the Sparkle Star Laser Gun's beam
 
+var profile_id := "" # which saved hero this is (see save.gd), or "" for none
+var created := false # true once she's been through the character creator
+var unlocked := 1 # how many levels she can play
+var finished: Array[int] = [] # the levels she's finished (their numbers)
+var run := "normal" # which game is loaded: "normal" (Easy and Hard) or "hardcore"
+var other_run = null # the other game, put aside (see use_run), or null if she's never played it
+var out := false # Hardcore: tagged, so out until the level ends
+
 var tag_bux := 0
 var hearts: int = Data.config.player.hearts
 var shields := 0 # hits your armour can still block this level
@@ -95,6 +103,117 @@ func _ready() -> void:
 	rebuild_body()
 	beam = Beam.new()
 	add_child(beam)
+	give_stick()
+
+
+# ---------- saving, and the normal and Hardcore games ----------
+
+## Everything worth keeping between days: her looks and outfits, and both her games (the one
+## she's not playing is kept in "hardcore", or the other way round).
+func to_save() -> Dictionary:
+	var current := run_to_save()
+	var d := { id = profile_id, look = look, created = created, outfits = outfits, wearing = wearing }
+	d.merge(other_run if run == "hardcore" else current)
+	d.hardcore = current if run == "hardcore" else other_run
+	return d
+
+
+## Loads a saved hero in her normal game (main.gd switches to Hardcore if that's chosen).
+func from_save(d: Dictionary) -> void:
+	profile_id = d.id
+	# the name tag colour belongs to the slot, so a hero can play as Player 1 or Player 2
+	look = Data.config.heroes[index].duplicate()
+	look.merge(d.look, true)
+	look.tagColour = Data.config.heroes[index].tagColour
+	created = d.get("created", false)
+	outfits.assign(d.get("outfits", []).filter(func(id): return Data.config.outfits.has(id)))
+	wearing.assign(d.get("wearing", []).filter(func(id): return id in outfits))
+	run_from_save(d)
+	run = "normal"
+	other_run = d.get("hardcore")
+	# a Hardcore game saved after beating the King starts fresh too
+	if other_run and 10 in other_run.get("finished", []):
+		other_run = null
+	rebuild_body()
+
+
+## A brand-new hero, before the character creator.
+func blank(id: String) -> void:
+	from_save({ id = id, look = { name = "Player %d" % (index + 1) }, created = false })
+
+
+func set_look(changes: Dictionary) -> void:
+	look.merge(changes, true)
+	rebuild_body()
+
+
+## One game's progress: Tag Bux, weapons, armour, training and levels.
+func run_to_save() -> Dictionary:
+	return {
+		tagBux = tag_bux,
+		weapons = weapons.map(func(w): return { id = w.id, hitsLeft = w.get("hitsLeft") }),
+		holding = weapon.id if weapon else null,
+		armour = armour,
+		speedLevel = speed_level,
+		strengthLevel = strength_level,
+		bests = bests,
+		unlocked = unlocked,
+		finished = finished,
+		trained = trained,
+	}
+
+
+## (A missing part starts fresh, so a new hero, or one saved before something was added, works.)
+func run_from_save(d: Dictionary) -> void:
+	var c: Dictionary = Data.config
+	tag_bux = int(d.get("tagBux", 0))
+	weapons.clear()
+	# only things that still exist in config.json, in case the numbers have changed
+	for saved in d.get("weapons", [{ id = "spikyStick" }]):
+		if c.weapons.has(saved.id):
+			var w: Dictionary = c.weapons[saved.id].duplicate()
+			w.id = saved.id
+			if w.has("maxHits"):
+				w.hitsLeft = int(saved.hitsLeft) if saved.get("hitsLeft") != null else int(w.maxHits)
+			weapons.append(w)
+	var holding = d.get("holding", "spikyStick")
+	hold(holding if holding is String and owns(holding) else null)
+	armour.assign(d.get("armour", []).filter(func(id): return c.armour.has(id)))
+	speed_level = int(d.get("speedLevel", c.player.startSpeed))
+	strength_level = int(d.get("strengthLevel", c.player.startStrength))
+	bests = d.get("bests", {})
+	unlocked = mini(c.levels.size(), int(d.get("unlocked", 1)))
+	finished.assign(d.get("finished", []).map(func(n): return int(n)))
+	# (JSON keeps the level numbers as text, so they're turned back into numbers)
+	trained = {}
+	for key in d.get("trained", {}):
+		trained[int(key)] = d.trained[key]
+	refill_shields()
+
+
+## Starting from nothing: a Spiky Stick, no Tag Bux, Speed and Strength 1, level 1.
+func fresh_run() -> void:
+	run_from_save({})
+
+
+## Swaps to the normal or the Hardcore game, putting the other one aside.
+func use_run(kind: String) -> void:
+	if kind == run:
+		return
+	var aside = other_run
+	other_run = run_to_save()
+	run = kind
+	if aside:
+		run_from_save(aside)
+	else:
+		fresh_run()
+
+
+## Hard: getting tagged takes your weapons and armour (you get a Spiky Stick back).
+func lose_items() -> void:
+	weapons.clear()
+	armour.clear()
+	refill_shields()
 	give_stick()
 
 
@@ -236,12 +355,13 @@ func damage_multiplier() -> float:
 
 ## A zombie touch. Returns "" if you couldn't be hurt just now, "shield" if your armour blocked it,
 ## or "heart" if it cost you hearts (and then `tagged` says whether that was your last).
-func hurt(amount: int) -> String:
+## ignore_armour: the Zombie King on Hard and Hardcore, who tags you in one go.
+func hurt(amount: int, ignore_armour := false) -> String:
 	if safe > 0 or tagged > 0 or inside:
 		return ""
 	safe = Data.config.player.safeTime
 	shake = 0.3
-	if shields > 0:
+	if shields > 0 and not ignore_armour:
 		shields -= 1
 		return "shield"
 	hearts = maxi(0, hearts - amount)
@@ -254,6 +374,7 @@ func hurt(amount: int) -> String:
 
 ## Back at the start with full hearts, after being tagged.
 func respawn(spot: Dictionary) -> void:
+	out = false
 	start_at(spot)
 	hearts = Data.config.player.hearts
 	refill_shields()

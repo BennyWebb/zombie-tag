@@ -20,6 +20,7 @@ config/quit_on_go_back=false
 Data="*res://scripts/data.gd"
 Controls="*res://scripts/controls.gd"
 Sound="*res://scripts/sound.gd"
+Save="*res://scripts/save.gd"
 
 [display]
 

@@ -1,0 +1,85 @@
+extends Node
+## Saves progress, so the girls can stop and carry on another day (like src/save.js). Every hero has
+## her own saved profile: her looks, Tag Bux, weapons, outfits, training and the levels she's
+## reached. It's an autoload, so any script can use Save.
+##
+## The save is a JSON file in Godot's "user://" folder (on the Shield that's the app's own storage).
+## It's written at the start of each level, after shopping or training, when you're tagged, when a
+## level's done, and when the sound settings change.
+
+const FILE := "user://save.json"
+
+var profiles: Array = [] # every saved hero (see Hero.to_save)
+var chosen: Array = [] # the profile ids who played as Player 1 and Player 2 last time
+var player_count := 1
+var difficulty := "easy"
+var music := 6 # the volumes, 0 to 10
+var sounds := 8
+
+
+func _ready() -> void:
+	music = Data.config.sound.music
+	sounds = Data.config.sound.sounds
+	read()
+	Sound.set_volumes(music, sounds)
+
+
+func read() -> void:
+	if not FileAccess.file_exists(FILE):
+		return
+	var data = JSON.parse_string(FileAccess.get_file_as_string(FILE))
+	if not data is Dictionary or data.get("version") != 1:
+		return # (a broken save is ignored, rather than stopping the game)
+	profiles = data.get("profiles", []).filter(func(d): return d is Dictionary and d.get("id") and d.get("created"))
+	chosen = data.get("chosen", [])
+	player_count = int(data.get("playerCount", 1))
+	if Data.config.difficulties.has(data.get("difficulty")):
+		difficulty = data.difficulty
+	music = int(data.get("music", music))
+	sounds = int(data.get("sounds", sounds))
+
+
+func write() -> void:
+	var file := FileAccess.open(FILE, FileAccess.WRITE)
+	if file == null:
+		return # can't save here; the game still works
+	file.store_string(JSON.stringify({
+		version = 1, profiles = profiles, chosen = chosen, playerCount = player_count,
+		difficulty = difficulty, music = music, sounds = sounds,
+	}, "\t"))
+
+
+## Puts a hero's profile into the save (a new one, or in place of her old one), then writes it.
+func keep(hero: Hero) -> void:
+	if not hero.created or hero.profile_id == "":
+		return
+	var data := hero.to_save()
+	var i := profiles.find_custom(func(d): return d.id == hero.profile_id)
+	if i >= 0:
+		profiles[i] = data
+	else:
+		profiles.append(data)
+
+
+func profile(id) -> Dictionary:
+	for d in profiles:
+		if d.id == id:
+			return d
+	return {}
+
+
+func remove(id: String) -> void:
+	profiles = profiles.filter(func(d): return d.id != id)
+	chosen = chosen.map(func(c): return null if c == id else c)
+	write()
+
+
+func set_volumes(new_music: int, new_sounds: int) -> void:
+	music = clampi(new_music, 0, 10)
+	sounds = clampi(new_sounds, 0, 10)
+	Sound.set_volumes(music, sounds)
+	write()
+
+
+func current_difficulty() -> Dictionary:
+	return Data.config.difficulties[difficulty]

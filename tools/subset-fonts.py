@@ -24,7 +24,7 @@ from fontTools import subset
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ["src/*.js", "index.html", "godot/scripts/*.gd"]
 # plain symbols, drawn in the text's own colour (the rest come in colour from the emoji font)
-SYMBOLS = "▲▼◀▶✔★➜🡐🡒🡑🡓"
+SYMBOLS = "▲▼◀▶✔★➜🡐🡒🡑🡓⌫▮▯"
 
 
 def is_emoji(ch):

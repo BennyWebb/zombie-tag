@@ -15,12 +15,14 @@ var friends: Array[Zombie] = []
 var camera := Camera3D.new()
 var screen := CanvasLayer.new() # the words on top
 var time := 0.0
+var hardcore_won := false # (it says your next Hardcore game starts fresh)
 
 
-func _init(the_level: Level, the_heroes: Array, the_effects: Effects) -> void:
+func _init(the_level: Level, the_heroes: Array, the_effects: Effects, won_hardcore := false) -> void:
 	level = the_level
 	heroes = the_heroes
 	effects = the_effects
+	hardcore_won = won_hardcore
 
 
 func _ready() -> void:
@@ -71,6 +73,8 @@ func make_screen() -> void:
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(gap)
 	column.add_child(line("All the zombies are your friends now. 🎉 PARTY TIME! 🎉", 36, Color.WHITE))
+	if hardcore_won:
+		column.add_child(line("💀 You beat Hardcore! Your next Hardcore game starts fresh from level 1.", 26, Color.WHITE))
 	column.add_child(line("Press %s when you've finished partying" % Controls.button(), 36, Color("ffe066")))
 
 

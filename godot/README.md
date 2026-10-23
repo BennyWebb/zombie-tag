@@ -17,7 +17,7 @@ to play.
 | 4 | ✅ | All the weapons: squirts, goo, bubbles, snowballs, the boomerang banana, pumpkins and the star laser |
 | 5 | ✅ | Two players, split screen |
 | 6 | ✅ | All ten levels and the Zombie King |
-| 7 | | Menus, the character creator, saving, sound settings |
+| 7 | ✅ | Menus, the character creator, saving, sound settings |
 | 8 | | The Android TV app for the Shield, and speed-ups |
 
 **Controls:** on a joypad, the left stick or d-pad walks and turns, and any face button or the right
@@ -26,12 +26,20 @@ trigger bonks (hold it to keep shooting). Start pauses. On a keyboard: W / S or 
 inside, up and down choose and bonk picks. **F3** (or Back / View / Select) shows the frame rate and
 how many things are drawn, for checking speed on the TV.
 
-**Two players:** the first joypad used is Player 1's. Press a button on a second joypad and Player 2
-joins: the screen splits in two, each sister with her own half, and there are half as many zombies
-again. On a computer, pressing **2** brings in Player 2 on the arrow keys and Enter, with Player 1 on
-W A S D and Space. In the shop each can give the other Tag Bux, and outfits show on your body, which
-your sister sees. Messages on the Android version only talk about joypad buttons (the TV has no
-keyboard).
+**The menus:** the title screen picks 1 or 2 players, then "Who's playing?" picks each player's saved
+hero (or makes a new one in the character creator: a name, then skin, hair and clothes), then how
+hard (Easy, Hard or Hardcore) and which level. Back / Select on the title screen lets heroes change
+how they look; on "Who's playing?" it deletes one. The pause menu has the music and sound volumes,
+and the way back to the start screen.
+
+**Two players:** each sister plays with what she picked her hero with: her own joypad, or the
+keyboard (or half each: Player 1 on W A S D and Space, Player 2 on the arrows and Enter). The screen
+splits in two, each sister with her own half, and there are half as many zombies again. In the shop
+each can give the other Tag Bux, and outfits show on your body, which your sister sees. Messages on
+the Android version only talk about joypad buttons (the TV has no keyboard).
+
+**Saving:** each hero's progress is saved in `user://save.json`: on a computer that's in Godot's app
+data folder (Project → Open User Data Folder), and on the Shield in the app's own storage.
 
 ## Trying it on the Shield
 
@@ -70,6 +78,9 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `level.gd` | The scenery, sky, fog and sun, lamps, the Funfair's rides, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
 | `hero.gd` | You: walking, turning, and swinging, shooting, throwing or zapping your weapon at the nearest zombie in front of you | `src/player.js` |
 | `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked, slimed, bubbled or frozen | `src/zombie.js` |
+| `screens.gd` | The start screens and menus: 1 or 2 players, who's playing, how hard, pick a level, paused, game over | `src/main.js`, `index.html` |
+| `creator.gd` | The character creator | `src/creator.js` |
+| `save.gd` | Saves each hero's progress, and the settings (an autoload: `Save`) | `src/save.js` |
 | `party.gd` | The party after beating the Zombie King | `src/main.js` |
 | `floaters.gd` | Snow, sparkles and fireflies drifting about (they move in `floaters.gdshader`) | `src/themes.js` |
 | `health_bar.gdshader` | A zombie's health bar, which turns to face whichever camera draws it | |

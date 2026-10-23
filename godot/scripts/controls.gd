@@ -4,12 +4,13 @@ extends Node
 ## they use. Scripts ask Input about them through action(), e.g.
 ## Input.is_action_pressed(Controls.action("attack", 0)).
 ##
-## With one player, the whole keyboard and every joypad work Player 1, until a joypad is used: then
-## that one is hers. Pressing a button on a different joypad brings in Player 2 with it, and the
-## screen splits in two. (On a computer, the 2 key brings in Player 2 on the arrow keys instead,
-## with Player 1 on W A S D.)
-
-signal player_two_joined # (main.gd splits the screen)
+## With one player, the whole keyboard and every joypad work Player 1. With two, each plays with
+## what she picked her hero with on "Who's playing?" (see screens.gd): her own joypad, the
+## keyboard, or half of it each (Player 1 on W A S D and Space, Player 2 on the arrows and Enter).
+##
+## The menus have their own actions ("menu_up", "menu_go" and so on) that anyone's keys or joypad
+## work. Menus check them once a frame with Input.is_action_just_pressed, so a stick pushed once
+## moves the choice once.
 
 const DEADZONE := 0.2 # joypad sticks ignore tiny wobbles below this
 const PLAYER_ACTIONS := ["walk_forward", "walk_back", "turn_left", "turn_right", "attack"]
@@ -54,6 +55,14 @@ func _ready() -> void:
 	add_action("pause", [KEY_ESCAPE], [JOY_BUTTON_START])
 	# for checking speed: shows the frame rate (Back / View / Select on a joypad)
 	add_action("show_speed", [KEY_F3], [JOY_BUTTON_BACK])
+	add_action("menu_up", [KEY_W, KEY_UP], [JOY_BUTTON_DPAD_UP], [JOY_AXIS_LEFT_Y, -1.0])
+	add_action("menu_down", [KEY_S, KEY_DOWN], [JOY_BUTTON_DPAD_DOWN], [JOY_AXIS_LEFT_Y, 1.0])
+	add_action("menu_left", [KEY_A, KEY_LEFT], [JOY_BUTTON_DPAD_LEFT], [JOY_AXIS_LEFT_X, -1.0])
+	add_action("menu_right", [KEY_D, KEY_RIGHT], [JOY_BUTTON_DPAD_RIGHT], [JOY_AXIS_LEFT_X, 1.0])
+	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], PAD.attack[0])
+	add_action("menu_back", [KEY_ESCAPE], [JOY_BUTTON_START])
+	# changing how your hero looks, or deleting one (Back / View / Select)
+	add_action("menu_extra", [KEY_C, KEY_X, KEY_DELETE], [JOY_BUTTON_BACK])
 	Input.joy_connection_changed.connect(joypad_plugged)
 
 
@@ -73,6 +82,22 @@ func is_anyones(event: InputEvent, name: String) -> bool:
 ## What to call the attack button in messages: the TV has only joypads, so no keys there.
 static func button() -> String:
 	return "A" if OS.has_feature("android") else "Space or fire"
+
+
+## Who plays with what: for each player, { keys = "all", "left", "right" or "", pad = a joypad's
+## number, ANY_PAD or NO_PAD }.
+func set_devices(devices: Array) -> void:
+	players = devices.size()
+	for i in 2:
+		keys[i] = devices[i].keys if i < players else ""
+		pads[i] = devices[i].pad if i < players else NO_PAD
+		using_joypad[i] = pads[i] != NO_PAD and keys[i] == ""
+	update_actions()
+
+
+## One player, with everything.
+func set_one_player() -> void:
+	set_devices([{ keys = "all", pad = ANY_PAD }])
 
 
 ## Sets each player's actions to their keys and joypad.
@@ -99,8 +124,9 @@ func update_actions() -> void:
 				InputMap.action_add_event(name, m)
 
 
-## An action that's the same for everyone (any key or joypad).
-func add_action(action_name: String, key_list: Array, buttons: Array) -> void:
+## An action that's the same for everyone (any key or joypad). axis: [which stick axis, which way],
+## if a stick works it too.
+func add_action(action_name: String, key_list: Array, buttons: Array, axis := []) -> void:
 	InputMap.add_action(action_name, DEADZONE)
 	for key in key_list:
 		var e := InputEventKey.new()
@@ -111,6 +137,12 @@ func add_action(action_name: String, key_list: Array, buttons: Array) -> void:
 		e.button_index = button_index
 		e.device = ANY_PAD
 		InputMap.action_add_event(action_name, e)
+	if axis:
+		var m := InputEventJoypadMotion.new()
+		m.axis = axis[0]
+		m.axis_value = axis[1]
+		m.device = ANY_PAD
+		InputMap.action_add_event(action_name, m)
 
 
 func _input(event: InputEvent) -> void:
@@ -118,17 +150,7 @@ func _input(event: InputEvent) -> void:
 		for i in players:
 			if keys[i] != "":
 				using_joypad[i] = false
-		if players == 1 and event.physical_keycode == KEY_2 and not OS.has_feature("android"):
-			# Player 2 on the arrow keys, Player 1 on W A S D
-			keys = ["left", "right"]
-			add_player_two(NO_PAD)
 	elif event is InputEventJoypadButton and event.pressed:
-		var menu_button: bool = event.button_index in [JOY_BUTTON_START, JOY_BUTTON_BACK, JOY_BUTTON_GUIDE]
-		if players == 1 and pads[0] != ANY_PAD and event.device != pads[0] and not menu_button:
-			add_player_two(event.device) # a second joypad: Player 2 is here!
-		elif players == 1 and pads[0] == ANY_PAD:
-			pads[0] = event.device # the first joypad used is Player 1's
-			update_actions()
 		for i in players:
 			if pads[i] == ANY_PAD or pads[i] == event.device:
 				using_joypad[i] = true
@@ -136,16 +158,6 @@ func _input(event: InputEvent) -> void:
 		for i in players:
 			if pads[i] == ANY_PAD or pads[i] == event.device:
 				using_joypad[i] = true
-
-
-func add_player_two(pad: int) -> void:
-	players = 2
-	pads[1] = pad
-	if pad != NO_PAD and keys[0] == "all":
-		keys = ["all", ""]
-	using_joypad[1] = pad != NO_PAD
-	update_actions()
-	player_two_joined.emit()
 
 
 ## A joypad was plugged in or taken out. If Player 1's goes, any joypad works her again, or with

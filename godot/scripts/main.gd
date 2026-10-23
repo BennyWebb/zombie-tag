@@ -5,16 +5,19 @@ extends Node3D
 ##
 ## Walk in through the shop's or gym's door to spend Tag Bux or train.
 ##
-## Player 2 joins by pressing a button on a second joypad (see controls.gd): the screen splits in
-## two, each sister with her own half, and there are half as many zombies again.
+## It starts on the title screen (screens.gd), over the level slowly turning: 1 or 2 players, who's
+## playing, the character creator, how hard, and which level. With two players the screen splits
+## in two, each sister with her own half, and there are half as many zombies again.
 ##
 ## The ten levels come one after another. In the last, the Zombie King's castle, he arrives with his
 ## guards once every other zombie is popped, and beating him starts a party.
 ##
-## For now it starts at level 1 on Easy (getting tagged costs nothing). The menus, choosing a level
-## and saving come in phase 7 (see the plan in README.md).
-
-const START_LEVEL := 1
+## How hard: on Easy, getting tagged costs nothing; on Hard you lose your weapons and armour; on
+## Hardcore there are twice the zombies and one life (get tagged and your Hardcore game starts
+## again). The King is tougher on Hard and Hardcore, and tags you in one go.
+##
+## Progress is saved (save.gd) at the start of each level, after shopping or training, when you're
+## tagged and when a level's done.
 const HUD_ZOOM_TWO_PLAYERS := 0.7 # with two players, everything on the HUD shrinks to fit half the screen
 # the sound a shot makes when it hits (swinging weapons go "bonk")
 const HIT_SOUNDS := { slime = "splat", bubble = "bloop", snowball = "poof", banana = "bonk" }
@@ -38,6 +41,10 @@ var zombie_holder := Node3D.new() # all the zombies go in here
 var boss: Zombie = null # the Zombie King, once he arrives
 var boss_came := false # (once he's popped, boss reads as null again, so this remembers he came)
 var party: Party = null # the party after beating him
+var screens: Screens # the start screens and menus
+var in_game := false # false while the menus are up, with the level turning behind them
+var menu_camera := Camera3D.new() # the camera going slowly round the level behind the menus
+var game_over_in := 0.0 # Hardcore: counts down to the GAME OVER! screen once everyone's out
 var zombie_scenes := [] # this level's kinds of zombie, loaded at the start (see warm_up)
 var to_spawn := 0 # zombies still to arrive this level
 var popped := 0
@@ -57,12 +64,15 @@ func _ready() -> void:
 	add_child(zombie_holder)
 	view_layer.layer = -1
 	add_child(view_layer)
+	menu_camera.fov = 70
+	add_child(menu_camera)
 	add_hero()
-	heroes[0].camera.make_current()
 	huds[0].views = [get_viewport().get_viewport_rid()]
-	Controls.player_two_joined.connect(player_two_joined)
+	Controls.set_one_player()
 	get_viewport().size_changed.connect(arrange_views)
-	start_level(START_LEVEL)
+	screens = Screens.new(self)
+	add_child(screens)
+	screens.to_title()
 
 
 ## A new hero, with her own HUD, shop and gym.
@@ -74,6 +84,7 @@ func add_hero() -> Hero:
 	add_child(hero)
 	heroes.append(hero)
 	var hud := Hud.new(hero.index)
+	hud.visible = in_game
 	add_child(hud)
 	huds.append(hud)
 	var shop := ShopMenu.new()
@@ -89,24 +100,32 @@ func two_players() -> bool:
 	return heroes.size() == 2
 
 
-## Player 2 pressed a button on her joypad: she starts at the beginning of this level, with a
-## Spiky Stick, and the screen splits in two.
-func player_two_joined() -> void:
-	var hero := add_hero()
-	hero.level = level
-	gyms[1].level_number = level.info.number
-	for h in heroes:
-		h.tagged_time = Data.config.player.taggedTimeTwoPlayers # you wait longer, while your sister carries on
-	hero.respawn(start_for(hero))
+## A hero leaves, with her HUD, shop and gym (going back to 1 player).
+func remove_hero() -> void:
+	var hero: Hero = heroes.pop_back()
+	hero.queue_free()
+	huds.pop_back().queue_free()
+	shops.pop_back()
+	gyms.pop_back()
+
+
+## 1 or 2 players, chosen on the title screen: with two the screen splits in two.
+func set_player_count(count: int) -> void:
+	if count == 1 and two_players():
+		join_screen()
+	while heroes.size() > count:
+		remove_hero()
+	while heroes.size() < count:
+		add_hero()
+	for hero in heroes:
+		# with 2 players you wait longer, while your sister carries on
+		hero.tagged_time = Data.config.player.taggedTimeTwoPlayers if count == 2 else Data.config.player.taggedTime
 	# each can give the other Tag Bux in the shop
-	shops[0].partner = heroes[1]
-	shops[1].partner = heroes[0]
-	if not level.gate_open:
-		to_spawn += roundi(level.info.zombies * (Data.config.twoPlayerZombies - 1)) # more zombies for two
-	split_screen()
-	level.set_two_player_shadows(true)
-	Sound.play("yay")
-	toast_all("%s is here! 👋" % hero.look.name, 2.5)
+	shops[0].partner = heroes[1] if count == 2 else null
+	if count == 2:
+		shops[1].partner = heroes[0]
+		if sub_views.is_empty():
+			split_screen()
 
 
 ## Gives each hero her own half of the screen.
@@ -130,6 +149,21 @@ func split_screen() -> void:
 	arrange_views()
 	huds[0].views.assign(sub_views.map(func(v): return v.get_viewport_rid()) + [get_viewport().get_viewport_rid()])
 	huds[0].time_views()
+
+
+## Back to one screen, for one player.
+func join_screen() -> void:
+	for hero in heroes:
+		hero.camera.reparent(hero)
+	for sub in sub_views:
+		sub.queue_free()
+	for rect in view_rects:
+		rect.queue_free()
+	sub_views.clear()
+	view_rects.clear()
+	view_layer.remove_child(divider)
+	huds[0].set_full_screen()
+	huds[0].views = [get_viewport().get_viewport_rid()]
 
 
 ## Sizes the halves of the screen to fit the window (each draws at the window's real size, so it's
@@ -168,6 +202,7 @@ func start_level(number: int) -> void:
 	boss_came = false
 	coins.clear()
 	shots.clear()
+	game_over_in = 0
 	level = Level.new(number)
 	add_child(level)
 	level.set_two_player_shadows(two_players())
@@ -175,15 +210,100 @@ func start_level(number: int) -> void:
 		heroes[i].level = level
 		gyms[i].level_number = number
 		heroes[i].respawn(start_for(heroes[i])) # full hearts, and armour shields filled up
+		huds[i].show_tagged(false)
+		if heroes[i].weapon == null:
+			heroes[i].give_stick()
 	warm_up()
-	to_spawn = roundi(level.info.zombies * (Data.config.twoPlayerZombies if two_players() else 1.0))
+	var more: float = (Data.config.twoPlayerZombies if two_players() else 1.0) * Save.current_difficulty().get("zombies", 1)
+	to_spawn = roundi(level.info.zombies * more)
 	popped = 0
 	finished = false
 	Sound.music(level.info.theme)
-	var text := "Level %d: %s %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name, level.info.icon]
+	save_game() # progress saves at the start of each level
+	var d := Save.current_difficulty()
+	toast_all("Level %d: %s %s   %s %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name, level.info.icon, d.icon, d.name], 4)
+
+
+## Starts playing a level (from "Pick a level").
+func play(number: int) -> void:
+	in_game = true
+	paused = false
+	for hud in huds:
+		hud.visible = true
+		hud.hide_level_done()
+	view_layer.visible = true
+	for sub in sub_views:
+		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	if not two_players():
-		text += "\nPlayer 2? Press %s on another controller to join" % Controls.button()
-	toast_all(text, 4)
+		heroes[0].camera.make_current()
+	start_level(number)
+
+
+## The menus: the level slowly turning behind them, with no zombies, heroes or HUDs.
+func show_background() -> void:
+	in_game = false
+	paused = false
+	finished = false
+	if party:
+		party.finish()
+		party.queue_free()
+		party = null
+	for hero in heroes:
+		if hero.inside:
+			leave_building(hero)
+		hero.hand.visible = false
+		hero.body.visible = false
+		hero.beam.hide_beam()
+	for z in zombies:
+		z.queue_free()
+	zombies.clear()
+	coins.clear()
+	shots.clear()
+	for hud in huds:
+		hud.visible = false
+	for sub in sub_views:
+		sub.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	view_layer.visible = false
+	if level == null:
+		var furthest := 1
+		var d := Save.profile(Save.chosen[0] if Save.chosen else null)
+		if d:
+			furthest = int(d.get("unlocked", 1))
+		level = Level.new(furthest)
+		add_child(level)
+	menu_camera.make_current()
+	Sound.music("title")
+
+
+## From the pause menu: saves, then back to the title screen.
+func quit_to_title() -> void:
+	save_game()
+	screens.to_title()
+
+
+func unpause() -> void:
+	paused = false
+
+
+## Each hero playing is saved into her own profile.
+func save_game() -> void:
+	for hero in heroes:
+		Save.keep(hero)
+	Save.chosen = heroes.map(func(h): return h.profile_id)
+	Save.player_count = heroes.size()
+	Save.write()
+
+
+## The levels the heroes playing can pick: with two players, the furthest either has reached.
+func unlocked_now() -> int:
+	var most := 1
+	for hero in heroes:
+		most = maxi(most, hero.unlocked)
+	return most
+
+
+func finished_now(number: int) -> bool:
+	return heroes.any(func(h): return number in h.finished)
 
 
 func toast_all(text: String, seconds := 2.5) -> void:
@@ -222,28 +342,40 @@ func warm_up() -> void:
 		node.free()
 
 
-# The TV remote's Back button (Android's "go back") pauses too, instead of closing the game.
+# The TV remote's Back button (Android's "go back") pauses too, or goes back in the menus, instead
+# of closing the game.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		toggle_pause()
+		if screens.active():
+			screens.remote_back = true
+		else:
+			pause()
 
 
-func toggle_pause() -> void:
-	if finished:
-		return # the Level done! screen is up
-	paused = not paused
-	toast_all("Paused" if paused else "", 9999 if paused else 0)
+func pause() -> void:
+	if finished or party or not in_game:
+		return
+	paused = true
+	for hud in huds:
+		hud.toast_time = 0
+		hud.toast_label.modulate.a = 0
+	screens.choice = 0
+	screens.show_screen("paused")
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		toggle_pause()
-	elif party:
-		if Controls.is_anyones(event, "attack"):
-			end_party()
+	if screens.active() or not in_game:
+		return # (the menus are up)
+	if party:
+		if Controls.is_anyones(event, "attack") or event.is_action_pressed("pause"):
+			screens.to_levels()
 	elif finished:
 		if Controls.is_anyones(event, "attack"):
 			next_level()
+		elif event.is_action_pressed("pause"):
+			screens.to_levels()
+	elif event.is_action_pressed("pause"):
+		pause()
 	elif not paused:
 		# a hero in the shop or gym uses it (each with her own buttons)
 		for hero in heroes:
@@ -262,6 +394,19 @@ func next_level() -> void:
 
 
 func _process(delta: float) -> void:
+	if not in_game:
+		# the camera goes slowly round the level, behind the menus
+		var t := Time.get_ticks_msec() / 1000.0 * 0.05
+		menu_camera.position = Vector3(sin(t) * 30, 8, cos(t) * 30)
+		menu_camera.look_at(Vector3(0, 2, 0))
+		return
+	if game_over_in > 0:
+		game_over_in -= delta
+		if game_over_in <= 0:
+			Sound.play("tagged")
+			show_background()
+			screens.show_screen("gameover")
+			return
 	if paused or finished or party:
 		return
 	var started := Time.get_ticks_usec() # (for the F3 numbers)
@@ -335,8 +480,21 @@ func level_done() -> void:
 		hero.tag_bux += share
 	heroes[0].tag_bux += coins.total() - share * heroes.size()
 	coins.clear()
+	var number: int = level.info.number
+	for hero in heroes:
+		if hero.out:
+			continue # tagged on Hardcore: her game has already started again
+		if number not in hero.finished:
+			hero.finished.append(number)
+		hero.unlocked = maxi(hero.unlocked, mini(Data.config.levels.size(), number + 1))
+	# beating the King finishes a Hardcore game: the next one starts fresh (outfits are kept)
+	var hardcore_won: bool = level.info.has("boss") and Save.current_difficulty().get("fresh", false)
+	if hardcore_won:
+		for hero in heroes:
+			hero.fresh_run()
+	save_game()
 	if level.info.has("boss"):
-		start_party()
+		start_party(hardcore_won)
 		return
 	finished = true
 	Sound.play("fanfare")
@@ -348,7 +506,7 @@ func level_done() -> void:
 
 ## You beat the Zombie King: all the zombies become your friends and there's a big party. It's
 ## seen from one camera going round, over the whole screen.
-func start_party() -> void:
+func start_party(hardcore_won: bool) -> void:
 	Sound.play("fanfare")
 	Sound.music("party")
 	for z in zombies:
@@ -363,29 +521,16 @@ func start_party() -> void:
 	for sub in sub_views:
 		sub.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	view_layer.visible = false
-	party = Party.new(level, heroes, effects)
+	party = Party.new(level, heroes, effects, hardcore_won)
 	add_child(party)
-
-
-## Back to the start of the game, keeping all your things. (Choosing a level comes in phase 7.)
-func end_party() -> void:
-	party.finish()
-	party.queue_free()
-	party = null
-	for hud in huds:
-		hud.visible = true
-	for sub in sub_views:
-		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	view_layer.visible = true
-	if not two_players():
-		heroes[0].camera.make_current()
-	start_level(1)
 
 
 func update_hero(hero: Hero, delta: float) -> void:
 	var hud := huds[hero.index]
 	if hero.tagged > 0:
 		hero.update(delta, zombies) # (just the camera)
+		if hero.out:
+			return # Hardcore: out until the level ends
 		hero.tagged -= delta
 		if hero.tagged <= 0:
 			hero.respawn(start_for(hero))
@@ -431,6 +576,8 @@ func leave_building(hero: Hero) -> void:
 	hero.hand.visible = true
 	hero.start_at(level.doors["shop" if menu is ShopMenu else "gym"].outside)
 	hero.safe = Data.config.player.leaveShopSafeTime # a moment to get past zombies waiting at the door
+	if in_game:
+		save_game() # keep what you bought or trained
 
 
 func stick_broke(hero: Hero) -> void:
@@ -443,7 +590,8 @@ func stick_broke(hero: Hero) -> void:
 ## A zombie touched a hero: it costs a heart (or armour takes it), and the zombie bounces off and
 ## goes dizzy for a moment, so she can get away.
 func zombie_touch(zombie: Zombie, hero: Hero) -> void:
-	var hurt := hero.hurt(zombie.type.touchHearts)
+	var instant: bool = zombie.type.get("instantTag", false) # the Zombie King on Hard and Hardcore
+	var hurt := hero.hurt(Data.config.player.hearts if instant else int(zombie.type.touchHearts), instant)
 	if hurt == "":
 		return
 	var hud := huds[hero.index]
@@ -453,7 +601,7 @@ func zombie_touch(zombie: Zombie, hero: Hero) -> void:
 	hud.flash(hurt)
 	if hero.tagged > 0:
 		Sound.play("tagged")
-		hud.show_tagged(true) # on Easy you keep everything
+		got_tagged(hero)
 	elif hurt == "shield":
 		Sound.play("clang")
 		hud.toast("Your armour blocked it!\nRun away!", 1.5)
@@ -463,6 +611,22 @@ func zombie_touch(zombie: Zombie, hero: Hero) -> void:
 			hud.toast("%s took %d hearts!\nRun away!" % [zombie.type.name, zombie.type.touchHearts], 1.5)
 		else:
 			hud.toast("Ouch! Last heart!\nRun away!" if hero.hearts == 1 else "Ouch! Run away!", 1.5)
+
+
+## Out of hearts. Easy keeps everything; Hard takes your weapons and armour; Hardcore is game over
+## (your Hardcore game starts again, and you're out until the level ends). Saved straight away.
+func got_tagged(hero: Hero) -> void:
+	var d := Save.current_difficulty()
+	if d.get("oneLife", false):
+		hero.out = true
+		hero.tagged = INF # out until the level ends; zombies leave her alone
+		hero.fresh_run() # (outfits are kept)
+		if heroes.all(func(h): return h.out):
+			game_over_in = 3
+	elif d.get("loseItems", false):
+		hero.lose_items()
+	huds[hero.index].show_tagged(true, d)
+	save_game()
 
 
 ## How far the nearest hero is from a spot on the ground.
@@ -487,7 +651,7 @@ func groan_now_and_then(z: Zombie, delta: float) -> void:
 
 ## A few zombies arrive, away from the heroes.
 func spawn_wave() -> void:
-	for i in mini(Data.config.arena.waveSize, to_spawn):
+	for i in mini(roundi(Data.config.arena.waveSize * Save.current_difficulty().get("zombies", 1)), to_spawn):
 		var kind := pick_kind()
 		var spot = spawn_spot(Data.config.zombies[kind].radius + 0.5)
 		if spot == null:
@@ -513,7 +677,14 @@ func boss_coming() -> bool:
 func spawn_boss() -> void:
 	boss = add_zombie(level.info.boss, level.info.gate.x, level.info.gate.z + 8)
 	boss_came = true
-	var guards: int = boss.type.guards
+	# on Hard and Hardcore he's tougher, faster and tags you in one go
+	var d := Save.current_difficulty()
+	if d.has("king"):
+		boss.type = boss.type.duplicate()
+		boss.type.merge(d.king, true)
+		boss.max_health = d.king.health * level.info.healthMultiplier
+		boss.health = boss.max_health
+	var guards: int = roundi(boss.type.guards * d.get("zombies", 1))
 	for i in guards:
 		var a := TAU * i / guards
 		var x := boss.position.x + cos(a) * 4
@@ -521,7 +692,10 @@ func spawn_boss() -> void:
 		if level.is_clear(x, z, 0.8):
 			add_zombie(pick_kind(), x, z)
 	Sound.play("king")
-	toast_all("👑 The Zombie King is here! The final battle!\nHe keeps calling Shufflers to help him!", 4)
+	if boss.type.get("instantTag", false):
+		toast_all("👑 THE ZOMBIE KING IS HERE! 👑\nDon't let him touch you, he tags you in one go!", 4)
+	else:
+		toast_all("👑 The Zombie King is here! The final battle!\nHe keeps calling Shufflers to help him!", 4)
 
 
 ## The King calls in a few Shufflers (only so many at once).
