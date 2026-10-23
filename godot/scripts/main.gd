@@ -41,7 +41,7 @@ func start_level(number: int) -> void:
 	add_child(hero)
 	hero.start_at(level.info.playerStart)
 	hero.camera.make_current()
-	effects.warm_up(hero.camera)
+	effects.warm_up(hero.camera, [level.gate.find_child("open", true, false)])
 	to_spawn = int(level.info.zombies)
 	popped = 0
 	finished = false

@@ -29,11 +29,12 @@ func _ready() -> void:
 	confetti_colours.colors = colours
 
 
-## Shows a burst of confetti and a word, too small and faint to see, just in front of the camera.
+## Shows a burst of confetti and a word, too small to see, just in front of the camera, and tiny
+## copies of `hidden` (things that are hidden until later, like the open gate's glow).
 ## The first time something new is drawn, the graphics card has to get ready for it (it compiles
 ## its "shader"), which can make the game stop for a moment; this gets that done at the start of a
-## level instead of when the first zombie pops.
-func warm_up(camera: Camera3D) -> void:
+## level instead of when the first zombie pops or the gate opens.
+func warm_up(camera: Camera3D, hidden: Array[Node3D] = []) -> void:
 	var front := camera.global_position - camera.global_basis.z * 2.0
 	var p := CPUParticles3D.new()
 	p.mesh = confetti_mesh
@@ -48,6 +49,13 @@ func warm_up(camera: Camera3D) -> void:
 	p.emitting = true
 	p.finished.connect(p.queue_free)
 	float_text(front, "POP! BONK!", Color.WHITE, 0.01)
+	for node in hidden:
+		var copy: Node3D = node.duplicate()
+		copy.visible = true
+		copy.scale = Vector3.ONE * 0.001
+		copy.position = front
+		add_child(copy)
+		get_tree().create_timer(0.5).timeout.connect(copy.queue_free)
 
 
 ## A burst of confetti when a zombie pops.
