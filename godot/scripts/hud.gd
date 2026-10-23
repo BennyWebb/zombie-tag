@@ -37,6 +37,9 @@ var level_done_bux := Label.new()
 var level_done_go := Label.new()
 var speed := Label.new()
 var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for timing them
+# Asking Godot to time the drawing crashed the Shield (with the halves drawn at 75% and stretched),
+# and its graphics chip can't time itself anyway, so on Android the overlay leaves those out
+var can_time_drawing := not OS.has_feature("android")
 var game_time := 0.0 # how long the game's own code took this frame, in ms (main.gd sets it)
 var hearts_shown := -1
 var blink_time := 0.0
@@ -390,6 +393,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Starts (or stops) timing how long the screens take to draw, for the F3 numbers.
 func time_views() -> void:
+	if not can_time_drawing:
+		return
 	for rid in views:
 		RenderingServer.viewport_set_measure_render_time(rid, speed.visible)
 
@@ -402,17 +407,20 @@ func _process(delta: float) -> void:
 	if speed.visible:
 		var size := get_viewport().get_visible_rect().size * get_viewport().get_final_transform().get_scale()
 		# how long things take, in milliseconds (for 60 fps a whole frame has 16.7 ms): the whole
-		# frame, the game's own code, the processor getting the drawing ready, and the graphics chip
-		# drawing it (that one shows 0 if the graphics chip can't time itself, like the Shield's)
-		var cpu := RenderingServer.get_frame_setup_time_cpu()
-		var gpu := 0.0
-		for rid in views:
-			cpu += RenderingServer.viewport_get_measured_render_time_cpu(rid)
-			gpu += RenderingServer.viewport_get_measured_render_time_gpu(rid)
-		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d\nframe %.1f ms · game code %.1f ms · drawing: processor %.1f ms, graphics chip %.1f ms" % [
+		# frame, the game's own code, and the drawing: the processor getting it ready and the
+		# graphics chip doing it (or on Android, everything that isn't the game's code)
+		var frame := Performance.get_monitor(Performance.TIME_PROCESS) * 1000
+		var drawing := "drawing and the rest %.1f ms" % (frame - game_time)
+		if can_time_drawing:
+			var cpu := RenderingServer.get_frame_setup_time_cpu()
+			var gpu := 0.0
+			for rid in views:
+				cpu += RenderingServer.viewport_get_measured_render_time_cpu(rid)
+				gpu += RenderingServer.viewport_get_measured_render_time_gpu(rid)
+			drawing = "drawing: processor %.1f ms, graphics chip %.1f ms" % [cpu, gpu]
+		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d\nframe %.1f ms · game code %.1f ms · %s" % [
 			Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
-			size.x, size.y,
-			Performance.get_monitor(Performance.TIME_PROCESS) * 1000, game_time, cpu, gpu,
+			size.x, size.y, frame, game_time, drawing,
 		]
