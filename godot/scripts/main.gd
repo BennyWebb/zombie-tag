@@ -52,6 +52,7 @@ func _ready() -> void:
 	add_child(view_layer)
 	add_hero()
 	heroes[0].camera.make_current()
+	huds[0].views = [get_viewport().get_viewport_rid()]
 	Controls.player_two_joined.connect(player_two_joined)
 	get_viewport().size_changed.connect(arrange_views)
 	start_level(START_LEVEL)
@@ -96,6 +97,7 @@ func player_two_joined() -> void:
 	if not level.gate_open:
 		to_spawn += roundi(level.info.zombies * (Data.config.twoPlayerZombies - 1)) # more zombies for two
 	split_screen()
+	level.set_two_player_shadows(true)
 	Sound.play("yay")
 	toast_all("%s is here! 👋" % hero.look.name, 2.5)
 
@@ -119,6 +121,8 @@ func split_screen() -> void:
 	divider.color = Color.WHITE
 	view_layer.add_child(divider)
 	arrange_views()
+	huds[0].views.assign(sub_views.map(func(v): return v.get_viewport_rid()) + [get_viewport().get_viewport_rid()])
+	huds[0].time_views()
 
 
 ## Sizes the halves of the screen to fit the window (each draws at the window's real size, so it's
@@ -157,6 +161,7 @@ func start_level(number: int) -> void:
 	shots.clear()
 	level = Level.new(number)
 	add_child(level)
+	level.set_two_player_shadows(two_players())
 	for i in heroes.size():
 		heroes[i].level = level
 		gyms[i].level_number = number

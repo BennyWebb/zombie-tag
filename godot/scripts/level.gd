@@ -15,6 +15,7 @@ var gate_open := false
 var signs: Array[Node3D] = [] # the shop's and gym's spinning signs
 var doors := {} # "shop" and "gym": { door = Vector2 (x, z), outside = where you come back out }
 var time := 0.0
+var sun := DirectionalLight3D.new()
 
 
 func _init(number: int) -> void:
@@ -60,13 +61,22 @@ func add_sky_and_light() -> void:
 	world_env.environment = env
 	add_child(world_env)
 
-	var sun := DirectionalLight3D.new()
 	sun.light_color = Data.colour(light.sun)
 	sun.light_energy = light.sunAmount * LIGHT_SCALE
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 60.0
 	add_child(sun)
 	sun.look_at_from_position(Vector3(info.sunPosition.x, info.sunPosition.y, info.sunPosition.z), Vector3.ZERO)
+
+
+## With two players the world is drawn twice, so the sun's shadows are made more simply: in two
+## layers rather than four (each layer draws everything that casts a shadow again), on a shadow map
+## half the usual size. The shadows close to you stay sharp.
+func set_two_player_shadows(two: bool) -> void:
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if two else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	# (the usual size is smaller on Android already: Godot's "size.mobile" setting)
+	var usual: int = ProjectSettings.get_setting_with_override("rendering/lights_and_shadows/directional_shadow/size")
+	RenderingServer.directional_shadow_atlas_set_size(usual / 2 if two else usual, true)
 
 
 ## The shop and the gym go at two of the six spots, at least 30 m apart, different every time.
