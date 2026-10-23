@@ -469,9 +469,11 @@ func _process(delta: float) -> void:
 		var size := get_viewport().get_visible_rect().size * get_viewport().get_final_transform().get_scale()
 		# how long things take, in milliseconds (for 60 fps a whole frame has 16.7 ms): the whole
 		# frame, the game's own code, and the drawing: the processor getting it ready and the
-		# graphics chip doing it (or on Android, everything that isn't the game's code)
+		# graphics chip doing it (or on Android, everything that isn't the game's code, which
+		# includes waiting for the TV to be ready for the next picture: at 60 fps the frame is
+		# always about 16.7 ms, however quickly it was drawn)
 		var frame := Performance.get_monitor(Performance.TIME_PROCESS) * 1000
-		var drawing := "drawing and the rest %.1f ms" % (frame - game_time)
+		var drawing := "drawing and waiting for the screen %.1f ms" % (frame - game_time)
 		if can_time_drawing:
 			var cpu := RenderingServer.get_frame_setup_time_cpu()
 			var gpu := 0.0
