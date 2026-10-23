@@ -1,7 +1,9 @@
 class_name Level
 extends Node3D
 ## One of the ten places: its scenery, sky, fog and sun, the shop and gym, the exit gate, and the
-## colliders that stop heroes and zombies walking through things (like src/world.js).
+## colliders that stop heroes and zombies walking through things (like src/world.js). Some have
+## more: lamps and torches that light up the dark, snow or fireflies drifting about, and the
+## Funfair's carousel and Ferris wheel going round.
 
 # The browser game's light strengths, turned into Godot's. Measured by drawing the same view in both
 # and matching the colours: about 1 / (2 pi).
@@ -16,6 +18,8 @@ var signs: Array[Node3D] = [] # the shop's and gym's spinning signs
 var doors := {} # "shop" and "gym": { door = Vector2 (x, z), outside = where you come back out }
 var time := 0.0
 var sun := DirectionalLight3D.new()
+var carousel: Node3D # (the Funfair's rides, or null)
+var ferris_wheel: Node3D
 
 
 func _init(number: int) -> void:
@@ -34,7 +38,12 @@ func _ready() -> void:
 		no_fog(mesh)
 	gate = scenery.find_child("gate", true, false)
 	gate.find_child("open", true, false).visible = false
+	carousel = scenery.find_child("carousel", true, false)
+	ferris_wheel = scenery.find_child("ferrisWheel", true, false)
 	add_sky_and_light()
+	add_lamps()
+	for settings in info.floaters:
+		add_child(Floaters.new(settings))
 	add_buildings()
 
 
@@ -67,6 +76,18 @@ func add_sky_and_light() -> void:
 	sun.directional_shadow_max_distance = 60.0
 	add_child(sun)
 	sun.look_at_from_position(Vector3(info.sunPosition.x, info.sunPosition.y, info.sunPosition.z), Vector3.ZERO)
+
+
+## Lamps and torches that light up the ground round them (each one lights what's within its range).
+func add_lamps() -> void:
+	for l in info.pointLights:
+		var lamp := OmniLight3D.new()
+		lamp.position = Vector3(l.x, l.y, l.z)
+		lamp.light_color = Data.colour(l.colour)
+		lamp.light_energy = l.intensity * LIGHT_SCALE
+		lamp.omni_range = l.range
+		lamp.omni_attenuation = 2.0 # fading like the browser game's (which fades with distance squared)
+		add_child(lamp)
 
 
 ## With two players the world is drawn twice, so the sun's shadows are made more simply: in two
@@ -118,6 +139,16 @@ func _process(delta: float) -> void:
 		s.rotate_y(delta * 1.2)
 	if gate_open:
 		gate.find_child("beam", true, false).rotate_y(delta)
+	if carousel:
+		# it goes round, and the horses go up and down
+		carousel.rotate_y(delta * 0.6)
+		for i in 8:
+			carousel.get_child(i).get_child(1).position.y = 1.5 + sin(time * 2 + i) * 0.3
+	if ferris_wheel:
+		ferris_wheel.rotate_z(delta * 0.15)
+		# the little cars (every other part after the rim) hang the right way up
+		for i in range(2, ferris_wheel.get_child_count(), 2):
+			ferris_wheel.get_child(i).rotation.z = -ferris_wheel.rotation.z
 
 
 func open_gate() -> void:

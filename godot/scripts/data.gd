@@ -29,6 +29,7 @@ func level(number: int) -> Dictionary:
 	var settings: Dictionary = config.levels[number - 1].duplicate()
 	var layout := load_json("res://data/levels/%02d-%s.json" % [number, settings.theme])
 	settings.merge(layout)
+	settings.number = number # (a whole number: numbers read from JSON files are decimals)
 	return settings
 
 

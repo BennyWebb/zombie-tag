@@ -16,7 +16,7 @@ to play.
 | 3 | ✅ | The shop and gym |
 | 4 | ✅ | All the weapons: squirts, goo, bubbles, snowballs, the boomerang banana, pumpkins and the star laser |
 | 5 | ✅ | Two players, split screen |
-| 6 | | All ten levels and the Zombie King |
+| 6 | ✅ | All ten levels and the Zombie King |
 | 7 | | Menus, the character creator, saving, sound settings |
 | 8 | | The Android TV app for the Shield, and speed-ups |
 
@@ -66,10 +66,12 @@ Everything is made in code, so you can read how it fits together, starting from 
 
 | Script | What it does | From the browser game's |
 | --- | --- | --- |
-| `main.gd` | Runs a level: zombies arrive in waves, bonks and pops, the exit gate | `src/main.js` |
-| `level.gd` | The scenery, sky, fog and sun, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
+| `main.gd` | Runs the game: zombies arrive in waves, bonks and pops, the exit gate, one level after another, the Zombie King | `src/main.js` |
+| `level.gd` | The scenery, sky, fog and sun, lamps, the Funfair's rides, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
 | `hero.gd` | You: walking, turning, and swinging, shooting, throwing or zapping your weapon at the nearest zombie in front of you | `src/player.js` |
 | `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked, slimed, bubbled or frozen | `src/zombie.js` |
+| `party.gd` | The party after beating the Zombie King | `src/main.js` |
+| `floaters.gd` | Snow, sparkles and fireflies drifting about (they move in `floaters.gdshader`) | `src/themes.js` |
 | `health_bar.gdshader` | A zombie's health bar, which turns to face whichever camera draws it | |
 | `hero_body.gd` | A hero's whole body with her hair, colours, outfits and name, which her sister sees | `src/hero.js` |
 | `shots.gd` | Everything that flies: squirts, goo, bubbles, snowballs, pumpkins and the boomerang banana | `src/weapons.js` |

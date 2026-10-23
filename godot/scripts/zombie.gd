@@ -3,7 +3,10 @@ extends Node3D
 ## A goofy zombie: it wanders about, chases the nearest hero it notices, wobbles as it walks and
 ## squashes and flashes white when it's bonked (like src/zombie.js). Goo slows it down, a bubble
 ## floats it up and a snowball freezes it solid.
-## For now this is everything a Shuffler does; the other kinds' tricks come in phase 6.
+## Each kind has its own tricks: Speedy Sid sprints then stops to pant (tongue out), Bouncy Bob hops
+## along and jumps over small things like fences and benches, and the Zombie King keeps calling
+## Shufflers to help him (main.gd brings them in). A Slime Zombie splits in two when it pops
+## (main.gd does that too).
 
 # the colour it glows: white when hit, blue when frozen, green when slimed
 const GLOW_WHITE := Color(1, 1, 1)
@@ -36,6 +39,11 @@ var frozen_time := 0.0
 var lift := 0.0 # how high its bubble has floated
 var wander_target = null # a Vector3, or null when it needs a new one
 var wander_timer := 0.0
+var sprint := 0.0 # Speedy Sid: time left in this sprint (or panting, when below 0)
+var hop := randf() * PI # Bouncy Bob: where he is in his hop
+var help_timer := 0.0 # Zombie King: time until he calls for help
+var calling_help := false # (main.gd brings the helpers, and sets it back)
+var helper := false # one of the King's helpers
 
 # parts of the model, moved to make it wobble and walk
 var body: Node3D
@@ -47,6 +55,7 @@ var stars: Node3D
 var bubble: Node3D
 var ice: Node3D
 var health_bar: MeshInstance3D
+var tongue: Node3D # (Speedy Sid's)
 var flash_materials: Array[StandardMaterial3D] = []
 
 
@@ -58,6 +67,8 @@ func _init(zombie_kind: String, the_level: Level, health_multiplier: float, x: f
 	health = max_health
 	radius = type.radius
 	position = Vector3(x, 0, z)
+	sprint = type.get("sprintTime", 0.0)
+	help_timer = type.get("callHelpEvery", 0.0)
 
 
 func _ready() -> void:
@@ -75,6 +86,7 @@ func _ready() -> void:
 		legs.append(model.find_child("leg" + side, true, false))
 		pupils.append(model.find_child("pupil" + side, true, false))
 	stars = model.find_child("stars", true, false)
+	tongue = model.find_child("tongue", true, false)
 	bubble = model.find_child("bubble", true, false)
 	ice = model.find_child("ice", true, false)
 	# its health bar floats over its head (the one in the model is left hidden: this one turns to
@@ -167,7 +179,17 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	elif hero and to_hero.length() < type.noticeDistance:
 		# chase, and stop once touching the hero
 		var touching: float = radius + hero.radius + 0.15
-		if to_hero.length() > touching:
+		if type.has("sprintTime"):
+			# Speedy Sid sprints, then stops to pant
+			sprint -= delta
+			if sprint < -type.pantTime:
+				sprint = type.sprintTime
+		if type.has("callHelpEvery"):
+			help_timer -= delta
+			if help_timer <= 0:
+				help_timer = type.callHelpEvery
+				calling_help = true
+		if to_hero.length() > touching and sprint >= 0:
 			dir = to_hero.normalized()
 			speed = type.chaseSpeed
 		else:
@@ -208,21 +230,28 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 			var push := d.normalized() * (min_dist - d.length()) * 0.5
 			position.x += push.x
 			position.z += push.y
-	position = level.resolve_collisions(position, radius)
+	# Bouncy Bob only moves while he's in the air, and hops over small things
+	var hop_up := 0.0
+	if type.has("hopHeight"):
+		hop += delta * type.hopsPerSecond * PI * (1.0 if speed > 0 else 0.5)
+		hop_up = absf(sin(hop)) * type.hopHeight
+	position = level.resolve_collisions(position, radius, type.get("jumpsSmallThings", false) and hop_up > 0.3)
 	position.y = 0
 	rotation.y = yaw
-	animate(delta, speed)
+	animate(delta, speed, hop_up)
 
 
 ## The silly walk: a wobble, swinging legs, waving arms and googly eyes.
-func animate(delta: float, speed: float) -> void:
+func animate(delta: float, speed: float, hop_up: float) -> void:
+	if tongue:
+		tongue.visible = sprint < 0 # panting
 	bubble.visible = bubble_time > 0
 	ice.visible = frozen_time > 0
 	# a bubble floats it up, then it drops back down when the bubble pops
 	lift += ((1.3 if bubble_time > 0 else 0.0) - lift) * minf(1.0, delta * (2.0 if bubble_time > 0 else 8.0))
 	if bubble_time > 0:
 		bubble.scale = Vector3.ONE * (1 + sin(time * 4) * 0.04)
-	model.position.y = lift
+	model.position.y = lift + hop_up
 	flash = maxf(0.0, flash - delta)
 	if frozen_time > 0:
 		# frozen solid: no wobbling at all

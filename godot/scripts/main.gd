@@ -8,8 +8,11 @@ extends Node3D
 ## Player 2 joins by pressing a button on a second joypad (see controls.gd): the screen splits in
 ## two, each sister with her own half, and there are half as many zombies again.
 ##
-## So far it's Sunny Park, on Easy (getting tagged costs nothing). The other levels and the menus
-## come in the later phases (see the plan in README.md).
+## The ten levels come one after another. In the last, the Zombie King's castle, he arrives with his
+## guards once every other zombie is popped, and beating him starts a party.
+##
+## For now it starts at level 1 on Easy (getting tagged costs nothing). The menus, choosing a level
+## and saving come in phase 7 (see the plan in README.md).
 
 const START_LEVEL := 1
 const HUD_ZOOM_TWO_PLAYERS := 0.7 # with two players, everything on the HUD shrinks to fit half the screen
@@ -32,6 +35,10 @@ var view_rects: Array[TextureRect] = []
 var divider := ColorRect.new()
 var zombies: Array[Zombie] = []
 var zombie_holder := Node3D.new() # all the zombies go in here
+var boss: Zombie = null # the Zombie King, once he arrives
+var boss_came := false # (once he's popped, boss reads as null again, so this remembers he came)
+var party: Party = null # the party after beating him
+var zombie_scenes := [] # this level's kinds of zombie, loaded at the start (see warm_up)
 var to_spawn := 0 # zombies still to arrive this level
 var popped := 0
 var finished := false
@@ -157,6 +164,8 @@ func start_level(number: int) -> void:
 	for z in zombies:
 		z.queue_free()
 	zombies.clear()
+	boss = null
+	boss_came = false
 	coins.clear()
 	shots.clear()
 	level = Level.new(number)
@@ -171,7 +180,7 @@ func start_level(number: int) -> void:
 	popped = 0
 	finished = false
 	Sound.music(level.info.theme)
-	var text := "Level %d: %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name]
+	var text := "Level %d: %s %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name, level.info.icon]
 	if not two_players():
 		text += "\nPlayer 2? Press %s on another controller to join" % Controls.button()
 	toast_all(text, 4)
@@ -185,6 +194,14 @@ func toast_all(text: String, seconds := 2.5) -> void:
 ## Draws everything that only shows up later once, too small to see, so the game doesn't stop for a
 ## moment the first time it appears (see Effects.warm_up).
 func warm_up() -> void:
+	# load this level's kinds of zombie now, rather than when the first of each arrives
+	var kinds: Array = level.info.mix.keys()
+	if level.info.has("boss"):
+		kinds.append(level.info.boss)
+	for kind in kinds.duplicate():
+		if Data.config.zombies[kind].has("splitsInto"):
+			kinds.append(Data.config.zombies[kind].splitsInto)
+	zombie_scenes = kinds.map(func(kind): return load("res://models/zombies/%s.glb" % kind))
 	var camera := heroes[0].camera
 	var coin: Node3D = coins.coin_scene.instantiate()
 	var zombie: Node3D = load("res://models/zombies/shuffler.glb").instantiate()
@@ -221,9 +238,12 @@ func toggle_pause() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		toggle_pause()
+	elif party:
+		if Controls.is_anyones(event, "attack"):
+			end_party()
 	elif finished:
 		if Controls.is_anyones(event, "attack"):
-			play_again()
+			next_level()
 	elif not paused:
 		# a hero in the shop or gym uses it (each with her own buttons)
 		for hero in heroes:
@@ -234,15 +254,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## From the Level done! screen. The next level is made behind the screen, which goes a moment later,
-## so any stop while it's made isn't seen. (The other levels come in phase 6.)
-func play_again() -> void:
-	start_level(level.info.number)
+## so any stop while it's made isn't seen.
+func next_level() -> void:
+	start_level(level.info.number + 1)
 	for hud in huds:
 		get_tree().create_timer(0.2).timeout.connect(hud.hide_level_done)
 
 
 func _process(delta: float) -> void:
-	if paused or finished:
+	if paused or finished or party:
 		return
 	var started := Time.get_ticks_usec() # (for the F3 numbers)
 	update(delta)
@@ -256,6 +276,8 @@ func update(delta: float) -> void:
 	# (popped zombies leave the list straight away, so it only holds ones still standing)
 	if to_spawn > 0 and zombies.size() <= Data.config.arena.nextWaveWhenLeft:
 		spawn_wave()
+	if boss_coming() and to_spawn == 0 and zombies.is_empty():
+		spawn_boss()
 	for hero in heroes:
 		update_hero(hero, delta)
 	keep_sisters_apart()
@@ -269,7 +291,7 @@ func update(delta: float) -> void:
 			hit_zombie(hit.zombie, hit.weapon, hit.push, hit.at, hit.by)
 
 	# every zombie popped: the exit gate opens, and all the coins fly to you
-	var cleared := to_spawn == 0 and zombies.is_empty()
+	var cleared := to_spawn == 0 and zombies.is_empty() and not boss_coming()
 	for got in coins.update(delta, heroes, level, cleared):
 		got[0].tag_bux += got[1]
 		huds[got[0].index].bump_bux()
@@ -279,8 +301,10 @@ func update(delta: float) -> void:
 			Sound.play("coin", 1 + mini(coin_streak, 8) * 0.06)
 		last_coin = time
 
-	for z in zombies:
+	for z in zombies.duplicate(): # (the King's helpers join the list as it goes)
 		z.update(delta, heroes, zombies)
+		if z.calling_help:
+			call_helpers(z)
 		groan_now_and_then(z, delta)
 		for hero in heroes:
 			var d := Vector2(z.position.x - hero.position.x, z.position.z - hero.position.z).length()
@@ -296,23 +320,66 @@ func update(delta: float) -> void:
 			level_done()
 			break
 	for i in heroes.size():
-		huds[i].show_zombies_left(to_spawn + zombies.size(), level.gate_open)
+		huds[i].show_zombies_left(to_spawn + zombies.size() + (1 if boss_coming() else 0), level.gate_open)
+		huds[i].show_boss(boss if is_instance_valid(boss) and boss.alive else null)
 		huds[i].update(heroes[i])
 		heroes[i].update_body(delta, two_players())
 
 
-## Either sister walking through the gate finishes the level for both.
+## Either sister walking through the gate finishes the level for both. After the Zombie King's
+## castle, there's a party.
 func level_done() -> void:
-	finished = true
 	# coins still on their way count too, shared out
 	var share := coins.total() / heroes.size()
 	for hero in heroes:
 		hero.tag_bux += share
 	heroes[0].tag_bux += coins.total() - share * heroes.size()
 	coins.clear()
+	if level.info.has("boss"):
+		start_party()
+		return
+	finished = true
 	Sound.play("fanfare")
+	var next: Dictionary = Data.config.levels[level.info.number]
 	for i in heroes.size():
-		huds[i].show_level_done(level.info.name, heroes[i].tag_bux)
+		huds[i].show_level_done("%s %s" % [level.info.name, level.info.icon], heroes[i].tag_bux,
+			"for level %d: %s %s" % [level.info.number + 1, next.name, next.icon])
+
+
+## You beat the Zombie King: all the zombies become your friends and there's a big party. It's
+## seen from one camera going round, over the whole screen.
+func start_party() -> void:
+	Sound.play("fanfare")
+	Sound.music("party")
+	for z in zombies:
+		z.queue_free()
+	zombies.clear()
+	coins.clear()
+	shots.clear()
+	for hero in heroes:
+		hero.beam.hide_beam()
+	for hud in huds:
+		hud.visible = false
+	for sub in sub_views:
+		sub.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	view_layer.visible = false
+	party = Party.new(level, heroes, effects)
+	add_child(party)
+
+
+## Back to the start of the game, keeping all your things. (Choosing a level comes in phase 7.)
+func end_party() -> void:
+	party.finish()
+	party.queue_free()
+	party = null
+	for hud in huds:
+		hud.visible = true
+	for sub in sub_views:
+		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	view_layer.visible = true
+	if not two_players():
+		heroes[0].camera.make_current()
+	start_level(1)
 
 
 func update_hero(hero: Hero, delta: float) -> void:
@@ -425,10 +492,53 @@ func spawn_wave() -> void:
 		var spot = spawn_spot(Data.config.zombies[kind].radius + 0.5)
 		if spot == null:
 			break
-		var z := Zombie.new(kind, level, level.info.healthMultiplier, spot.x, spot.y)
-		zombie_holder.add_child(z)
-		zombies.append(z)
+		add_zombie(kind, spot.x, spot.y)
 		to_spawn -= 1
+
+
+func add_zombie(kind: String, x: float, z: float) -> Zombie:
+	var zombie := Zombie.new(kind, level, level.info.healthMultiplier, x, z)
+	zombie_holder.add_child(zombie)
+	zombies.append(zombie)
+	return zombie
+
+
+## Whether this level's Zombie King is still to come.
+func boss_coming() -> bool:
+	return level.info.has("boss") and not boss_came
+
+
+## The final battle: once every other zombie is popped, the Zombie King arrives at the exit gate
+## end of his castle, with his guards in a ring round him.
+func spawn_boss() -> void:
+	boss = add_zombie(level.info.boss, level.info.gate.x, level.info.gate.z + 8)
+	boss_came = true
+	var guards: int = boss.type.guards
+	for i in guards:
+		var a := TAU * i / guards
+		var x := boss.position.x + cos(a) * 4
+		var z := boss.position.z + sin(a) * 4
+		if level.is_clear(x, z, 0.8):
+			add_zombie(pick_kind(), x, z)
+	Sound.play("king")
+	toast_all("👑 The Zombie King is here! The final battle!\nHe keeps calling Shufflers to help him!", 4)
+
+
+## The King calls in a few Shufflers (only so many at once).
+func call_helpers(king: Zombie) -> void:
+	king.calling_help = false
+	var t: Dictionary = king.type
+	var helping := zombies.filter(func(z): return z.helper).size()
+	var n := mini(t.helpers, t.maxHelpers - helping)
+	for i in n:
+		var a := randf() * TAU
+		var x := king.position.x + cos(a) * 3
+		var z := king.position.z + sin(a) * 3
+		if level.is_clear(x, z, 0.6):
+			add_zombie("shuffler", x, z).helper = true
+	if n > 0:
+		Sound.play("help")
+		effects.float_text(king.centre() + Vector3(0, 2.5, 0), "HELP!", Color("ff8ad8"), 2)
 
 
 ## Picks a kind of zombie for this level, more often the ones with a bigger number in its mix.
@@ -487,11 +597,23 @@ func hit_zombie(zombie: Zombie, weapon: Dictionary, push: Vector3, at, by: Hero)
 
 
 func pop_zombie(zombie: Zombie) -> void:
-	var size: float = zombie.type.size
-	effects.confetti(zombie.centre())
+	var t: Dictionary = zombie.type
+	var size: float = t.size
+	effects.confetti(zombie.centre(), 300 if t.get("boss", false) else 70)
 	effects.float_text(zombie.centre() + Vector3(0, size, 0), "POP!", Color("9cff57"), 1.4 * size)
-	coins.burst(zombie.centre(), zombie.type.tagBux)
+	coins.burst(zombie.centre(), t.tagBux)
 	Sound.play("pop", randf_range(0.95, 1.15) / size)
 	zombies.erase(zombie)
 	zombie.queue_free()
 	popped += 1
+	if t.has("splitsInto"):
+		# a Slime Zombie splits into two little Shufflers
+		for side in [-1, 1]:
+			var x: float = zombie.position.x + side * cos(zombie.yaw) * 0.9
+			var z: float = zombie.position.z - side * sin(zombie.yaw) * 0.9
+			add_zombie(t.splitsInto, x, z)
+		effects.float_text(zombie.centre() + Vector3(0, 2, 0), "SPLIT!", Color("7dff4f"), 1.4)
+		Sound.play("split")
+	if t.get("boss", false):
+		Sound.play("fanfare")
+		toast_all("👑 You popped the Zombie King! 👑", 4)

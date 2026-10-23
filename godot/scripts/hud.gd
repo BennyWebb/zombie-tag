@@ -22,6 +22,8 @@ var speed_badge := Label.new()
 var strength_badge := Label.new()
 var zombies_left := Label.new()
 var zombies_pill: PanelContainer
+var boss_box := VBoxContainer.new() # the Zombie King's health, while he's about
+var boss_fill := TextureRect.new()
 var bux := Label.new()
 var bux_pill: PanelContainer
 var weapon := Label.new()
@@ -78,6 +80,38 @@ func _ready() -> void:
 	zombies_pill.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	zombies_pill.position.y = 18
 	root.add_child(zombies_pill)
+
+	# under it, the Zombie King's health
+	boss_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	boss_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	boss_box.position.y = 84
+	boss_box.custom_minimum_size.x = 460
+	boss_box.visible = false
+	root.add_child(boss_box)
+	var king := style(Label.new(), 26)
+	king.text = "👑 Zombie King"
+	king.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	king.add_theme_color_override("font_shadow_color", PURPLE)
+	boss_box.add_child(king)
+	var bar_box := StyleBoxFlat.new()
+	bar_box.bg_color = PILL
+	bar_box.set_border_width_all(3)
+	bar_box.border_color = Color.WHITE
+	bar_box.set_corner_radius_all(11)
+	var bar := Panel.new()
+	bar.add_theme_stylebox_override("panel", bar_box)
+	bar.custom_minimum_size.y = 22
+	bar.clip_contents = true
+	boss_box.add_child(bar)
+	var g := Gradient.new()
+	g.colors = PackedColorArray([Color("ff4f8b"), Color("ffd23f")])
+	var fill_texture := GradientTexture2D.new()
+	fill_texture.gradient = g
+	boss_fill.texture = fill_texture
+	boss_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	boss_fill.stretch_mode = TextureRect.STRETCH_SCALE
+	boss_fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bar.add_child(boss_fill)
 
 	# top right: Tag Bux
 	var bux_row := HBoxContainer.new()
@@ -270,10 +304,11 @@ func make_level_done_screen() -> void:
 	pulse.tween_property(level_done_go, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE)
 
 
-func show_level_done(place: String, tag_bux: int) -> void:
+## next: what pressing the button does, like "for level 2: School and Playground 🏫".
+func show_level_done(place: String, tag_bux: int, next: String) -> void:
 	level_done_place.text = "%s is safe again!" % place
 	level_done_bux.text = "%d Tag Bux to spend" % tag_bux
-	level_done_go.text = "Press %s to play again" % Controls.button()
+	level_done_go.text = "Press %s %s" % [Controls.button(), next]
 	toast_time = 0
 	level_done.visible = true
 
@@ -315,6 +350,13 @@ func bump(node: Control, scale_to: float, seconds: float) -> void:
 	var t := create_tween()
 	t.tween_property(node, "scale", Vector2.ONE * scale_to, seconds * 0.4)
 	t.tween_property(node, "scale", Vector2.ONE, seconds * 0.6)
+
+
+## The Zombie King's health bar, while he's about (boss: him, or null).
+func show_boss(boss: Zombie) -> void:
+	boss_box.visible = boss != null
+	if boss:
+		boss_fill.anchor_right = maxf(0.0, boss.health / boss.max_health)
 
 
 func show_zombies_left(n: int, gate_open: bool) -> void:
