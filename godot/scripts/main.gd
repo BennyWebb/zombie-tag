@@ -1,15 +1,18 @@
 extends Node3D
 ## Runs a level (like src/main.js): zombies arrive a few at a time, bonking them pops them into
-## confetti, and once they're all popped the exit gate opens. Walk through it to finish.
+## confetti and Tag Bux, a zombie touch costs a heart (lose them all and you're tagged), and once
+## every zombie is popped the exit gate opens. Walk through it to finish.
 ##
-## Phase 1 is Sunny Park with one hero. Coins, hearts, the shop and gym, the other weapons, two
-## players, the other levels and the menus come in the later phases (see the plan in README.md).
+## So far it's Sunny Park with one hero, on Easy (getting tagged costs nothing). The shop and gym,
+## the other weapons, two players, the other levels and the menus come in the later phases (see the
+## plan in README.md).
 
 const START_LEVEL := 1
 
 var level: Level
-var hero: Hero
+var hero := Hero.new() # the same hero all the way through, so she keeps her Tag Bux
 var effects := Effects.new()
+var coins := Coins.new()
 var hud := Hud.new()
 var zombies: Array[Zombie] = []
 var zombie_holder := Node3D.new() # all the zombies go in here
@@ -17,36 +20,55 @@ var to_spawn := 0 # zombies still to arrive this level
 var popped := 0
 var finished := false
 var paused := false
+var coin_streak := 0 # coins picked up one after another go up in pitch
+var last_coin := -1.0
+var last_groan := -9.0
+var time := 0.0
 
 
 func _ready() -> void:
 	add_child(effects)
+	add_child(coins)
 	add_child(hud)
 	zombie_holder.name = "Zombies"
 	add_child(zombie_holder)
+	hero.bonked.connect(hit_zombie)
+	add_child(hero)
+	hero.camera.make_current()
 	start_level(START_LEVEL)
 
 
 func start_level(number: int) -> void:
 	if level:
 		level.queue_free()
-		hero.queue_free()
 	for z in zombies:
 		z.queue_free()
 	zombies.clear()
+	coins.clear()
 	level = Level.new(number)
 	add_child(level)
-	hero = Hero.new(level)
-	hero.bonked.connect(hit_zombie)
-	add_child(hero)
-	hero.start_at(level.info.playerStart)
-	hero.camera.make_current()
-	effects.warm_up(hero.camera, [level.gate.find_child("open", true, false)])
+	hero.level = level
+	hero.respawn(level.info.playerStart) # full hearts, and armour shields filled up
+	warm_up()
 	to_spawn = int(level.info.zombies)
 	popped = 0
 	finished = false
 	Sound.music(level.info.theme)
-	hud.say("Level %d: %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name], 4)
+	hud.toast("Level %d: %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name], 4)
+
+
+## Draws everything that only shows up later once, too small to see, so the game doesn't stop for a
+## moment the first time it appears (see Effects.warm_up).
+func warm_up() -> void:
+	var coin: Node3D = coins.coin_scene.instantiate()
+	var zombie: Node3D = load("res://models/zombies/shuffler.glb").instantiate()
+	effects.warm_up(hero.camera, [
+		level.gate.find_child("open", true, false),
+		coin,
+		zombie.find_child("stars", true, false),
+	])
+	coin.free()
+	zombie.free()
 
 
 # The TV remote's Back button (Android's "go back") pauses too, instead of closing the game.
@@ -57,7 +79,7 @@ func _notification(what: int) -> void:
 
 func toggle_pause() -> void:
 	paused = not paused
-	hud.say("Paused" if paused else "", 9999 if paused else 0)
+	hud.toast("Paused" if paused else "", 9999 if paused else 0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -68,26 +90,89 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if paused:
 		return
+	time += delta
 
 	var alive := zombies.filter(func(z): return z.alive)
 	if to_spawn > 0 and alive.size() <= Data.config.arena.nextWaveWhenLeft:
 		spawn_wave()
-	hero.update(delta, zombies)
+	update_hero(delta)
+
+	# every zombie popped: the exit gate opens, and all the coins fly to you
+	var cleared := to_spawn == 0 and alive.is_empty()
+	for got in coins.update(delta, [hero], level, cleared):
+		got[0].tag_bux += got[1]
+		hud.bump_bux()
+		# ka-ching, a little higher for each coin in a row
+		coin_streak = coin_streak + 1 if time - last_coin < 0.6 else 0
+		if time - last_coin > 0.05:
+			Sound.play("coin", 1 + mini(coin_streak, 8) * 0.06)
+		last_coin = time
+
 	for z in zombies:
 		z.update(delta, [hero], zombies)
+		groan_now_and_then(z, delta)
+		var d := Vector2(z.position.x - hero.position.x, z.position.z - hero.position.z).length()
+		if z.can_tag() and d < z.radius + hero.radius + Data.config.player.touchDistance:
+			zombie_touch(z)
 
-	# every zombie popped: the exit gate opens, and walking through it finishes the level
-	var cleared := to_spawn == 0 and alive.is_empty()
 	if cleared and not level.gate_open:
 		level.open_gate()
 		Sound.play("gate")
-		hud.say("All the zombies are popped!\nWalk through the glowing exit gate", 4)
-	if level.at_gate(hero.position) and not finished:
+		hud.toast("All the zombies are popped!\nWalk through the glowing exit gate", 4)
+	if level.at_gate(hero.position) and hero.tagged <= 0 and not finished:
 		finished = true
 		Sound.play("fanfare")
-		hud.say("Level done!", 3)
+		hud.toast("Level done!", 3)
 		get_tree().create_timer(3.0).timeout.connect(func(): start_level(level.info.number))
 	hud.show_zombies_left(to_spawn + alive.size(), level.gate_open)
+	hud.update(hero)
+
+
+func update_hero(delta: float) -> void:
+	if hero.tagged > 0:
+		hero.tagged -= delta
+		if hero.tagged <= 0:
+			hero.respawn(level.info.playerStart)
+			hud.show_tagged(false)
+			hud.toast("Back at the start with 3 hearts!", 2)
+		return
+	hero.update(delta, zombies)
+
+
+## A zombie touched you: it costs a heart (or armour takes it), and the zombie bounces off and
+## goes dizzy for a moment, so you can get away.
+func zombie_touch(zombie: Zombie) -> void:
+	var hurt := hero.hurt(zombie.type.touchHearts)
+	if hurt == "":
+		return
+	var away := Vector3(zombie.position.x - hero.position.x, 0, zombie.position.z - hero.position.z).normalized()
+	zombie.knock(away, zombie.type.bounceBack)
+	zombie.dizzy = zombie.type.dizzyTime
+	hud.flash(hurt)
+	if hero.tagged > 0:
+		Sound.play("tagged")
+		hud.show_tagged(true) # on Easy you keep everything
+	elif hurt == "shield":
+		Sound.play("clang")
+		hud.toast("Your armour blocked it!\nRun away!", 1.5)
+	else:
+		Sound.play("ouch")
+		if zombie.type.touchHearts > 1:
+			hud.toast("%s took %d hearts!\nRun away!" % [zombie.type.name, zombie.type.touchHearts], 1.5)
+		else:
+			hud.toast("Ouch! Last heart!\nRun away!" if hero.hearts == 1 else "Ouch! Run away!", 1.5)
+
+
+## Zombies groan now and then, louder when they're close.
+func groan_now_and_then(z: Zombie, delta: float) -> void:
+	z.groan_in -= delta
+	if z.groan_in > 0:
+		return
+	z.groan_in = randf_range(6, 14)
+	var d := Vector2(z.position.x - hero.position.x, z.position.z - hero.position.z).length()
+	if d < 18 and time - last_groan > 1.2:
+		last_groan = time
+		Sound.play("groan", randf_range(0.9, 1.15) / z.type.size, (1 - d / 18) * 0.9)
 
 
 ## A few zombies arrive, away from the hero.
@@ -143,6 +228,7 @@ func pop_zombie(zombie: Zombie) -> void:
 	var size: float = zombie.type.size
 	effects.confetti(zombie.centre())
 	effects.float_text(zombie.centre() + Vector3(0, size, 0), "POP!", Color("9cff57"), 1.4 * size)
+	coins.burst(zombie.centre(), zombie.type.tagBux)
 	Sound.play("pop", randf_range(0.95, 1.15) / size)
 	zombies.erase(zombie)
 	zombie.queue_free()

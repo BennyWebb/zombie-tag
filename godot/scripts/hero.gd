@@ -1,7 +1,8 @@
 class_name Hero
 extends Node3D
 ## You! Seen from your own eyes: you walk and turn, and your hand swings your weapon at the nearest
-## zombie in front of you (like src/player.js).
+## zombie in front of you (like src/player.js). Zombie touches cost hearts; lose them all and you're
+## tagged, and after a countdown you're back at the start.
 ## For now it's always the Spiky Stick, and it never breaks; the shop and the other weapons come in
 ## phases 3 and 4.
 
@@ -9,7 +10,7 @@ signal bonked(zombie: Zombie, weapon: Dictionary, push: Vector3) # a swing lande
 
 const HAND_REST := Vector3(0.38, -0.42, -0.65) # where the hand sits, from the camera
 
-var level: Level
+var level: Level # the level you're in (main.gd sets it)
 var radius: float = Data.config.player.radius
 var yaw := 0.0 # which way you face: 0 is towards -z, the middle of the level from the start
 var speed_level: int = Data.config.player.startSpeed
@@ -21,12 +22,16 @@ var swing := 0.0 # counts down while swinging
 var swing_hit := false
 var attack_queued := false # a press during a swing is remembered, so mashing never feels ignored
 
+var tag_bux := 0
+var hearts: int = Data.config.player.hearts
+var shields := 0 # hits your armour can still block this level
+var shields_max := 0 # how many your best armour blocks (armour comes with the shop, in phase 3)
+var safe := 0.0 # counts down while you can't be hurt, after a zombie touch
+var tagged := 0.0 # counts down while you're tagged, before going back to the start
+var shake := 0.0 # the camera wobbles for a moment when you're hurt
+
 var camera := Camera3D.new()
 var hand: Node3D
-
-
-func _init(the_level: Level) -> void:
-	level = the_level
 
 
 func _ready() -> void:
@@ -66,8 +71,47 @@ func damage_multiplier() -> float:
 	return 1 + (strength_level - 1) * Data.config.player.strengthPerLevel
 
 
-## Moves you for one frame (main.gd calls this, so everything moves in a set order). zombies: the ones you could bump into or bonk.
+## A zombie touch. Returns "" if you couldn't be hurt just now, "shield" if your armour blocked it,
+## or "heart" if it cost you hearts (and then `tagged` says whether that was your last).
+func hurt(amount: int) -> String:
+	if safe > 0 or tagged > 0:
+		return ""
+	safe = Data.config.player.safeTime
+	shake = 0.3
+	if shields > 0:
+		shields -= 1
+		return "shield"
+	hearts = maxi(0, hearts - amount)
+	if hearts == 0:
+		tagged = Data.config.player.taggedTime
+		hand.visible = false
+	return "heart"
+
+
+## Back at the start with full hearts, after being tagged.
+func respawn(spot: Dictionary) -> void:
+	start_at(spot)
+	hearts = Data.config.player.hearts
+	shields = shields_max
+	tagged = 0
+	safe = Data.config.player.safeTime
+	swing = 0
+	attack_queued = false
+	hand.rotation = Vector3.ZERO
+	hand.visible = true
+
+
+## Moves you for one frame (main.gd calls this, so everything moves in a set order).
+## zombies: the ones you could bump into or bonk.
 func update(delta: float, zombies: Array) -> void:
+	# a little wobble when a zombie touches you, and your hand blinks while you can't be hurt
+	shake = maxf(0.0, shake - delta)
+	camera.position.x = randf_range(-0.25, 0.25) * shake
+	safe = maxf(0.0, safe - delta)
+	if tagged > 0:
+		return # main.gd counts down and brings you back
+	hand.visible = safe <= 0 or int(safe * 8) % 2 == 0
+
 	# turning: keys turn a little faster than a joypad, which is easy to overshoot with
 	var turn := Input.get_axis("turn_right", "turn_left")
 	var turn_speed: float = Data.config.controls.padTurnSpeed if Controls.using_joypad else Data.config.player.turnSpeed
@@ -93,13 +137,14 @@ func update(delta: float, zombies: Array) -> void:
 	rotation.y = yaw
 	# a little head bob
 	camera.position.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 else 0.0)
+	camera.position.y += randf_range(-0.25, 0.25) * shake
 
 	update_swing(delta, zombies, walk != 0)
 
 
 # Presses are caught as they happen, so even a tap quicker than a frame isn't missed.
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("attack"):
+	if event.is_action_pressed("attack") and tagged <= 0:
 		attack_queued = true
 
 

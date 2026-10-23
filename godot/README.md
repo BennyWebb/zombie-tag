@@ -12,7 +12,7 @@ to play.
 | --- | --- | --- |
 | 0 | ✅ | Export the browser game's levels, characters, sounds and numbers |
 | 1 | ✅ | Walk and bonk in Sunny Park: the level, sky and sun, a hero, Shufflers that chase you and pop into confetti |
-| 2 | | Tag Bux coins, hearts and the HUD |
+| 2 | ✅ | Tag Bux coins, hearts, getting tagged, and the HUD |
 | 3 | | The shop and gym |
 | 4 | | All the weapons |
 | 5 | | Two players, split screen |
@@ -62,7 +62,9 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `hero.gd` | You: walking, turning, and swinging your weapon at the nearest zombie in front of you | `src/player.js` |
 | `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked | `src/zombie.js` |
 | `effects.gd` | Confetti and words that float up, like "POP!" | `src/effects.js` |
-| `hud.gd` | What's drawn over the game | `src/hud.js` |
+| `coins.gd` | Tag Bux coins: bursting out, bouncing, flying to you | `src/coins.js` |
+| `hud.gd` | What's drawn over the game: hearts, Tag Bux, messages, the TAGGED! screen | `src/hud.js` |
+| `hud_icon.gd` | The HUD's hearts, armour shields and coin, drawn as shapes | |
 | `data.gd` | Reads the exported numbers and helps with the models (an autoload: use it anywhere as `Data`) | |
 | `controls.gd` | The keys and joypad buttons for each action (an autoload: `Controls`) | `src/input.js` |
 | `sound.gd` | Plays sound effects and music (an autoload: `Sound`) | `src/audio.js` |
@@ -71,6 +73,7 @@ Everything is made in code, so you can read how it fits together, starting from 
 
 | Folder | What's in it |
 | --- | --- |
+| `fonts/` | [Fredoka](https://github.com/hafontia/Fredoka-One), the round font the browser game asks for (free to use under the SIL Open Font License in `fonts/OFL.txt`) |
 | `data/config.json` | All the game's numbers, from `src/config.js`: speeds, prices, weapons, zombies, levels... |
 | `data/levels/` | Each level's layout: colliders, where you start, the gate, the building spots, sky, fog and light colours |
 | `data/models.json` | What's in each model: its parts' names, which materials to recolour, and which parts start hidden |

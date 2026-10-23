@@ -9,6 +9,7 @@ const CONFETTI_COLOURS := [0xff4f8b, 0xffe066, 0x4fc3f7, 0x9cff57, 0xb28dff, 0xf
 var confetti_mesh := QuadMesh.new()
 var confetti_colours := Gradient.new()
 var texts: Array = [] # [Label3D, life left]
+var font: Font = load("res://fonts/fredoka_bold.tres")
 
 
 func _ready() -> void:
@@ -88,6 +89,7 @@ func confetti(pos: Vector3, count := 70) -> void:
 func float_text(pos: Vector3, text: String, colour: Color, size := 1.6) -> void:
 	var label := Label3D.new()
 	label.text = text
+	label.font = font
 	label.modulate = colour
 	label.outline_modulate = Color("4b1e8a")
 	label.outline_size = 24

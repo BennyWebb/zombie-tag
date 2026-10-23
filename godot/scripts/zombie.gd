@@ -19,7 +19,9 @@ var time := randf() * 10.0
 var spawn_pop := 0.0 # grows out of the ground when it arrives
 var flash := 0.0 # flashes white for a moment when it's hit
 var squash := 0.0
-var knock_vel := Vector3.ZERO # set when a weapon bonks it backwards
+var knock_vel := Vector3.ZERO # set when a weapon bonks it backwards, or it bounces off you
+var dizzy := 0.0 # counts down after it tags you; it stands still, seeing stars
+var groan_in := randf_range(2, 10) # time until it groans (main.gd plays it)
 var wander_target = null # a Vector3, or null when it needs a new one
 var wander_timer := 0.0
 
@@ -28,6 +30,7 @@ var body: Node3D
 var arms: Array[Node3D] = []
 var legs: Array[Node3D] = []
 var pupils: Array[Node3D] = []
+var stars: Node3D
 var flash_materials: Array[StandardMaterial3D] = []
 
 
@@ -51,6 +54,7 @@ func _ready() -> void:
 		arms.append(model.find_child("arm" + side, true, false))
 		legs.append(model.find_child("leg" + side, true, false))
 		pupils.append(model.find_child("pupil" + side, true, false))
+	stars = model.find_child("stars", true, false)
 	# its own colours, picked from its kind's (and its own copies, so it can flash on its own)
 	var colours: Dictionary = Data.models.zombieColours.get(kind, Data.models.zombieColours.default)
 	var picks := { skin = colours.skins.pick_random(), shirt = colours.shirts.pick_random() }
@@ -78,14 +82,27 @@ func knock(direction: Vector3, amount: float) -> void:
 	knock_vel += direction * amount
 
 
+## Standing still: dizzy (more ways come with the other weapons in phase 4).
+func stuck() -> bool:
+	return dizzy > 0
+
+
+## Only a zombie that's fully arrived and not stuck can tag you.
+func can_tag() -> bool:
+	return spawn_pop >= 1 and not stuck()
+
+
 ## Moves it for one frame. heroes: everyone it could chase. others: the other zombies.
 func update(delta: float, heroes: Array, others: Array) -> void:
 	time += delta
 	spawn_pop = minf(1.0, spawn_pop + delta * 2.0)
+	dizzy = maxf(0.0, dizzy - delta)
 
-	# go for the nearest hero
+	# go for the nearest hero who isn't tagged
 	var hero = null
 	for h in heroes:
+		if h.tagged > 0:
+			continue
 		if hero == null or position.distance_to(h.position) < position.distance_to(hero.position):
 			hero = h
 	var to_hero := Vector3.ZERO
@@ -94,7 +111,9 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	var speed := 0.0
 	var dir := Vector3.ZERO
 
-	if hero and to_hero.length() < type.noticeDistance:
+	if stuck():
+		pass # seeing stars: stay put
+	elif hero and to_hero.length() < type.noticeDistance:
 		# chase, and stop once touching the hero
 		var touching: float = radius + hero.radius + 0.15
 		if to_hero.length() > touching:
@@ -145,7 +164,11 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 ## The silly walk: a wobble, swinging legs, waving arms and googly eyes.
 func animate(delta: float, speed: float) -> void:
 	var walk := time * (7.0 if speed > 2 else 4.0) if speed > 0 else 0.0
-	body.rotation.z = sin(time * 2.3) * 0.12
+	# a wobble, much more when dizzy, with stars going round its head
+	body.rotation.z = sin(time * 6) * 0.25 if dizzy > 0 else sin(time * 2.3) * 0.12
+	stars.visible = dizzy > 0
+	if dizzy > 0:
+		stars.rotate_y(delta * 6)
 	body.position.y = absf(sin(walk)) * 0.08
 	legs[0].rotation.x = sin(walk) * 0.5
 	legs[1].rotation.x = -sin(walk) * 0.5

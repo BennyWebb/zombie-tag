@@ -6,7 +6,9 @@ var config: Dictionary # data/config.json: everything in the browser game's src/
 var models: Dictionary # data/models.json: part names, recolourable materials, hidden parts
 
 
-func _ready() -> void:
+# (loaded straight away, rather than in _ready, so other scripts' variables can use it as they're
+# made)
+func _init() -> void:
 	config = load_json("res://data/config.json")
 	models = load_json("res://data/models.json")
 

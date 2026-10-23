@@ -7,8 +7,9 @@ const VOICES := 12 # how many sound effects can play at once
 var players: Array[AudioStreamPlayer] = []
 var next_player := 0
 var music_player := AudioStreamPlayer.new()
-var streams := {} # sound name -> AudioStream, loaded the first time it's played
+var streams := {} # sound name -> AudioStream (all loaded at the start)
 var song := ""
+var sounds_db := 0.0 # the sound effects' volume setting
 
 
 func _ready() -> void:
@@ -28,12 +29,12 @@ func _ready() -> void:
 
 func set_volumes(music_volume: float, sounds_volume: float) -> void:
 	music_player.volume_db = linear_to_db(music_volume / 10.0)
-	for p in players:
-		p.volume_db = linear_to_db(sounds_volume / 10.0)
+	sounds_db = linear_to_db(sounds_volume / 10.0)
 
 
 ## Plays a sound effect. pitch: 1 is normal, higher is squeakier (and a little shorter).
-func play(sound: String, pitch := 1.0) -> void:
+## volume: 1 is normal, 0 is silent.
+func play(sound: String, pitch := 1.0, volume := 1.0) -> void:
 	if not streams.has(sound):
 		streams[sound] = load("res://sounds/sfx/%s.wav" % sound)
 	# use the voices in turn, so a new sound only cuts off the oldest one
@@ -41,6 +42,7 @@ func play(sound: String, pitch := 1.0) -> void:
 	next_player = (next_player + 1) % VOICES
 	p.stream = streams[sound]
 	p.pitch_scale = pitch
+	p.volume_db = sounds_db + linear_to_db(volume)
 	p.play()
 
 
