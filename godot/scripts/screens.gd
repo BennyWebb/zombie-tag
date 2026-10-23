@@ -9,7 +9,8 @@ extends CanvasLayer
 ##   creator     The character creator (creator.gd), for new heroes
 ##   difficulty  How hard? Easy, Hard or Hardcore
 ##   levels      Pick a level
-##   paused      Music and sound volumes, and back to the start screen
+##   paused      Music and sound volumes, joypads, graphics, and back to the start screen
+##   graphics    The graphics settings, which change straight away so you can see what they do
 ##   gameover    Hardcore: everyone's out
 ## main.gd runs the game itself; this tells it what to play.
 
@@ -31,6 +32,8 @@ var devices: Array = [] # what each player picked her hero with (see Controls.se
 var removing := {} # the profile "Delete?" is asking about
 var creator: Creator
 var remote_back := false # the TV remote's Back button (main.gd sets it)
+var speed_line := Label.new() # the frame rate, on the graphics screen
+var speed_time := 0.0
 
 
 func _init(the_main) -> void:
@@ -38,6 +41,9 @@ func _init(the_main) -> void:
 	layer = 5 # over the HUDs
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
+	speed_line.add_theme_font_size_override("font_size", 24)
+	speed_line.add_theme_color_override("font_color", Color("9cff57"))
+	speed_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func active() -> bool:
@@ -143,6 +149,13 @@ func to_levels() -> void:
 func _process(delta: float) -> void:
 	if screen == "":
 		return
+	if screen == "graphics":
+		# how fast it's going now (twice a second)
+		speed_time -= delta
+		if speed_time <= 0:
+			speed_time = 0.5
+			speed_line.text = "Now: %d fps (%.1f ms a frame; 60 fps needs 16.7)" % [
+				Performance.get_monitor(Performance.TIME_FPS), Performance.get_monitor(Performance.TIME_PROCESS) * 1000]
 	wait -= delta
 	if wait > 0 or screen == "creator":
 		return
@@ -234,22 +247,55 @@ func _process(delta: float) -> void:
 				to_difficulty()
 				return
 		"paused":
+			# music, sounds, joypads, graphics, start screen
 			if up:
 				choice = maxi(0, choice - 1)
 			if down:
-				choice = mini(2, choice + 1)
+				choice = mini(4, choice + 1)
 			var change := (1 if right else 0) - (1 if left else 0)
 			if change and choice < 2:
 				Sound.play("tick")
 				Save.set_volumes(Save.music + (change if choice == 0 else 0), Save.sounds + (change if choice == 1 else 0))
 				draw()
-			if go and choice == 2:
+			if (change or go) and choice == 2:
+				Sound.play("tick")
+				Save.two_sticks = not Save.two_sticks
+				Controls.set_two_sticks(Save.two_sticks)
+				Save.write()
+				draw()
+			if go and choice == 3:
+				Sound.play("select")
+				choice = 0
+				show_screen("graphics")
+				return
+			if go and choice == 4:
 				Sound.play("select")
 				main.quit_to_title()
 				return
 			if back:
 				show_screen("")
 				main.unpause()
+				return
+		"graphics":
+			var keys: Array = Graphics.OPTIONS.keys()
+			if up:
+				choice = maxi(0, choice - 1)
+			if down:
+				choice = mini(keys.size(), choice + 1)
+			var change := (1 if right else 0) - (1 if left else 0)
+			if choice < keys.size() and (change or go):
+				# go steps on through the choices too, round to the first again
+				var g: Dictionary = Save.graphics[str(main.heroes.size())]
+				var n: int = Graphics.OPTIONS[keys[choice]].choices.size()
+				g[keys[choice]] = clampi(g[keys[choice]] + change, 0, n - 1) if change else (g[keys[choice]] + 1) % n
+				Sound.play("tick")
+				Save.write()
+				main.apply_graphics()
+				draw()
+			if back or (go and choice == keys.size()):
+				Sound.play("select")
+				choice = 3
+				show_screen("paused")
 				return
 		"gameover":
 			if go or back:
@@ -265,7 +311,7 @@ func _input(event: InputEvent) -> void:
 	if screen != "who" or wait > 0 or not event.is_pressed() or event.is_echo():
 		return
 	var mine: Dictionary = devices[0] if slot == 1 else {}
-	if event is InputEventJoypadButton and event.button_index in Controls.PAD.attack[0]:
+	if event is InputEventJoypadButton and event.button_index in Controls.PAD.attack:
 		if mine.get("pad") == event.device:
 			Sound.play("nope") # that's Player 1's joypad
 		else:
@@ -284,6 +330,8 @@ func _input(event: InputEvent) -> void:
 # ---------- drawing ----------
 
 func draw() -> void:
+	if speed_line.get_parent():
+		speed_line.get_parent().remove_child(speed_line) # (kept, not freed)
 	for child in root.get_children():
 		if child != creator:
 			root.remove_child(child)
@@ -437,7 +485,13 @@ func draw_levels(column: VBoxContainer) -> void:
 func draw_paused(column: VBoxContainer) -> void:
 	column.add_child(heading("Paused", 100))
 	var bar := func(n: int) -> String: return "▮".repeat(n) + "▯".repeat(10 - n)
-	var rows := [["🎵 Music", bar.call(Save.music)], ["🔊 Sounds", bar.call(Save.sounds)], ["🏠 Start screen", Controls.button()]]
+	var rows := [
+		["🎵 Music", bar.call(Save.music)],
+		["🔊 Sounds", bar.call(Save.sounds)],
+		["🎮 Joypads", "Two sticks" if Save.two_sticks else "Simple"],
+		["✨ Graphics", "➜"],
+		["🏠 Start screen", Controls.button()],
+	]
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 8)
 	list.custom_minimum_size.x = 600
@@ -451,7 +505,44 @@ func draw_paused(column: VBoxContainer) -> void:
 		row.add_child(MenuScreen.label(rows[i][1], 30, PINK if i == choice else YELLOW))
 		list.add_child(card(row, i == choice))
 	column.add_child(line("%s choose  ·  %s change" % ["🡑 🡓", "🡐 🡒"], 26, Color.WHITE))
+	column.add_child(line("🎮 Simple: the left stick walks and turns.  Two sticks: the left stick walks and steps sideways, the right one turns.", 20, Color.WHITE))
 	column.add_child(line("Press %s to keep playing" % back_name(), 30, YELLOW))
+
+
+## The graphics settings: a panel on the left, without the purple wash, so you can see the game
+## change behind it.
+func draw_graphics(column: VBoxContainer) -> void:
+	root.get_child(0).color.a = 0.0
+	column.anchor_right = 0
+	column.offset_left = 30
+	column.offset_right = 650
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	var count: int = main.heroes.size()
+	box.add_child(heading("Graphics", 52))
+	box.add_child(line("For %s · they change straight away" % ("1 player" if count == 1 else "2 players"), 24, Color.WHITE))
+	box.add_child(speed_line)
+	var g: Dictionary = Save.graphics[str(count)]
+	var keys: Array = Graphics.OPTIONS.keys()
+	for i in keys.size() + 1:
+		var row := HBoxContainer.new()
+		var chosen := i == choice
+		var name_text: String = Graphics.OPTIONS[keys[i]].label if i < keys.size() else "↩ Back"
+		var name_label := MenuScreen.label(name_text, 26, PURPLE if chosen else Color.WHITE)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+		if i < keys.size():
+			var value: String = Graphics.OPTIONS[keys[i]].choices[g[keys[i]]]
+			row.add_child(MenuScreen.label("◀ %s ▶" % value, 26, PINK if chosen else YELLOW))
+		var c := card(row, chosen)
+		c.get_theme_stylebox("panel").content_margin_top = 4
+		c.get_theme_stylebox("panel").content_margin_bottom = 4
+		box.add_child(c)
+	box.add_child(line("Further down the choices is quicker, but not as nice", 22, Color.WHITE))
+	box.add_child(line("%s choose  ·  🡐 🡒 change  ·  %s back" % ["🡑 🡓", back_name()], 24, YELLOW))
+	var panel := card(box, false)
+	panel.get_theme_stylebox("panel").bg_color = Color(40 / 255.0, 15 / 255.0, 80 / 255.0, 0.8)
+	column.add_child(panel)
 
 
 func draw_gameover(column: VBoxContainer) -> void:

@@ -18,7 +18,7 @@ to play.
 | 5 | ✅ | Two players, split screen |
 | 6 | ✅ | All ten levels and the Zombie King |
 | 7 | ✅ | Menus, the character creator, saving, sound settings |
-| 8 | | The Android TV app for the Shield, and speed-ups |
+| 8 | ✅ | The Android TV app for the Shield, graphics settings, and joypads with two sticks |
 
 **Controls:** on a joypad, the left stick or d-pad walks and turns, and any face button or the right
 trigger bonks (hold it to keep shooting). Start pauses. On a keyboard: W / S or ↑ / ↓ walk, A / D or
@@ -41,10 +41,10 @@ the Android version only talk about joypad buttons (the TV has no keyboard).
 **Saving:** each hero's progress is saved in `user://save.json`: on a computer that's in Godot's app
 data folder (Project → Open User Data Folder), and on the Shield in the app's own storage.
 
-## Trying it on the Shield
+## The app on the Shield
 
-Until phase 8 makes it a proper Android TV app (with a tile on the home screen), Godot's **one-click
-deploy** puts a test version on the Shield and starts it:
+The game is an Android TV app, with its own tile on the Shield's home screen (the banner in
+`icons/banner.png`). Getting it there the first time:
 
 1. In Godot: **Editor → Manage Export Templates → Download and Install** (once).
 2. **Editor → Editor Settings → Export → Android** (once):
@@ -52,21 +52,49 @@ deploy** puts a test version on the Shield and starts it:
      that comes with Android Studio) or the Java 21 from `winget install Microsoft.OpenJDK.21`.
    - **Android SDK Path**: `C:\Users\<you>\AppData\Local\Android\Sdk`.
    Godot makes its own debug key for signing the app.
-3. Connect to the Shield (with Network debugging on, as for the browser version's app):
+3. **Project → Install Android Build Template…** (once). Showing on the TV's home screen needs the
+   app built the full way ("Gradle"), which uses this template. It goes in the `android/` folder,
+   which git leaves out, since it belongs to your copy of Godot. The first build downloads what it
+   needs, so it takes a few minutes; after that it's quicker.
+4. Connect to the Shield (with Network debugging on, as for the browser version's app):
    ```
    "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" connect <the Shield's IP address>:5555
    ```
-4. A **Remote Deploy** button (▶ with radio waves) appears next to the play buttons at the top right
-   of Godot (restart Godot if you pulled while it was open). Click it and pick the Shield: Godot builds
-   the game, puts it on the Shield and starts it. Next time, steps 3 and 4 are all you need.
+5. Click **Remote Deploy** (▶ with radio waves, at the top right) and pick the Shield: Godot builds the
+   app, puts it on the Shield and starts it. Next time, steps 4 and 5 are all you need.
 
-   If it doesn't appear, check **Project → Export…** lists **Android (Runnable)** with no red errors,
+   If it doesn't work, check **Project → Export…** lists **Android (Runnable)** with no red errors,
    and that `adb devices` shows the Shield as `device` (not `unauthorized` or `offline`). Or export
    an APK from that window and install it with `adb install -r zombie-tag.apk`.
 
-On the Shield, Back or Start pauses. To start it again later without the PC, it's in **Settings →
-Apps → See all apps → Zombie Tag (Godot)**. Press **Back / View / Select** on a joypad (F3 on a
-keyboard) to see the frame rate and how big it's drawn.
+After that, **Zombie Tag** is on the Shield's home screen (in the Apps row; hold Select on it to move
+it). The older test version, "Zombie Tag (Godot)", and the browser version's app can be uninstalled
+in **Settings → Apps**.
+
+The banner: Godot has no setting for a TV banner, so the little add-on in `addons/tv_banner/` puts
+`icons/banner.png` into the build template each time you export. `tools/make-icons.gd` drew the icon
+and banner from the game's own models (`godot --path godot -s ../tools/make-icons.gd`).
+
+## Making it run smoothly
+
+**Pause → ✨ Graphics** changes how the game is drawn while you watch, with the frame rate at the top
+(60 fps needs each frame to take 16.7 ms or less). There's a set of settings for 1 player and another
+for 2, since two players draw the world twice. Further down each list is quicker but not as nice:
+
+| Setting | What it does |
+| --- | --- |
+| 🖼️ Sharpness | Draws the world with fewer dots and stretches it to fit (the HUD and menus stay sharp) |
+| 🌳 Shadows | The sun's shadows in four layers near to far, two, one, or none (each layer draws everything that casts a shadow again) |
+| ✨ Smooth edges | Smoothing jagged edges ("anti-aliasing"): 4x, 2x or off |
+| 🔭 View distance | Brings the fog in, and doesn't draw anything past it (far things like the sun go too) |
+| ❄️ Snow and lamps | The snow, sparkles and fireflies, and the lamps and torches at night |
+
+They're saved with the game. **F3** (Back / View / Select on a joypad) shows the frame rate and draw
+calls while playing.
+
+**Pause → 🎮 Joypads** chooses how joypads play: **Simple** (the left stick or d-pad walks and turns,
+for joypads with one stick or none) or **Two sticks** (the left stick walks and steps sideways and the
+right stick turns, like an Xbox controller in most games). The d-pad always walks and turns.
 
 ## The scripts
 
@@ -95,13 +123,16 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `shop.gd` | The shop: weapons, Heart Medicine, armour and outfits | `src/shop.js` |
 | `gym.gd` | The gym: the treadmill and weights mini-games | `src/gym.js` |
 | `data.gd` | Reads the exported numbers and helps with the models (an autoload: use it anywhere as `Data`) | |
-| `controls.gd` | Each player's keys and joypad buttons, and Player 2 joining (an autoload: `Controls`) | `src/input.js` |
+| `controls.gd` | Each player's keys and joypad buttons and sticks, and the menus' buttons (an autoload: `Controls`) | `src/input.js` |
+| `graphics.gd` | The graphics settings, and what each choice does | |
 | `sound.gd` | Plays sound effects and music (an autoload: `Sound`) | `src/audio.js` |
 
 ## What's in the other folders
 
 | Folder | What's in it |
 | --- | --- |
+| `icons/` | The app's icon (with the two halves of its Android "adaptive" icon) and its TV banner |
+| `addons/tv_banner/` | Puts the TV banner into the Android app when it's exported |
 | `fonts/` | [Fredoka](https://github.com/hafontia/Fredoka-One), the round font the browser game asks for, with just the emoji and arrows the game uses from Noto Color Emoji (`emoji.ttf`) and Noto Sans Symbols 2 (`symbols.ttf`) to fall back on. All free to use under the SIL Open Font License (the `OFL*.txt` files). `tools/subset-fonts.py` makes the two small ones again, if the game needs a new emoji |
 | `data/config.json` | All the game's numbers, from `src/config.js`: speeds, prices, weapons, zombies, levels... |
 | `data/levels/` | Each level's layout: colliders, where you start, the gate, the building spots, sky, fog and light colours |
@@ -159,11 +190,11 @@ var colour := Color.hex((int(c) << 8) | 0xff)
 pushes heroes and zombies out of them in `src/world.js` (`resolveCollisions`).
 
 **Lights.** Each level's `light` has the sky, ground and sun colours and strengths (a hemisphere light
-and a sun at `sunPosition`). `pointLights` lists the lamps and torches; on the Shield, glowing
-materials are cheaper than real lights.
+and a sun at `sunPosition`). `pointLights` lists the lamps and torches (the game makes each an `OmniLight3D`; the
+Graphics menu's "Snow and lamps" turns them off).
 
-**Floaters** (`floaters`: the snow, fireflies and sparkles) are little dots drifting about. Make them
-with a `CPUParticles3D` using the count, colour, size and heights listed.
+**Floaters** (`floaters`: the snow, fireflies and sparkles) are little dots drifting about, with the
+count, colour, size and heights listed. `scripts/floaters.gd` draws them, moving them in a shader.
 
 **Sounds.** Sound effects are recorded at normal pitch. The game plays some higher or lower (the coin's
 ka-ching goes up as you collect more), which in Godot is `pitch_scale` on the `AudioStreamPlayer`.

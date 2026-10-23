@@ -18,6 +18,9 @@ var signs: Array[Node3D] = [] # the shop's and gym's spinning signs
 var doors := {} # "shop" and "gym": { door = Vector2 (x, z), outside = where you come back out }
 var time := 0.0
 var sun := DirectionalLight3D.new()
+var env := Environment.new()
+var lamps: Array[OmniLight3D] = []
+var floaters: Array[Floaters] = []
 var carousel: Node3D # (the Funfair's rides, or null)
 var ferris_wheel: Node3D
 
@@ -43,14 +46,15 @@ func _ready() -> void:
 	add_sky_and_light()
 	add_lamps()
 	for settings in info.floaters:
-		add_child(Floaters.new(settings))
+		var f := Floaters.new(settings)
+		add_child(f)
+		floaters.append(f)
 	add_buildings()
 
 
 func add_sky_and_light() -> void:
 	var light: Dictionary = info.light
 	var sky := Data.colour(info.sky)
-	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = sky
 	# The browser game lights things with a "hemisphere" light (sky colour from above, ground colour
@@ -88,17 +92,32 @@ func add_lamps() -> void:
 		lamp.omni_range = l.range
 		lamp.omni_attenuation = 2.0 # fading like the browser game's (which fades with distance squared)
 		add_child(lamp)
+		lamps.append(lamp)
 
 
-## With two players the world is drawn twice, so the sun's shadows are made more simply: in two
-## layers rather than four (each layer draws everything that casts a shadow again), reaching 40 m
-## rather than 60, on a shadow map half the usual size. The shadows close to you stay sharp.
-func set_two_player_shadows(two: bool) -> void:
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if two else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = 40.0 if two else 60.0
+## Uses the graphics settings (see graphics.gd) for the shadows, how far you can see, and the
+## extras. Returns how far the cameras should draw.
+func set_graphics(g: Dictionary) -> float:
+	# the sun's shadows: each layer draws everything that casts a shadow again, so fewer layers
+	# (reaching less far) take less time; the shadows close to you stay sharp
+	sun.shadow_enabled = g.shadows < 3
+	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS,
+		DirectionalLight3D.SHADOW_ORTHOGONAL, DirectionalLight3D.SHADOW_ORTHOGONAL][g.shadows]
+	sun.directional_shadow_max_distance = [60.0, 40.0, 30.0, 30.0][g.shadows]
 	# (the usual size is smaller on Android already: Godot's "size.mobile" setting)
 	var usual: int = ProjectSettings.get_setting_with_override("rendering/lights_and_shadows/directional_shadow/size")
-	RenderingServer.directional_shadow_atlas_set_size(usual / 2 if two else usual, true)
+	RenderingServer.directional_shadow_atlas_set_size(usual if g.shadows == 0 else usual / 2, true)
+	# how far: nothing past the end of the fog is drawn, so bringing the fog in draws less (things
+	# far away, like the sun, the moon and far clouds, go too)
+	var fog_end: float = [info.fog.end, minf(info.fog.end, 70.0), minf(info.fog.end, 45.0)][g.distance]
+	env.fog_depth_end = fog_end
+	env.fog_depth_begin = minf(info.fog.start, fog_end * 0.4)
+	# the extras
+	for f in floaters:
+		f.visible = g.extras == 0
+	for lamp in lamps:
+		lamp.visible = g.extras == 0
+	return 300.0 if g.distance == 0 else fog_end + 5
 
 
 ## The shop and the gym go at two of the six spots, at least 30 m apart, different every time.

@@ -1,0 +1,33 @@
+class_name Graphics
+## The graphics settings, so the game can be tuned to run smoothly on the TV box while you watch
+## (the pause menu's "Graphics", see screens.gd). Each is a list of choices, best looking first;
+## the ones further down draw less, so each frame takes less time.
+##   resolution  how many dots the world is drawn with, across and down (the HUD and menus stay sharp)
+##   shadows     the sun's shadows: in four layers near to far (each layer draws everything that
+##               casts a shadow again), two, one, or none
+##   smoothing   smoothing the jagged edges of things ("multisample anti-aliasing")
+##   distance    how far you can see: anything past it isn't drawn, and the fog comes in to hide it
+##   extras      the snow, sparkles and fireflies, and the glowing lamps and torches at night
+## main.gd uses them (apply_graphics), and level.gd does the shadows, distance and extras.
+
+const OPTIONS := {
+	resolution = { label = "🖼️ Sharpness", choices = ["100%", "90%", "80%", "70%", "60%", "50%"] },
+	shadows = { label = "🌳 Shadows", choices = ["Best", "Good", "Simple", "Off"] },
+	smoothing = { label = "✨ Smooth edges", choices = ["4x", "2x", "Off"] },
+	distance = { label = "🔭 View distance", choices = ["Far", "Medium", "Near"] },
+	extras = { label = "❄️ Snow and lamps", choices = ["On", "Off"] },
+}
+
+
+## The usual settings: as good as the Shield managed at 60 fps with one player, and simpler
+## shadows with two.
+static func defaults(players: int) -> Dictionary:
+	return { resolution = 0, shadows = 0 if players == 1 else 1, smoothing = 1, distance = 0, extras = 0 }
+
+
+static func resolution_scale(g: Dictionary) -> float:
+	return [1.0, 0.9, 0.8, 0.7, 0.6, 0.5][g.resolution]
+
+
+static func msaa(g: Dictionary) -> Viewport.MSAA:
+	return [Viewport.MSAA_4X, Viewport.MSAA_2X, Viewport.MSAA_DISABLED][g.smoothing]

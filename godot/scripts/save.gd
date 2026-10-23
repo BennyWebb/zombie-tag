@@ -15,6 +15,10 @@ var player_count := 1
 var difficulty := "easy"
 var music := 6 # the volumes, 0 to 10
 var sounds := 8
+var two_sticks := false # how joypads play (see controls.gd)
+# The graphics settings (see Graphics.OPTIONS), one set for 1 player and one for 2, since two
+# players draw the world twice and may need simpler settings.
+var graphics := { "1": Graphics.defaults(1), "2": Graphics.defaults(2) }
 
 
 func _ready() -> void:
@@ -22,6 +26,7 @@ func _ready() -> void:
 	sounds = Data.config.sound.sounds
 	read()
 	Sound.set_volumes(music, sounds)
+	Controls.set_two_sticks(two_sticks)
 
 
 func read() -> void:
@@ -37,6 +42,13 @@ func read() -> void:
 		difficulty = data.difficulty
 	music = int(data.get("music", music))
 	sounds = int(data.get("sounds", sounds))
+	two_sticks = data.get("twoSticks", false)
+	for count in ["1", "2"]:
+		# (only settings that still exist, and any new ones at their usual choice)
+		var saved: Dictionary = data.get("graphics", {}).get(count, {})
+		for key in graphics[count]:
+			if saved.has(str(key)) and int(saved[str(key)]) < Graphics.OPTIONS[key].choices.size():
+				graphics[count][key] = int(saved[str(key)])
 
 
 func write() -> void:
@@ -45,7 +57,7 @@ func write() -> void:
 		return # can't save here; the game still works
 	file.store_string(JSON.stringify({
 		version = 1, profiles = profiles, chosen = chosen, playerCount = player_count,
-		difficulty = difficulty, music = music, sounds = sounds,
+		difficulty = difficulty, music = music, sounds = sounds, twoSticks = two_sticks, graphics = graphics,
 	}, "\t"))
 
 

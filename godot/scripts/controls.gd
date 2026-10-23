@@ -8,12 +8,16 @@ extends Node
 ## what she picked her hero with on "Who's playing?" (see screens.gd): her own joypad, the
 ## keyboard, or half of it each (Player 1 on W A S D and Space, Player 2 on the arrows and Enter).
 ##
+## Joypads have two ways to play (a setting in the pause menu): "Simple", where the left stick (or
+## d-pad) walks and turns, for joypads with one stick or none; and "Two sticks", where the left
+## stick walks and steps sideways and the right stick turns, like most games on a joypad with two.
+##
 ## The menus have their own actions ("menu_up", "menu_go" and so on) that anyone's keys or joypad
 ## work. Menus check them once a frame with Input.is_action_just_pressed, so a stick pushed once
 ## moves the choice once.
 
 const DEADZONE := 0.2 # joypad sticks ignore tiny wobbles below this
-const PLAYER_ACTIONS := ["walk_forward", "walk_back", "turn_left", "turn_right", "attack"]
+const PLAYER_ACTIONS := ["walk_forward", "walk_back", "turn_left", "turn_right", "step_left", "step_right", "attack"]
 # the keys for each action: the whole keyboard, or each half when two players share it
 const KEYS := {
 	all = {
@@ -29,14 +33,13 @@ const KEYS := {
 		attack = [KEY_ENTER, KEY_KP_ENTER],
 	},
 }
-# the joypad buttons and sticks for each action; any face button (A B X Y, or cross circle square
-# triangle) or the right trigger bonks
+# the joypad buttons for each action (the sticks are in pad_sticks); any face button (A B X Y, or
+# cross circle square triangle) or the right trigger bonks
 const PAD := {
-	walk_forward = [[JOY_BUTTON_DPAD_UP], [JOY_AXIS_LEFT_Y, -1.0]],
-	walk_back = [[JOY_BUTTON_DPAD_DOWN], [JOY_AXIS_LEFT_Y, 1.0]],
-	turn_left = [[JOY_BUTTON_DPAD_LEFT], [JOY_AXIS_LEFT_X, -1.0]],
-	turn_right = [[JOY_BUTTON_DPAD_RIGHT], [JOY_AXIS_LEFT_X, 1.0]],
-	attack = [[JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y], [JOY_AXIS_TRIGGER_RIGHT, 1.0]],
+	walk_forward = [JOY_BUTTON_DPAD_UP], walk_back = [JOY_BUTTON_DPAD_DOWN],
+	turn_left = [JOY_BUTTON_DPAD_LEFT], turn_right = [JOY_BUTTON_DPAD_RIGHT],
+	step_left = [], step_right = [],
+	attack = [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y],
 }
 const ANY_PAD := -1
 const NO_PAD := -2
@@ -45,6 +48,7 @@ var players := 1
 var pads := [ANY_PAD, NO_PAD] # each player's joypad (a device number), ANY_PAD or NO_PAD
 var keys := ["all", ""] # each player's keys: "all", "left", "right" or "" for none
 var using_joypad := [false, false] # whether each player last used a joypad (they turn a bit slower)
+var two_sticks := false # see above (save.gd sets it)
 
 
 func _ready() -> void:
@@ -59,7 +63,7 @@ func _ready() -> void:
 	add_action("menu_down", [KEY_S, KEY_DOWN], [JOY_BUTTON_DPAD_DOWN], [JOY_AXIS_LEFT_Y, 1.0])
 	add_action("menu_left", [KEY_A, KEY_LEFT], [JOY_BUTTON_DPAD_LEFT], [JOY_AXIS_LEFT_X, -1.0])
 	add_action("menu_right", [KEY_D, KEY_RIGHT], [JOY_BUTTON_DPAD_RIGHT], [JOY_AXIS_LEFT_X, 1.0])
-	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], PAD.attack[0])
+	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], PAD.attack)
 	add_action("menu_back", [KEY_ESCAPE], [JOY_BUTTON_START])
 	# changing how your hero looks, or deleting one (Back / View / Select)
 	add_action("menu_extra", [KEY_C, KEY_X, KEY_DELETE], [JOY_BUTTON_BACK])
@@ -100,6 +104,25 @@ func set_one_player() -> void:
 	set_devices([{ keys = "all", pad = ANY_PAD }])
 
 
+func set_two_sticks(on: bool) -> void:
+	two_sticks = on
+	update_actions()
+
+
+## The sticks that work an action, each [which stick axis, which way]. The right stick always turns
+## too, so a joypad with two sticks can turn with either in "Simple".
+func pad_sticks(a: String) -> Array:
+	match a:
+		"walk_forward": return [[JOY_AXIS_LEFT_Y, -1.0]]
+		"walk_back": return [[JOY_AXIS_LEFT_Y, 1.0]]
+		"turn_left": return [[JOY_AXIS_RIGHT_X, -1.0]] + ([] if two_sticks else [[JOY_AXIS_LEFT_X, -1.0]])
+		"turn_right": return [[JOY_AXIS_RIGHT_X, 1.0]] + ([] if two_sticks else [[JOY_AXIS_LEFT_X, 1.0]])
+		"step_left": return [[JOY_AXIS_LEFT_X, -1.0]] if two_sticks else []
+		"step_right": return [[JOY_AXIS_LEFT_X, 1.0]] if two_sticks else []
+		"attack": return [[JOY_AXIS_TRIGGER_RIGHT, 1.0]]
+	return []
+
+
 ## Sets each player's actions to their keys and joypad.
 func update_actions() -> void:
 	for i in 2:
@@ -107,21 +130,22 @@ func update_actions() -> void:
 			var name := action(a, i)
 			InputMap.action_erase_events(name)
 			if keys[i] != "":
-				for key in KEYS[keys[i]][a]:
+				for key in KEYS[keys[i]].get(a, []): # (stepping sideways is joypad only)
 					var e := InputEventKey.new()
 					e.physical_keycode = key
 					InputMap.action_add_event(name, e)
 			if pads[i] != NO_PAD:
-				for button_index in PAD[a][0]:
+				for button_index in PAD[a]:
 					var e := InputEventJoypadButton.new()
 					e.button_index = button_index
 					e.device = pads[i]
 					InputMap.action_add_event(name, e)
-				var m := InputEventJoypadMotion.new()
-				m.axis = PAD[a][1][0]
-				m.axis_value = PAD[a][1][1]
-				m.device = pads[i]
-				InputMap.action_add_event(name, m)
+				for stick in pad_sticks(a):
+					var m := InputEventJoypadMotion.new()
+					m.axis = stick[0]
+					m.axis_value = stick[1]
+					m.device = pads[i]
+					InputMap.action_add_event(name, m)
 
 
 ## An action that's the same for everyone (any key or joypad). axis: [which stick axis, which way],

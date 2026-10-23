@@ -407,9 +407,13 @@ func update(delta: float, zombies: Array) -> void:
 	var walk := Input.get_axis(act("walk_back"), act("walk_forward"))
 	if walk < 0:
 		walk *= 0.7
-	if walk != 0:
-		position += forward() * walk * move_speed() * delta
-		walk_phase += delta * move_speed() * 2.2 * absf(walk)
+	# stepping sideways (the left stick, with "Two sticks" joypads)
+	var side := Input.get_axis(act("step_left"), act("step_right")) * 0.8
+	if walk != 0 or side != 0:
+		var fwd := forward()
+		position += fwd * walk * move_speed() * delta
+		position += Vector3(-fwd.z, 0, fwd.x) * side * move_speed() * delta
+		walk_phase += delta * move_speed() * 2.2 * maxf(absf(walk), absf(side))
 	position = level.resolve_collisions(position, radius)
 	# don't walk through zombies
 	for z in zombies:
@@ -423,11 +427,11 @@ func update(delta: float, zombies: Array) -> void:
 			position.z = z.position.z + d.y
 	rotation.y = yaw
 	# a little head bob
-	eye.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 else 0.0)
+	eye.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 or side != 0 else 0.0)
 	eye.y += randf_range(-0.25, 0.25) * shake
 	place_camera()
 
-	update_attack(delta, zombies, walk != 0)
+	update_attack(delta, zombies, walk != 0 or side != 0)
 
 
 # Presses are caught as they happen, so even a tap quicker than a frame isn't missed.

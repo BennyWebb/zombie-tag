@@ -9,3 +9,6 @@ godot/**/*.import
 
 # Godot writes the levels' palette pictures out of the models when it imports them
 godot/models/**/*_[0-9].png
+
+# the Android build template (Project → Install Android Build Template makes it for your Godot)
+godot/android/

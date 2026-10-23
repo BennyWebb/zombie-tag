@@ -126,13 +126,13 @@ func set_player_count(count: int) -> void:
 		shops[1].partner = heroes[0]
 		if sub_views.is_empty():
 			split_screen()
+	apply_graphics()
 
 
 ## Gives each hero her own half of the screen.
 func split_screen() -> void:
 	for hero in heroes:
 		var sub := SubViewport.new()
-		sub.msaa_3d = get_viewport().msaa_3d
 		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		add_child(sub) # (it draws the same world as the main screen)
 		hero.camera.reparent(sub)
@@ -205,7 +205,7 @@ func start_level(number: int) -> void:
 	game_over_in = 0
 	level = Level.new(number)
 	add_child(level)
-	level.set_two_player_shadows(two_players())
+	apply_graphics()
 	for i in heroes.size():
 		heroes[i].level = level
 		gyms[i].level_number = number
@@ -222,6 +222,23 @@ func start_level(number: int) -> void:
 	save_game() # progress saves at the start of each level
 	var d := Save.current_difficulty()
 	toast_all("Level %d: %s %s   %s %s\nPop all the zombies, then find the exit gate!" % [number, level.info.name, level.info.icon, d.icon, d.name], 4)
+
+
+## Uses the graphics settings for 1 or 2 players (see graphics.gd): with two, each half of the
+## screen has them; with one, the whole screen.
+func apply_graphics() -> void:
+	var g: Dictionary = Save.graphics[str(heroes.size())]
+	var views: Array = sub_views if two_players() else [get_viewport()]
+	for v in views:
+		v.scaling_3d_scale = Graphics.resolution_scale(g)
+		v.msaa_3d = Graphics.msaa(g)
+	if two_players():
+		# the main screen only shows the halves (and the menus' background, at the full settings)
+		get_viewport().scaling_3d_scale = 1.0
+	var far := level.set_graphics(g) if level else 300.0
+	for hero in heroes:
+		hero.camera.far = far
+	menu_camera.far = far
 
 
 ## Starts playing a level (from "Pick a level").
@@ -271,6 +288,7 @@ func show_background() -> void:
 			furthest = int(d.get("unlocked", 1))
 		level = Level.new(furthest)
 		add_child(level)
+	apply_graphics()
 	menu_camera.make_current()
 	Sound.music("title")
 
@@ -283,6 +301,8 @@ func quit_to_title() -> void:
 
 func unpause() -> void:
 	paused = false
+	for hud in huds:
+		hud.visible = true
 
 
 ## Each hero playing is saved into her own profile.
@@ -357,8 +377,7 @@ func pause() -> void:
 		return
 	paused = true
 	for hud in huds:
-		hud.toast_time = 0
-		hud.toast_label.modulate.a = 0
+		hud.visible = false # (so the game behind the menu is easier to see)
 	screens.choice = 0
 	screens.show_screen("paused")
 
