@@ -45,6 +45,7 @@ func _ready() -> void:
 	var model: Node3D = load("res://models/zombies/%s.glb" % kind).instantiate()
 	add_child(model)
 	Data.hide_parts(model, "zombies/" + kind)
+	Data.remove_extra_shadows(model)
 	body = model.find_child("body", true, false)
 	for side in ["L", "R"]:
 		arms.append(model.find_child("arm" + side, true, false))

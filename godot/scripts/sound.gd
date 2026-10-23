@@ -20,6 +20,10 @@ func _ready() -> void:
 	add_child(music_player)
 	# the browser game's volume settings go from 0 to 10
 	set_volumes(Data.config.sound.music, Data.config.sound.sounds)
+	# load every sound now, so the first pop or bonk doesn't wait while one loads
+	for file in ResourceLoader.list_directory("res://sounds/sfx"):
+		if file.ends_with(".wav"):
+			streams[file.get_basename()] = load("res://sounds/sfx/" + file)
 
 
 func set_volumes(music_volume: float, sounds_volume: float) -> void:

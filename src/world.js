@@ -246,7 +246,8 @@ export function buildWorld(scene, level, theme, { forExport = false } = {}) {
     new THREE.SphereGeometry(6, 20, 16),
     new THREE.MeshBasicMaterial({ color: theme.night ? 0xf4f0d0 : 0xfff176, fog: false }),
   );
-  sky.position.set(60, 70, -90);
+  // in the same direction as the light, so shadows point away from it
+  sky.position.copy(sun.position).setLength(140);
   group.add(sky);
 
   // ground inside and outside the wall, so the world doesn't end in a cliff

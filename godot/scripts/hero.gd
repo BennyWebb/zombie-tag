@@ -38,6 +38,7 @@ func _ready() -> void:
 	# the first-person hand, holding every weapon; only the one you're holding shows
 	hand = load("res://models/hand.glb").instantiate()
 	camera.add_child(hand)
+	Data.remove_extra_shadows(hand) # your hand doesn't cast a shadow, like in the browser game
 	hand.position = HAND_REST
 	for id in Data.models.models.hand.weapons:
 		hand.find_child(id, true, false).visible = id == weapon_id

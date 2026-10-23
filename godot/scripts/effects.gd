@@ -29,6 +29,27 @@ func _ready() -> void:
 	confetti_colours.colors = colours
 
 
+## Shows a burst of confetti and a word, too small and faint to see, just in front of the camera.
+## The first time something new is drawn, the graphics card has to get ready for it (it compiles
+## its "shader"), which can make the game stop for a moment; this gets that done at the start of a
+## level instead of when the first zombie pops.
+func warm_up(camera: Camera3D) -> void:
+	var front := camera.global_position - camera.global_basis.z * 2.0
+	var p := CPUParticles3D.new()
+	p.mesh = confetti_mesh
+	p.amount = 6
+	p.one_shot = true
+	p.lifetime = 0.3
+	p.scale_amount_min = 0.01
+	p.scale_amount_max = 0.01
+	p.color_initial_ramp = confetti_colours
+	p.position = front
+	add_child(p)
+	p.emitting = true
+	p.finished.connect(p.queue_free)
+	float_text(front, "POP! BONK!", Color.WHITE, 0.01)
+
+
 ## A burst of confetti when a zombie pops.
 func confetti(pos: Vector3, count := 70) -> void:
 	var p := CPUParticles3D.new()
