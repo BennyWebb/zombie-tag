@@ -21,6 +21,7 @@ func _init(icon_kind: Kind, size_px: float) -> void:
 	kind = icon_kind
 	custom_minimum_size = Vector2(size_px * (0.8 if kind == Kind.SHIELD else 1.0), size_px)
 	pivot_offset = custom_minimum_size / 2 # so it grows and spins round its middle
+	size_flags_vertical = Control.SIZE_SHRINK_CENTER # (a row taller than the icon would stretch it)
 
 
 func _draw() -> void:

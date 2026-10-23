@@ -321,8 +321,24 @@ func update(hero: Hero) -> void:
 	speed_badge.text = "Speed %d" % hero.speed_level
 	strength_badge.text = "Strength %d" % hero.strength_level
 	bux.text = str(hero.tag_bux)
-	weapon.text = hero.weapon.name
+	# the weapon you're holding (and how many hits a Spiky Stick has left), or a red warning
+	var w = hero.weapon
+	var text := "No weapon! Get a free Spiky Stick at the 🛍️ shop"
+	if w:
+		text = "%s %s" % [w.icon, w.name]
+		if w.has("hitsLeft"):
+			text += " · %d %s left" % [w.hitsLeft, "hit" if w.hitsLeft == 1 else "hits"]
+	if text != weapon.text:
+		weapon.text = text
+		var box: StyleBoxFlat = weapon_pill.get_theme_stylebox("panel")
+		box.bg_color = PILL if w else Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.75)
 	weapon_pill.visible = hero.tagged <= 0
+	# the badge for the stat you just trained does a little jump
+	if hero.stat_up != "" and not hero.inside:
+		var badge := speed_badge if hero.stat_up == "speed" else strength_badge
+		for i in 3:
+			get_tree().create_timer(i * 0.4).timeout.connect(bump.bind(badge.get_parent(), 1.25, 0.4))
+		hero.stat_up = ""
 	if hero.tagged > 0:
 		show_tagged_countdown(hero.tagged)
 

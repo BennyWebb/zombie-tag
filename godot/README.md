@@ -13,15 +13,16 @@ to play.
 | 0 | ✅ | Export the browser game's levels, characters, sounds and numbers |
 | 1 | ✅ | Walk and bonk in Sunny Park: the level, sky and sun, a hero, Shufflers that chase you and pop into confetti |
 | 2 | ✅ | Tag Bux coins, hearts, getting tagged, and the HUD |
-| 3 | | The shop and gym |
+| 3 | ✅ | The shop and gym (the weapons that shoot or throw say "Coming soon" until phase 4) |
 | 4 | | All the weapons |
 | 5 | | Two players, split screen |
 | 6 | | All ten levels and the Zombie King |
 | 7 | | Menus, the character creator, saving, sound settings |
 | 8 | | The Android TV app for the Shield, and speed-ups |
 
-**Controls (phase 1):** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks. On a joypad: the
-left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. **F3** (or
+**Controls:** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks. On a joypad: the
+left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. Walk in through the
+shop's or gym's door to go in; inside, up and down choose and bonk picks. **F3** (or
 Back / View / Select) shows the frame rate and how many things are drawn, for checking speed on the TV.
 
 ## Trying it on the Shield
@@ -65,6 +66,9 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `coins.gd` | Tag Bux coins: bursting out, bouncing, flying to you | `src/coins.js` |
 | `hud.gd` | What's drawn over the game: hearts, Tag Bux, messages, the TAGGED! screen | `src/hud.js` |
 | `hud_icon.gd` | The HUD's hearts, armour shields and coin, drawn as shapes | |
+| `menu_screen.gd` | The screen you see inside a building: title, a list to choose from, a message | `src/style.css` |
+| `shop.gd` | The shop: weapons, Heart Medicine, armour and outfits | `src/shop.js` |
+| `gym.gd` | The gym: the treadmill and weights mini-games | `src/gym.js` |
 | `data.gd` | Reads the exported numbers and helps with the models (an autoload: use it anywhere as `Data`) | |
 | `controls.gd` | The keys and joypad buttons for each action (an autoload: `Controls`) | `src/input.js` |
 | `sound.gd` | Plays sound effects and music (an autoload: `Sound`) | `src/audio.js` |
@@ -73,7 +77,7 @@ Everything is made in code, so you can read how it fits together, starting from 
 
 | Folder | What's in it |
 | --- | --- |
-| `fonts/` | [Fredoka](https://github.com/hafontia/Fredoka-One), the round font the browser game asks for (free to use under the SIL Open Font License in `fonts/OFL.txt`) |
+| `fonts/` | [Fredoka](https://github.com/hafontia/Fredoka-One), the round font the browser game asks for, with just the emoji and arrows the game uses from Noto Color Emoji (`emoji.ttf`) and Noto Sans Symbols 2 (`symbols.ttf`) to fall back on. All free to use under the SIL Open Font License (the `OFL*.txt` files). `tools/subset-fonts.py` makes the two small ones again, if the game needs a new emoji |
 | `data/config.json` | All the game's numbers, from `src/config.js`: speeds, prices, weapons, zombies, levels... |
 | `data/levels/` | Each level's layout: colliders, where you start, the gate, the building spots, sky, fog and light colours |
 | `data/models.json` | What's in each model: its parts' names, which materials to recolour, and which parts start hidden |

@@ -3,9 +3,10 @@ extends Node3D
 ## confetti and Tag Bux, a zombie touch costs a heart (lose them all and you're tagged), and once
 ## every zombie is popped the exit gate opens. Walk through it to finish.
 ##
-## So far it's Sunny Park with one hero, on Easy (getting tagged costs nothing). The shop and gym,
-## the other weapons, two players, the other levels and the menus come in the later phases (see the
-## plan in README.md).
+## Walk in through the shop's or gym's door to spend Tag Bux or train.
+##
+## So far it's Sunny Park with one hero, on Easy (getting tagged costs nothing). The other weapons,
+## two players, the other levels and the menus come in the later phases (see the plan in README.md).
 
 const START_LEVEL := 1
 
@@ -14,6 +15,8 @@ var hero := Hero.new() # the same hero all the way through, so she keeps her Tag
 var effects := Effects.new()
 var coins := Coins.new()
 var hud := Hud.new()
+var shop := ShopMenu.new()
+var gym := GymMenu.new()
 var zombies: Array[Zombie] = []
 var zombie_holder := Node3D.new() # all the zombies go in here
 var to_spawn := 0 # zombies still to arrive this level
@@ -32,7 +35,10 @@ func _ready() -> void:
 	add_child(hud)
 	zombie_holder.name = "Zombies"
 	add_child(zombie_holder)
+	hud.root.add_child(shop)
+	hud.root.add_child(gym)
 	hero.bonked.connect(hit_zombie)
+	hero.stick_broke.connect(stick_broke)
 	add_child(hero)
 	hero.camera.make_current()
 	start_level(START_LEVEL)
@@ -45,9 +51,12 @@ func start_level(number: int) -> void:
 		z.queue_free()
 	zombies.clear()
 	coins.clear()
+	if hero.inside:
+		leave_building()
 	level = Level.new(number)
 	add_child(level)
 	hero.level = level
+	gym.level_number = number
 	hero.respawn(level.info.playerStart) # full hearts, and armour shields filled up
 	warm_up()
 	to_spawn = int(level.info.zombies)
@@ -87,6 +96,11 @@ func toggle_pause() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		toggle_pause()
+	elif hero.inside and not paused:
+		if hero.inside.handle_input(event):
+			Sound.play("select")
+			leave_building()
+			hud.toast("See you soon! 👋", 1.5)
 	elif event.is_action_pressed("attack") and finished:
 		play_again()
 
@@ -149,7 +163,37 @@ func update_hero(delta: float) -> void:
 			hud.show_tagged(false)
 			hud.toast("Back at the start with 3 hearts!", 2)
 		return
+	if hero.inside:
+		return # the shop or gym has it (see _unhandled_input)
 	hero.update(delta, zombies)
+	# walk in through the shop's or gym's door
+	for kind in level.doors:
+		var door: Vector2 = level.doors[kind].door
+		if Vector2(hero.position.x, hero.position.z).distance_to(door) < hero.radius + Data.config.shop.enterDistance:
+			enter_building(shop if kind == "shop" else gym)
+
+
+func enter_building(menu: MenuScreen) -> void:
+	hero.inside = menu
+	hero.hand.visible = false
+	hud.toast_time = 0
+	menu.open(hero)
+
+
+func leave_building() -> void:
+	var menu: MenuScreen = hero.inside
+	menu.visible = false
+	hero.inside = null
+	hero.hand.visible = true
+	hero.start_at(level.doors["shop" if menu == shop else "gym"].outside)
+	hero.safe = Data.config.player.leaveShopSafeTime # a moment to get past zombies waiting at the door
+
+
+func stick_broke() -> void:
+	if hero.weapon:
+		hud.toast("Your stick broke! 🪵💥\nNow holding the %s" % hero.weapon.name)
+	else:
+		hud.toast("Your stick broke! 🪵💥\nGet a free one at the 🛍️ shop")
 
 
 ## A zombie touched you: it costs a heart (or armour takes it), and the zombie bounces off and
@@ -230,11 +274,18 @@ func hit_zombie(zombie: Zombie, weapon: Dictionary, push: Vector3) -> void:
 		return
 	if weapon.has("knockback"):
 		zombie.knock(push, weapon.knockback)
-	Sound.play("bonk", randf_range(0.9, 1.15)) # a little different every time, so it's not robotic
-	if zombie.hit(weapon.damage * hero.damage_multiplier()):
+	var wobble := randf_range(0.9, 1.15) # a little different every time, so it's not robotic
+	var chicken: bool = weapon.id == "chickenHammer"
+	Sound.play("squawk" if chicken else "bonk", wobble)
+	var popping := zombie.hit(weapon.damage * hero.damage_multiplier())
+	var word: String = weapon.get("word", "BONK!")
+	# the chicken squawks on every hit, even ones that pop
+	if chicken:
+		effects.float_text(zombie.centre() + Vector3(0, 2.0 if popping else 0.8, 0), word, Color("ffe066"), 1.3)
+	if popping:
 		pop_zombie(zombie)
-	else:
-		effects.float_text(zombie.centre() + Vector3(0, 0.8, 0), "BONK!", Color("ffe066"), 1.1)
+	elif not chicken:
+		effects.float_text(zombie.centre() + Vector3(0, 0.8, 0), word, Color("ffe066"), 1.1)
 
 
 func pop_zombie(zombie: Zombie) -> void:

@@ -13,6 +13,7 @@ var bounds: float # how far from the middle you can go
 var gate: Node3D
 var gate_open := false
 var signs: Array[Node3D] = [] # the shop's and gym's spinning signs
+var doors := {} # "shop" and "gym": { door = Vector2 (x, z), outside = where you come back out }
 var time := 0.0
 
 
@@ -90,6 +91,9 @@ func add_buildings() -> void:
 			no_fog(mesh)
 		var size: Dictionary = info.buildingSize
 		colliders.append({ x = pair[1].x, z = pair[1].z, hw = size.halfWidth, hd = size.halfDepth })
+		# the door is on the +z side; you come back out a little way in front of it, facing away
+		var door := Vector2(pair[1].x, pair[1].z + size.halfDepth)
+		doors[pair[0]] = { door = door, outside = { x = door.x, z = door.y + 2.4, yaw = PI } }
 
 
 func no_fog(mesh: MeshInstance3D) -> void:

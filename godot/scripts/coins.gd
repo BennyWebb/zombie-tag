@@ -60,7 +60,7 @@ func update(delta: float, heroes: Array, level: Level, pull_all: bool) -> Array:
 		var nearest = null
 		var nearest_dist := INF
 		for h in heroes:
-			if h.tagged > 0:
+			if h.tagged > 0 or h.inside:
 				continue
 			var d := Vector2(h.position.x - pos.x, h.position.z - pos.z).length()
 			if d < nearest_dist:
