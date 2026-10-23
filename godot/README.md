@@ -39,8 +39,13 @@ deploy** puts a test version on the Shield and starts it:
    ```
    "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" connect <the Shield's IP address>:5555
    ```
-4. An Android button appears at the top right of Godot. Click it: Godot builds the game, puts it on
-   the Shield and starts it. Next time, steps 3 and 4 are all you need.
+4. A **Remote Deploy** button (▶ with radio waves) appears next to the play buttons at the top right
+   of Godot (restart Godot if you pulled while it was open). Click it and pick the Shield: Godot builds
+   the game, puts it on the Shield and starts it. Next time, steps 3 and 4 are all you need.
+
+   If it doesn't appear, check **Project → Export…** lists **Android (Runnable)** with no red errors,
+   and that `adb devices` shows the Shield as `device` (not `unauthorized` or `offline`). Or export
+   an APK from that window and install it with `adb install -r zombie-tag.apk`.
 
 On the Shield, Back or Start pauses. To start it again later without the PC, it's in **Settings →
 Apps → See all apps → Zombie Tag (Godot)**. Press **Back / View / Select** on a joypad (F3 on a
