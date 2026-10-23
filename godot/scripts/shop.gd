@@ -2,7 +2,6 @@ class_name ShopMenu
 extends MenuScreen
 ## The shop (src/shop.js): weapons, Heart Medicine, armour and cool outfits. Walk in through the
 ## door; choose with up and down, and buy with Space or fire.
-## Weapons that shoot, throw or zap come in phase 4; until then they say "Coming soon".
 
 const ROWS_SHOWN := 4 # the list scrolls to show this many rows at a time
 
@@ -75,8 +74,6 @@ func status(id: String) -> Dictionary:
 		if best != "" and Data.config.armour[best].blocks >= w.blocks:
 			return { label = "You have better", kind = "locked" }
 		return can.call()
-	if w.kind != "swing":
-		return { label = "Coming soon", kind = "soon" } # (phase 4)
 	if p.weapon != null and p.weapon.id == id:
 		return { label = "✔ Holding", kind = "holding" }
 	if p.owns(id):
@@ -114,7 +111,7 @@ func choose() -> bool:
 	var s := status(id)
 	var w := thing(id)
 	# a happy sound for anything that worked, a buzz for anything that didn't
-	Sound.play("nope" if s.kind in ["dear", "locked", "full", "soon"] else "kaching" if s.kind in ["buy", "free"] else "select")
+	Sound.play("nope" if s.kind in ["dear", "locked", "full"] else "kaching" if s.kind in ["buy", "free"] else "select")
 	match s.kind:
 		"holding":
 			say("You're already %s the %s!" % ["wearing" if w.has("blocks") else "holding", w.name])
@@ -133,8 +130,6 @@ func choose() -> bool:
 			say("Here's a free Spiky Stick! 🪵", "good")
 		"locked":
 			say("You've already got better armour!" if w.has("blocks") else "You can have a free one when you have no weapon", "bad")
-		"soon":
-			say("The %s is coming soon!" % w.name, "bad")
 		"full":
 			say("Your hearts are already full! ❤️❤️❤️")
 		"dear":

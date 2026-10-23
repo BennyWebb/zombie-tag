@@ -5,15 +5,18 @@ extends Node3D
 ##
 ## Walk in through the shop's or gym's door to spend Tag Bux or train.
 ##
-## So far it's Sunny Park with one hero, on Easy (getting tagged costs nothing). The other weapons,
-## two players, the other levels and the menus come in the later phases (see the plan in README.md).
+## So far it's Sunny Park with one hero, on Easy (getting tagged costs nothing). Two players, the
+## other levels and the menus come in the later phases (see the plan in README.md).
 
 const START_LEVEL := 1
+# the sound a shot makes when it hits (swinging weapons go "bonk")
+const HIT_SOUNDS := { slime = "splat", bubble = "bloop", snowball = "poof", banana = "bonk" }
 
 var level: Level
 var hero := Hero.new() # the same hero all the way through, so she keeps her Tag Bux
 var effects := Effects.new()
 var coins := Coins.new()
+var shots := Shots.new()
 var hud := Hud.new()
 var shop := ShopMenu.new()
 var gym := GymMenu.new()
@@ -32,6 +35,7 @@ var time := 0.0
 func _ready() -> void:
 	add_child(effects)
 	add_child(coins)
+	add_child(shots)
 	add_child(hud)
 	zombie_holder.name = "Zombies"
 	add_child(zombie_holder)
@@ -39,6 +43,7 @@ func _ready() -> void:
 	hud.root.add_child(gym)
 	hero.bonked.connect(hit_zombie)
 	hero.stick_broke.connect(stick_broke)
+	hero.shots = shots
 	add_child(hero)
 	hero.camera.make_current()
 	start_level(START_LEVEL)
@@ -51,6 +56,7 @@ func start_level(number: int) -> void:
 		z.queue_free()
 	zombies.clear()
 	coins.clear()
+	shots.clear()
 	if hero.inside:
 		leave_building()
 	level = Level.new(number)
@@ -71,13 +77,20 @@ func start_level(number: int) -> void:
 func warm_up() -> void:
 	var coin: Node3D = coins.coin_scene.instantiate()
 	var zombie: Node3D = load("res://models/zombies/shuffler.glb").instantiate()
-	effects.warm_up(hero.camera, [
-		level.gate.find_child("open", true, false),
-		coin,
-		zombie.find_child("stars", true, false),
-	])
+	var hidden: Array[Node3D] = [level.gate.find_child("open", true, false), coin]
+	for part in ["stars", "bubble", "ice", "healthBar"]:
+		hidden.append(zombie.find_child(part, true, false))
+	var flying := []
+	for shot in shots.looks:
+		flying.append(shots.looks[shot].instantiate())
+	hidden.append_array(flying)
+	hidden.append(hero.beam.tube)
+	effects.warm_up(hero.camera, hidden)
+	hero.beam.warm_up(hero.camera.global_position - hero.camera.global_basis.z * 2.0)
 	coin.free()
 	zombie.free()
+	for node in flying:
+		node.free()
 
 
 # The TV remote's Back button (Android's "go back") pauses too, instead of closing the game.
@@ -121,6 +134,14 @@ func _process(delta: float) -> void:
 	if to_spawn > 0 and zombies.size() <= Data.config.arena.nextWaveWhenLeft:
 		spawn_wave()
 	update_hero(delta)
+	for hit in shots.update(delta, zombies):
+		if hit.has("splat"):
+			# a pumpkin landed: a big orange splat
+			effects.splash(hit.at, "pumpkin", 60, 2.5)
+			Sound.play("splat", 2)
+			effects.float_text(hit.at + Vector3(0, 1.2, 0), hit.weapon.word, Color("ff8a1f"), 1.8)
+		else:
+			hit_zombie(hit.zombie, hit.weapon, hit.push, hit.at)
 
 	# every zombie popped: the exit gate opens, and all the coins fly to you
 	var cleared := to_spawn == 0 and zombies.is_empty()
@@ -176,6 +197,7 @@ func update_hero(delta: float) -> void:
 func enter_building(menu: MenuScreen) -> void:
 	hero.inside = menu
 	hero.hand.visible = false
+	hero.beam.hide_beam()
 	hud.toast_time = 0
 	menu.open(hero)
 
@@ -269,14 +291,24 @@ func spawn_spot(radius: float):
 	return null
 
 
-func hit_zombie(zombie: Zombie, weapon: Dictionary, push: Vector3) -> void:
+## A weapon hit a zombie. push: which way it's knocked; at: where a shot landed, for a splash
+## (or null).
+func hit_zombie(zombie: Zombie, weapon: Dictionary, push: Vector3, at) -> void:
 	if not zombie.alive:
 		return
+	if weapon.has("shot") and at != null:
+		effects.splash(at, weapon.shot)
+	zombie.weapon_effects(weapon)
 	if weapon.has("knockback"):
 		zombie.knock(push, weapon.knockback)
 	var wobble := randf_range(0.9, 1.15) # a little different every time, so it's not robotic
 	var chicken: bool = weapon.id == "chickenHammer"
-	Sound.play("squawk" if chicken else "bonk", wobble)
+	if chicken:
+		Sound.play("squawk", wobble)
+	elif weapon.kind == "swing":
+		Sound.play("bonk", wobble)
+	elif HIT_SOUNDS.has(weapon.get("shot", "")):
+		Sound.play(HIT_SOUNDS[weapon.shot], wobble * (1.3 if weapon.shot == "banana" else 1.0))
 	var popping := zombie.hit(weapon.damage * hero.damage_multiplier())
 	var word: String = weapon.get("word", "BONK!")
 	# the chicken squawks on every hit, even ones that pop
@@ -284,7 +316,9 @@ func hit_zombie(zombie: Zombie, weapon: Dictionary, push: Vector3) -> void:
 		effects.float_text(zombie.centre() + Vector3(0, 2.0 if popping else 0.8, 0), word, Color("ffe066"), 1.3)
 	if popping:
 		pop_zombie(zombie)
-	elif not chicken:
+	elif not chicken and time - zombie.word_time > 0.6:
+		# fast weapons hit so often that they only say their word now and then
+		zombie.word_time = time
 		effects.float_text(zombie.centre() + Vector3(0, 0.8, 0), word, Color("ffe066"), 1.1)
 
 

@@ -13,14 +13,14 @@ to play.
 | 0 | ✅ | Export the browser game's levels, characters, sounds and numbers |
 | 1 | ✅ | Walk and bonk in Sunny Park: the level, sky and sun, a hero, Shufflers that chase you and pop into confetti |
 | 2 | ✅ | Tag Bux coins, hearts, getting tagged, and the HUD |
-| 3 | ✅ | The shop and gym (the weapons that shoot or throw say "Coming soon" until phase 4) |
-| 4 | | All the weapons |
+| 3 | ✅ | The shop and gym |
+| 4 | ✅ | All the weapons: squirts, goo, bubbles, snowballs, the boomerang banana, pumpkins and the star laser |
 | 5 | | Two players, split screen |
 | 6 | | All ten levels and the Zombie King |
 | 7 | | Menus, the character creator, saving, sound settings |
 | 8 | | The Android TV app for the Shield, and speed-ups |
 
-**Controls:** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks. On a joypad: the
+**Controls:** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks (hold it to keep shooting). On a joypad: the
 left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. Walk in through the
 shop's or gym's door to go in; inside, up and down choose and bonk picks. **F3** (or
 Back / View / Select) shows the frame rate and how many things are drawn, for checking speed on the TV.
@@ -60,8 +60,10 @@ Everything is made in code, so you can read how it fits together, starting from 
 | --- | --- | --- |
 | `main.gd` | Runs a level: zombies arrive in waves, bonks and pops, the exit gate | `src/main.js` |
 | `level.gd` | The scenery, sky, fog and sun, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
-| `hero.gd` | You: walking, turning, and swinging your weapon at the nearest zombie in front of you | `src/player.js` |
-| `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked | `src/zombie.js` |
+| `hero.gd` | You: walking, turning, and swinging, shooting, throwing or zapping your weapon at the nearest zombie in front of you | `src/player.js` |
+| `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked, slimed, bubbled or frozen | `src/zombie.js` |
+| `shots.gd` | Everything that flies: squirts, goo, bubbles, snowballs, pumpkins and the boomerang banana | `src/weapons.js` |
+| `beam.gd` | The Sparkle Star Laser Gun's beam and its swirling stars | `src/weapons.js` |
 | `effects.gd` | Confetti and words that float up, like "POP!" | `src/effects.js` |
 | `coins.gd` | Tag Bux coins: bursting out, bouncing, flying to you | `src/coins.js` |
 | `hud.gd` | What's drawn over the game: hearts, Tag Bux, messages, the TAGGED! screen | `src/hud.js` |

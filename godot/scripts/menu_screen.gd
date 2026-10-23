@@ -199,7 +199,7 @@ func price(r: Dictionary, chosen: bool) -> Control:
 		colour = Color("4caf50")
 	if r.has("price"):
 		return bux(r.price, 32, colour)
-	var small := kind in ["locked", "soon", "leave", "full"]
+	var small := kind in ["locked", "leave", "full"]
 	var l := label(r.get("label", ""), 22 if small else 32, colour)
 	if small:
 		l.modulate.a = 0.8

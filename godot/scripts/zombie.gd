@@ -1,10 +1,14 @@
 class_name Zombie
 extends Node3D
 ## A goofy zombie: it wanders about, chases the nearest hero it notices, wobbles as it walks and
-## squashes and flashes white when it's bonked (like src/zombie.js).
+## squashes and flashes white when it's bonked (like src/zombie.js). Goo slows it down, a bubble
+## floats it up and a snowball freezes it solid.
 ## For now this is everything a Shuffler does; the other kinds' tricks come in phase 6.
 
+# the colour it glows: white when hit, blue when frozen, green when slimed
 const GLOW_WHITE := Color(1, 1, 1)
+const GLOW_ICE := Color("3a78b0")
+const GLOW_SLIME := Color("2f7a10")
 const GLOW_NONE := Color(0, 0, 0)
 
 var kind: String
@@ -22,6 +26,13 @@ var squash := 0.0
 var knock_vel := Vector3.ZERO # set when a weapon bonks it backwards, or it bounces off you
 var dizzy := 0.0 # counts down after it tags you; it stands still, seeing stars
 var groan_in := randf_range(2, 10) # time until it groans (main.gd plays it)
+var word_time := -9.0 # when it last showed a word like "SPLOSH!" (main.gd)
+# weapon effects, each counting down: slimed (slow), trapped in a bubble, frozen solid
+var slow_time := 0.0
+var slow_speed := 1.0
+var bubble_time := 0.0
+var frozen_time := 0.0
+var lift := 0.0 # how high its bubble has floated
 var wander_target = null # a Vector3, or null when it needs a new one
 var wander_timer := 0.0
 
@@ -30,7 +41,12 @@ var body: Node3D
 var arms: Array[Node3D] = []
 var legs: Array[Node3D] = []
 var pupils: Array[Node3D] = []
+var model: Node3D
 var stars: Node3D
+var bubble: Node3D
+var ice: Node3D
+var health_bar: Node3D
+var health_fill: Node3D
 var flash_materials: Array[StandardMaterial3D] = []
 
 
@@ -45,7 +61,7 @@ func _init(zombie_kind: String, the_level: Level, health_multiplier: float, x: f
 
 
 func _ready() -> void:
-	var model: Node3D = load("res://models/zombies/%s.glb" % kind).instantiate()
+	model = load("res://models/zombies/%s.glb" % kind).instantiate()
 	add_child(model)
 	Data.hide_parts(model, "zombies/" + kind)
 	Data.remove_extra_shadows(model)
@@ -55,6 +71,14 @@ func _ready() -> void:
 		legs.append(model.find_child("leg" + side, true, false))
 		pupils.append(model.find_child("pupil" + side, true, false))
 	stars = model.find_child("stars", true, false)
+	bubble = model.find_child("bubble", true, false)
+	ice = model.find_child("ice", true, false)
+	health_bar = model.find_child("healthBar", true, false)
+	health_fill = model.find_child("healthFill", true, false)
+	for part in [bubble, ice, health_bar]: # (see-through, or floating above it)
+		for mesh in part.find_children("*", "GeometryInstance3D", true, false) + [part]:
+			if mesh is GeometryInstance3D:
+				mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# its own colours, picked from its kind's (and its own copies, so it can flash on its own)
 	var colours: Dictionary = Data.models.zombieColours.get(kind, Data.models.zombieColours.default)
 	var picks := { skin = colours.skins.pick_random(), shirt = colours.shirts.pick_random() }
@@ -73,18 +97,36 @@ func hit(damage: float) -> bool:
 	health -= damage
 	flash = 0.15
 	squash = 1.0
+	# its health bar shows once it's been hit
+	health_bar.visible = true
+	var left := maxf(0.0, health / max_health)
+	health_fill.scale.x = left
+	health_fill.position.x = -0.47 * (1 - left)
 	if health <= 0.0001:
 		alive = false
 	return not alive
 
 
 func knock(direction: Vector3, amount: float) -> void:
+	if bubble_time > 0 or frozen_time > 0:
+		return # bubbles and ice blocks don't get pushed
 	knock_vel += direction * amount
 
 
-## Standing still: dizzy (more ways come with the other weapons in phase 4).
+## What a weapon does besides damage.
+func weapon_effects(w: Dictionary) -> void:
+	if w.has("slowTime"):
+		slow_time = w.slowTime
+		slow_speed = w.slowSpeed
+	if w.has("bubbleTime"):
+		bubble_time = w.bubbleTime
+	if w.has("freezeTime"):
+		frozen_time = w.freezeTime
+
+
+## Standing still: dizzy, trapped in a bubble or frozen.
 func stuck() -> bool:
-	return dizzy > 0
+	return dizzy > 0 or bubble_time > 0 or frozen_time > 0
 
 
 ## Only a zombie that's fully arrived and not stuck can tag you.
@@ -97,6 +139,9 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	time += delta
 	spawn_pop = minf(1.0, spawn_pop + delta * 2.0)
 	dizzy = maxf(0.0, dizzy - delta)
+	slow_time = maxf(0.0, slow_time - delta)
+	bubble_time = maxf(0.0, bubble_time - delta)
+	frozen_time = maxf(0.0, frozen_time - delta)
 
 	# go for the nearest hero who isn't tagged
 	var hero = null
@@ -112,7 +157,7 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	var dir := Vector3.ZERO
 
 	if stuck():
-		pass # seeing stars: stay put
+		pass # seeing stars, bubbled or frozen: stay put
 	elif hero and to_hero.length() < type.noticeDistance:
 		# chase, and stop once touching the hero
 		var touching: float = radius + hero.radius + 0.15
@@ -140,6 +185,8 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 		knock_vel *= exp(-6.0 * delta)
 		speed *= maxf(0.0, 1.0 - knocked / 3.0)
 
+	if slow_time > 0:
+		speed *= slow_speed
 	if dir != Vector3.ZERO:
 		position += dir * speed * delta
 		# turn smoothly towards where it's going
@@ -158,11 +205,29 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	position = level.resolve_collisions(position, radius)
 	position.y = 0
 	rotation.y = yaw
-	animate(delta, speed)
+	animate(delta, speed, heroes)
 
 
 ## The silly walk: a wobble, swinging legs, waving arms and googly eyes.
-func animate(delta: float, speed: float) -> void:
+func animate(delta: float, speed: float, heroes: Array) -> void:
+	bubble.visible = bubble_time > 0
+	ice.visible = frozen_time > 0
+	# a bubble floats it up, then it drops back down when the bubble pops
+	lift += ((1.3 if bubble_time > 0 else 0.0) - lift) * minf(1.0, delta * (2.0 if bubble_time > 0 else 8.0))
+	if bubble_time > 0:
+		bubble.scale = Vector3.ONE * (1 + sin(time * 4) * 0.04)
+	model.position.y = lift
+	# the health bar faces you
+	if health_bar.visible and heroes:
+		health_bar.global_basis = heroes[0].camera.global_basis.scaled(Vector3.ONE * type.size)
+	flash = maxf(0.0, flash - delta)
+	if frozen_time > 0:
+		# frozen solid: no wobbling at all
+		stars.visible = false
+		for m in flash_materials:
+			m.emission = GLOW_WHITE if flash > 0 else GLOW_ICE
+		return
+
 	var walk := time * (7.0 if speed > 2 else 4.0) if speed > 0 else 0.0
 	# a wobble, much more when dizzy, with stars going round its head
 	body.rotation.z = sin(time * 6) * 0.25 if dizzy > 0 else sin(time * 2.3) * 0.12
@@ -182,11 +247,10 @@ func animate(delta: float, speed: float) -> void:
 	squash = maxf(0.0, squash - delta * 4.0)
 	var s := spawn_pop * (1.0 + sin(squash * PI * 3) * 0.15 * squash)
 	body.scale = Vector3(s, spawn_pop * (1.0 - squash * 0.2), s)
-	flash = maxf(0.0, flash - delta)
 	for m in flash_materials:
-		m.emission = GLOW_WHITE if flash > 0 else GLOW_NONE
+		m.emission = GLOW_WHITE if flash > 0 else GLOW_SLIME if slow_time > 0 else GLOW_NONE
 
 
-## Where it gets hit: the middle of its body.
+## Where it gets hit: the middle of its body (up in its bubble, if it's in one).
 func centre() -> Vector3:
-	return position + Vector3(0, 1.2 * type.size, 0)
+	return position + Vector3(0, 1.2 * type.size + lift, 0)

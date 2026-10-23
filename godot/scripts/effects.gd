@@ -1,6 +1,7 @@
 class_name Effects
 extends Node3D
-## Bursts of confetti and words that float up, like "POP!" (src/effects.js).
+## Bursts of confetti, splashes where shots land, and words that float up, like "POP!"
+## (src/effects.js).
 ## Each burst is a CPUParticles3D: one node draws all its bits at once, which is much quicker than
 ## a node for every bit.
 
@@ -8,6 +9,7 @@ const CONFETTI_COLOURS := [0xff4f8b, 0xffe066, 0x4fc3f7, 0x9cff57, 0xb28dff, 0xf
 
 var confetti_mesh := QuadMesh.new()
 var confetti_colours := Gradient.new()
+var splash_colours := {} # each kind of shot's colours, as a Gradient (made when first needed)
 var texts: Array = [] # [Label3D, life left]
 var font: Font = load("res://fonts/fredoka_bold.tres")
 
@@ -19,15 +21,21 @@ func _ready() -> void:
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED # both sides of each bit show as it spins
 	m.vertex_color_use_as_albedo = true # each bit's colour comes from the particles
 	confetti_mesh.material = m
-	# each bit picks one of the colours (no blending between them)
-	confetti_colours.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
+	confetti_colours = pick_one_of(CONFETTI_COLOURS)
+
+
+## A Gradient that gives each bit one of the colours (no blending between them).
+static func pick_one_of(list: Array) -> Gradient:
+	var g := Gradient.new()
+	g.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
 	var offsets := PackedFloat32Array()
 	var colours := PackedColorArray()
-	for i in CONFETTI_COLOURS.size():
-		offsets.append(float(i) / CONFETTI_COLOURS.size())
-		colours.append(Data.colour(CONFETTI_COLOURS[i]))
-	confetti_colours.offsets = offsets
-	confetti_colours.colors = colours
+	for i in list.size():
+		offsets.append(float(i) / list.size())
+		colours.append(Data.colour(list[i]))
+	g.offsets = offsets
+	g.colors = colours
+	return g
 
 
 ## Shows a burst of confetti and a word, too small to see, just in front of the camera, and tiny
@@ -79,6 +87,36 @@ func confetti(pos: Vector3, count := 70) -> void:
 	p.angular_velocity_max = 600
 	p.particle_flag_rotate_y = true
 	p.color_initial_ramp = confetti_colours
+	p.position = pos
+	add_child(p)
+	p.emitting = true
+	p.finished.connect(p.queue_free)
+
+
+## A little burst of drops (water, goo, snow, pumpkin...) where a shot lands. shot: which kind,
+## for its colours (from data/models.json). power: bigger, faster and longer, for a pumpkin splat.
+func splash(pos: Vector3, shot: String, count := 12, power := 1.0) -> void:
+	if not splash_colours.has(shot):
+		splash_colours[shot] = pick_one_of(Data.models.models["shots/" + shot].splashColours)
+	var p := CPUParticles3D.new()
+	p.mesh = confetti_mesh
+	p.amount = count
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.lifetime = 0.7 * power
+	p.lifetime_randomness = 0.43
+	p.direction = Vector3.UP
+	p.spread = 60
+	p.initial_velocity_min = 1.5 * power
+	p.initial_velocity_max = 3.6 * power
+	p.gravity = Vector3(0, -9, 0)
+	p.damping_min = 1.5
+	p.damping_max = 3.0
+	p.angular_velocity_min = -600
+	p.angular_velocity_max = 600
+	p.scale_amount_min = power
+	p.scale_amount_max = power
+	p.color_initial_ramp = splash_colours[shot]
 	p.position = pos
 	add_child(p)
 	p.emitting = true

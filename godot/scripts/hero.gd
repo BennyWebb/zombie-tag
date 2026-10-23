@@ -1,12 +1,16 @@
 class_name Hero
 extends Node3D
-## You! Seen from your own eyes: you walk and turn, and your hand swings your weapon at the nearest
-## zombie in front of you (like src/player.js). Zombie touches cost hearts; lose them all and you're
-## tagged, and after a countdown you're back at the start. You keep your Tag Bux, weapons, armour,
-## outfits and training from level to level.
-## Swinging weapons work so far; the ones that shoot, throw or zap come in phase 4.
+## You! Seen from your own eyes: you walk and turn, and your hand swings, shoots, throws or zaps
+## your weapon at the nearest zombie in front of you (like src/player.js). Zombie touches cost
+## hearts; lose them all and you're tagged, and after a countdown you're back at the start. You keep
+## your Tag Bux, weapons, armour, outfits and training from level to level.
 
-signal bonked(zombie: Zombie, weapon: Dictionary, push: Vector3) # a swing landed on a zombie
+const FIRE_SOUNDS := { # each shot's sound: [name, volume, pitch]
+	water = ["squirt", 0.6, 1.0], slime = ["splat", 0.4, 0.6], bubble = ["bloop", 0.7, 0.8],
+	snowball = ["whoosh", 0.7, 1.0], pumpkin = ["thump", 1.0, 1.0],
+}
+
+signal bonked(zombie: Zombie, weapon: Dictionary, push: Vector3, at) # a swing or the laser hit a zombie
 signal stick_broke # your Spiky Stick broke (main.gd says so)
 
 const HAND_REST := Vector3(0.38, -0.42, -0.65) # where the hand sits, from the camera
@@ -22,6 +26,11 @@ var weapon = null # the one in your hand (one of weapons), or null if you have n
 var swing := 0.0 # counts down while swinging
 var swing_hit := false
 var attack_queued := false # a press during a swing is remembered, so mashing never feels ignored
+var cooldown := 0.0 # time until a shooting weapon can fire again
+var recoil := 0.0 # the gun kicks back when it fires
+var shots: Shots # where shots fly (main.gd sets it)
+var thrown = null # the boomerang banana while it's flying (one of shots.list)
+var beam: Beam # the Sparkle Star Laser Gun's beam
 
 var tag_bux := 0
 var hearts: int = Data.config.player.hearts
@@ -58,6 +67,8 @@ func _ready() -> void:
 	Data.own_material(hand, "skin").albedo_color = Data.colour(look.skin)
 	sleeve = Data.own_material(hand, "clothes")
 	update_sleeve()
+	beam = Beam.new(camera)
+	add_child(beam)
 	give_stick()
 
 
@@ -89,6 +100,7 @@ func hold(id) -> void:
 	attack_queued = false
 	swing = 0
 	hand.rotation = Vector3.ZERO
+	hand.position = HAND_REST
 	for model_id in Data.models.models.hand.weapons:
 		hand.find_child(model_id, true, false).visible = weapon != null and model_id == weapon.id
 
@@ -182,6 +194,7 @@ func hurt(amount: int) -> String:
 	if hearts == 0:
 		tagged = Data.config.player.taggedTime
 		hand.visible = false
+		beam.hide_beam()
 	return "heart"
 
 
@@ -194,6 +207,7 @@ func respawn(spot: Dictionary) -> void:
 	safe = Data.config.player.safeTime
 	swing = 0
 	attack_queued = false
+	cooldown = 0
 	hand.rotation = Vector3.ZERO
 	hand.visible = true
 
@@ -236,7 +250,7 @@ func update(delta: float, zombies: Array) -> void:
 	camera.position.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 else 0.0)
 	camera.position.y += randf_range(-0.25, 0.25) * shake
 
-	update_swing(delta, zombies, walk != 0)
+	update_attack(delta, zombies, walk != 0)
 
 
 # Presses are caught as they happen, so even a tap quicker than a frame isn't missed.
@@ -245,10 +259,72 @@ func _unhandled_input(event: InputEvent) -> void:
 		attack_queued = true
 
 
+func update_attack(delta: float, zombies: Array, moving: bool) -> void:
+	cooldown -= delta
+	recoil = maxf(0.0, recoil - delta * 8)
+	var kind: String = weapon.kind if weapon else ""
+	if kind != "beam":
+		beam.hide_beam()
+	beam.update(delta, weapon.starsPerSecond if kind == "beam" else 0.0)
+	if kind != "swing":
+		hand.position = HAND_REST
+	match kind:
+		"": attack_queued = false # (no weapon: get a free stick at the shop)
+		"swing": update_swing(delta, zombies, moving)
+		"shoot", "throw", "beam":
+			update_aim(delta, zombies, kind)
+			# holding a gun: a kick back when it fires, and a little sway as you walk
+			hand.rotation = Vector3(recoil * 0.15 + (sin(walk_phase * 0.5) * 0.03 if moving else 0.0), 0, 0)
+			hand.position = HAND_REST + Vector3(0, 0, recoil * 0.06)
+
+
+## Shooting, throwing and zapping.
+func update_aim(_delta: float, zombies: Array, kind: String) -> void:
+	# where shots and the laser come out: just in front of the gun in your hand
+	var fwd := forward()
+	var right := Vector3(-fwd.z, 0, fwd.x)
+	var muzzle := position + fwd * 0.9 + right * 0.3
+	muzzle.y = 1.2
+	var holding := Input.is_action_pressed("attack") # hold the button to keep shooting
+	var target := find_target(zombies)
+	match kind:
+		"beam":
+			# a laser that hits whatever it's pointing at, again and again
+			if holding or attack_queued:
+				attack_queued = false
+				beam.show_beam(muzzle, target.centre() if target else muzzle + fwd * weapon.range)
+				if cooldown <= 0:
+					cooldown = weapon.fireInterval
+					Sound.play("pew")
+					if target:
+						bonked.emit(target, weapon, fwd, target.centre())
+				recoil = 0.4
+			else:
+				beam.hide_beam()
+		"throw":
+			# the banana leaves your hand until it comes back
+			hand.find_child(weapon.id, true, false).visible = thrown == null
+			if attack_queued and thrown == null: # (a press while it's flying throws it again when it's back)
+				var dir := fwd
+				if target:
+					dir = target.centre() - muzzle
+					dir.y = 0
+					dir = dir.normalized()
+				shots.fire(muzzle, dir, weapon, self)
+				Sound.play("whoosh")
+				attack_queued = false
+		"shoot":
+			if (attack_queued or holding) and cooldown <= 0:
+				attack_queued = false
+				cooldown = weapon.fireInterval
+				recoil = 1
+				var dir := (target.centre() - muzzle).normalized() if target else fwd
+				shots.fire(muzzle, dir, weapon, self, target.centre() if target else null)
+				var sound: Array = FIRE_SOUNDS[weapon.shot]
+				Sound.play(sound[0], sound[2], sound[1])
+
+
 func update_swing(delta: float, zombies: Array, moving: bool) -> void:
-	if weapon == null or weapon.kind != "swing":
-		attack_queued = false # (no weapon: get a free stick at the shop)
-		return
 	if attack_queued and swing <= 0:
 		attack_queued = false
 		swing = weapon.swingTime
@@ -269,7 +345,7 @@ func update_swing(delta: float, zombies: Array, moving: bool) -> void:
 			if target:
 				targets = [target]
 		for target in targets:
-			bonked.emit(target, weapon, forward())
+			bonked.emit(target, weapon, forward(), null)
 		if targets and weapon.has("maxHits"):
 			weapon.hitsLeft -= 1
 	# wind up, chop down towards the middle of the screen, then come back up
