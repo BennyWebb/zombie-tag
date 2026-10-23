@@ -37,8 +37,8 @@ var level_done_bux := Label.new()
 var level_done_go := Label.new()
 var speed := Label.new()
 var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for timing them
-# Asking Godot to time the drawing crashed the Shield (with the halves drawn at 75% and stretched),
-# and its graphics chip can't time itself anyway, so on Android the overlay leaves those out
+# Asking Godot to time the drawing once crashed the Shield, and its graphics chip can't time itself
+# anyway, so on Android the overlay leaves those out
 var can_time_drawing := not OS.has_feature("android")
 var game_time := 0.0 # how long the game's own code took this frame, in ms (main.gd sets it)
 var hearts_shown := -1
