@@ -300,62 +300,32 @@
     },
     "heroes/outfit-pirateHat": {
       "file": "models/heroes/outfit-pirateHat.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "heroes/outfit-superheroCape": {
       "file": "models/heroes/outfit-superheroCape.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "heroes/outfit-unicornOnesie": {
       "file": "models/heroes/outfit-unicornOnesie.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "heroes/outfit-dancerOutfit": {
       "file": "models/heroes/outfit-dancerOutfit.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "heroes/outfit-astronautSuit": {
       "file": "models/heroes/outfit-astronautSuit.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "heroes/outfit-goldenCrown": {
       "file": "models/heroes/outfit-goldenCrown.glb",
-      "recolour": {
-        "skin": "skin",
-        "clothes": "clothes",
-        "trousers": "trousers",
-        "hair": "hair"
-      },
+      "note": "Just the outfit: put the children of \"head\" and \"torso\" on the hero's head and torso.",
       "hidden": []
     },
     "hand": {

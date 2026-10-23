@@ -15,15 +15,23 @@ to play.
 | 2 | ✅ | Tag Bux coins, hearts, getting tagged, and the HUD |
 | 3 | ✅ | The shop and gym |
 | 4 | ✅ | All the weapons: squirts, goo, bubbles, snowballs, the boomerang banana, pumpkins and the star laser |
-| 5 | | Two players, split screen |
+| 5 | ✅ | Two players, split screen |
 | 6 | | All ten levels and the Zombie King |
 | 7 | | Menus, the character creator, saving, sound settings |
 | 8 | | The Android TV app for the Shield, and speed-ups |
 
-**Controls:** W / S or ↑ / ↓ walk, A / D or ← / → turn, Space or Enter bonks (hold it to keep shooting). On a joypad: the
-left stick or d-pad, and any face button or the right trigger. Esc or Start pauses. Walk in through the
-shop's or gym's door to go in; inside, up and down choose and bonk picks. **F3** (or
-Back / View / Select) shows the frame rate and how many things are drawn, for checking speed on the TV.
+**Controls:** on a joypad, the left stick or d-pad walks and turns, and any face button or the right
+trigger bonks (hold it to keep shooting). Start pauses. On a keyboard: W / S or ↑ / ↓ walk, A / D or
+← / → turn, Space or Enter bonks, Esc pauses. Walk in through the shop's or gym's door to go in;
+inside, up and down choose and bonk picks. **F3** (or Back / View / Select) shows the frame rate and
+how many things are drawn, for checking speed on the TV.
+
+**Two players:** the first joypad used is Player 1's. Press a button on a second joypad and Player 2
+joins: the screen splits in two, each sister with her own half, and there are half as many zombies
+again. On a computer, pressing **2** brings in Player 2 on the arrow keys and Enter, with Player 1 on
+W A S D and Space. In the shop each can give the other Tag Bux, and outfits show on your body, which
+your sister sees. Messages on the Android version only talk about joypad buttons (the TV has no
+keyboard).
 
 ## Trying it on the Shield
 
@@ -62,6 +70,8 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `level.gd` | The scenery, sky, fog and sun, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
 | `hero.gd` | You: walking, turning, and swinging, shooting, throwing or zapping your weapon at the nearest zombie in front of you | `src/player.js` |
 | `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked, slimed, bubbled or frozen | `src/zombie.js` |
+| `health_bar.gdshader` | A zombie's health bar, which turns to face whichever camera draws it | |
+| `hero_body.gd` | A hero's whole body with her hair, colours, outfits and name, which her sister sees | `src/hero.js` |
 | `shots.gd` | Everything that flies: squirts, goo, bubbles, snowballs, pumpkins and the boomerang banana | `src/weapons.js` |
 | `beam.gd` | The Sparkle Star Laser Gun's beam and its swirling stars | `src/weapons.js` |
 | `effects.gd` | Confetti and words that float up, like "POP!" | `src/effects.js` |
@@ -72,7 +82,7 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `shop.gd` | The shop: weapons, Heart Medicine, armour and outfits | `src/shop.js` |
 | `gym.gd` | The gym: the treadmill and weights mini-games | `src/gym.js` |
 | `data.gd` | Reads the exported numbers and helps with the models (an autoload: use it anywhere as `Data`) | |
-| `controls.gd` | The keys and joypad buttons for each action (an autoload: `Controls`) | `src/input.js` |
+| `controls.gd` | Each player's keys and joypad buttons, and Player 2 joining (an autoload: `Controls`) | `src/input.js` |
 | `sound.gd` | Plays sound effects and music (an autoload: `Sound`) | `src/audio.js` |
 
 ## What's in the other folders
@@ -84,7 +94,7 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `data/levels/` | Each level's layout: colliders, where you start, the gate, the building spots, sky, fog and light colours |
 | `data/models.json` | What's in each model: its parts' names, which materials to recolour, and which parts start hidden |
 | `models/levels/` | Each level's scenery, already merged into a few big meshes so it draws quickly |
-| `models/` | The shop, gym and gate, every zombie, heroes (each hair style and outfit), the hand with every weapon, shots and the coin |
+| `models/` | The shop, gym and gate, every zombie, heroes (one for each hair style, and each outfit on its own to put on any of them), the hand with every weapon, shots and the coin |
 | `sounds/sfx/` | Every sound effect |
 | `sounds/music/` | Every tune, each one a loop that joins up with itself |
 

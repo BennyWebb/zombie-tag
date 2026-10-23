@@ -1,12 +1,12 @@
 class_name Beam
 extends Node3D
 ## The Sparkle Star Laser Gun's beam, with stars swirling round it (the Beam class in
-## src/weapons.js). All the stars are one MultiMesh, so however many there are, they draw at once.
+## src/weapons.js). All the stars are one MultiMesh, so however many there are, they draw at once,
+## and each turns to face whichever camera is drawing it (its material is a "billboard").
 
 const STAR_COLOURS := [0xffe066, 0xff6fd8, 0xb28dff, 0x9cfff0, 0xffffff]
 const MAX_STARS := 64
 
-var camera: Camera3D # the stars turn to face it
 var glow := MeshInstance3D.new()
 var tube := Node3D.new() # the glow and the white core, stretched from the gun to what it's hitting
 var stars_mesh := MultiMeshInstance3D.new()
@@ -17,8 +17,7 @@ var to_spawn := 0.0
 var time := 0.0
 
 
-func _init(the_camera: Camera3D) -> void:
-	camera = the_camera
+func _init() -> void:
 	top_level = true # it stays where it's put in the world, not following the hero about
 	add_child(tube)
 	tube.visible = false
@@ -63,6 +62,9 @@ static func glowing(colour: Color, stars := false) -> StandardMaterial3D:
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = colour
 	m.vertex_color_use_as_albedo = stars
+	if stars:
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		m.billboard_keep_scale = true
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -133,7 +135,6 @@ func update(delta: float, stars_per_second: float) -> void:
 					colour = Data.colour(STAR_COLOURS.pick_random()),
 				})
 	var mm := stars_mesh.multimesh
-	var facing := camera.global_basis # each star turns to face you
 	for i in range(stars.size() - 1, -1, -1):
 		var s: Dictionary = stars[i]
 		s.life -= delta
@@ -145,6 +146,6 @@ func update(delta: float, stars_per_second: float) -> void:
 		var s: Dictionary = stars[i]
 		var p: Vector3 = s.from + s.axis * s.along + s.side * cos(s.angle) * s.radius + s.up * sin(s.angle) * s.radius
 		var k := maxf(0.0, s.life / 0.7)
-		mm.set_instance_transform(i, Transform3D(facing.scaled(Vector3.ONE * s.size * (0.5 + k)), p))
+		mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ONE * s.size * (0.5 + k)), p))
 		mm.set_instance_color(i, s.colour)
 	mm.visible_instance_count = stars.size()

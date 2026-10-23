@@ -4,6 +4,7 @@ extends Node3D
 ## your weapon at the nearest zombie in front of you (like src/player.js). Zombie touches cost
 ## hearts; lose them all and you're tagged, and after a countdown you're back at the start. You keep
 ## your Tag Bux, weapons, armour, outfits and training from level to level.
+## In 2-player mode your sister sees your whole body (HeroBody), with your name over your head.
 
 const FIRE_SOUNDS := { # each shot's sound: [name, volume, pitch]
 	water = ["squirt", 0.6, 1.0], slime = ["splat", 0.4, 0.6], bubble = ["bloop", 0.7, 0.8],
@@ -14,7 +15,12 @@ signal bonked(zombie: Zombie, weapon: Dictionary, push: Vector3, at) # a swing o
 signal stick_broke # your Spiky Stick broke (main.gd says so)
 
 const HAND_REST := Vector3(0.38, -0.42, -0.65) # where the hand sits, from the camera
+# what each camera draws (its visual layers): the world on layer 1, each player's hand on layer 2
+# or 3 (only she sees it) and each player's body on layer 4 or 5 (only her sister sees it)
+const WORLD_LAYER := 1
 
+var index: int # 0 for Player 1, 1 for Player 2
+var look: Dictionary # name, skin, hairStyle, hair, outfit, trousers, tagColour
 var level: Level # the level you're in (main.gd sets it)
 var radius: float = Data.config.player.radius
 var yaw := 0.0 # which way you face: 0 is towards -z, the middle of the level from the start
@@ -45,29 +51,49 @@ var inside = null # the shop or gym you're in, or null when you're outside
 var stat_up := "" # "speed" or "strength" just after training, so the HUD's badge jumps
 var safe := 0.0 # counts down while you can't be hurt, after a zombie touch
 var tagged := 0.0 # counts down while you're tagged, before going back to the start
+var tagged_time: float = Data.config.player.taggedTime # how long that is (main.gd sets it)
 var shake := 0.0 # the camera wobbles for a moment when you're hurt
 
-var camera := Camera3D.new()
+var camera := Camera3D.new() # your eyes (main.gd moves it to your half of the screen with 2 players)
+var eye := Vector3.ZERO # where the camera is, from your feet (with a bob and a wobble)
 var hand: Node3D
-var sleeve: StandardMaterial3D # the hand's sleeve material, which outfits recolour
+var skin: StandardMaterial3D # the hand's skin and sleeve materials
+var sleeve: StandardMaterial3D
+var body: HeroBody # your whole body, which only your sister sees
+var last_position := Vector3.ZERO # for how fast your body walks
+var time := 0.0
+
+
+## player: 0 for Player 1, 1 for Player 2.
+func _init(player: int) -> void:
+	index = player
+	look = Data.config.heroes[player].duplicate()
+
+
+## The name of one of your actions, like "p1_attack" (see controls.gd).
+func act(action_name: String) -> String:
+	return Controls.action(action_name, index)
 
 
 func _ready() -> void:
 	camera.fov = 70 # like the browser game (both measure it top to bottom)
 	camera.near = 0.05
 	camera.far = 300
+	camera.top_level = true # it follows you (see place_camera), wherever it is
+	camera.cull_mask = WORLD_LAYER | hand_layer(index) | body_layer(1 - index)
 	add_child(camera)
-	camera.position.y = Data.config.player.eyeHeight
+	eye.y = Data.config.player.eyeHeight
 	# the first-person hand, holding every weapon; only the one you're holding shows
 	hand = load("res://models/hand.glb").instantiate()
 	camera.add_child(hand)
 	Data.remove_extra_shadows(hand) # your hand doesn't cast a shadow, like in the browser game
+	for node in hand.find_children("*", "VisualInstance3D", true, false):
+		node.layers = hand_layer(index)
 	hand.position = HAND_REST
-	var look: Dictionary = Data.config.heroes[0]
-	Data.own_material(hand, "skin").albedo_color = Data.colour(look.skin)
+	skin = Data.own_material(hand, "skin")
 	sleeve = Data.own_material(hand, "clothes")
-	update_sleeve()
-	beam = Beam.new(camera)
+	rebuild_body()
+	beam = Beam.new()
 	add_child(beam)
 	give_stick()
 
@@ -130,25 +156,45 @@ func wear(id: String) -> void:
 	var covers: Array = Data.config.outfits[id].covers
 	wearing = wearing.filter(func(w): return not Data.config.outfits[w].covers.any(func(c): return c in covers))
 	wearing.append(id)
-	update_sleeve()
+	rebuild_body()
 
 
 func take_off(id: String) -> void:
 	wearing.erase(id)
-	update_sleeve()
+	rebuild_body()
 
 
-## Your sleeve is your favourite colour, unless an outfit covers your body (clothesColour in
-## src/hero.js). The rest of an outfit shows on your body, which your sister sees (phase 5).
-func update_sleeve() -> void:
-	var colour: int = Data.config.heroes[0].outfit
-	if "unicornOnesie" in wearing:
-		colour = 0xffffff
-	elif "dancerOutfit" in wearing:
-		colour = 0xd36bff
-	elif "astronautSuit" in wearing:
-		colour = 0xf2f2f2
-	sleeve.albedo_color = Data.colour(colour)
+## The visual layers for each player's hand and body (see WORLD_LAYER).
+static func hand_layer(player: int) -> int:
+	return 1 << (1 + player)
+
+
+static func body_layer(player: int) -> int:
+	return 1 << (3 + player)
+
+
+## Makes your body (and the hand you see) match your look and outfits.
+func rebuild_body() -> void:
+	var was_visible := body != null and body.visible
+	if body:
+		body.queue_free()
+	body = HeroBody.new(look, wearing, body_layer(index))
+	body.visible = was_visible
+	add_child(body)
+	skin.albedo_color = Data.colour(look.skin)
+	# your sleeve is your favourite colour, unless an outfit covers your body
+	sleeve.albedo_color = Data.colour(HeroBody.clothes_colour(look, wearing))
+
+
+## Moves and animates your body for your sister to see. show: whether there's a sister to see it.
+func update_body(delta: float, show: bool) -> void:
+	time += delta
+	body.visible = show and not inside and tagged <= 0
+	if not body.visible:
+		return
+	var moved := Vector2(position.x - last_position.x, position.z - last_position.z).length() / maxf(delta, 0.001)
+	last_position = position
+	body.animate(walk_phase, moved, swing > 0 or recoil > 0.3, time)
 
 
 func trained_on(level_number: int, stat: String) -> int:
@@ -163,8 +209,16 @@ func add_training(level_number: int, stat: String) -> void:
 
 func start_at(spot: Dictionary) -> void:
 	position = Vector3(spot.x, 0, spot.z)
+	last_position = position
 	yaw = spot.yaw
 	rotation.y = yaw
+	place_camera()
+
+
+## The camera goes where your eyes are. (It isn't simply a child of yours, because with two players
+## it has to be inside your half of the screen.)
+func place_camera() -> void:
+	camera.global_transform = Transform3D(Basis(Vector3.UP, yaw), position + Basis(Vector3.UP, yaw) * eye)
 
 
 func forward() -> Vector3:
@@ -192,7 +246,7 @@ func hurt(amount: int) -> String:
 		return "shield"
 	hearts = maxi(0, hearts - amount)
 	if hearts == 0:
-		tagged = Data.config.player.taggedTime
+		tagged = tagged_time
 		hand.visible = false
 		beam.hide_beam()
 	return "heart"
@@ -217,18 +271,19 @@ func respawn(spot: Dictionary) -> void:
 func update(delta: float, zombies: Array) -> void:
 	# a little wobble when a zombie touches you, and your hand blinks while you can't be hurt
 	shake = maxf(0.0, shake - delta)
-	camera.position.x = randf_range(-0.25, 0.25) * shake
+	eye.x = randf_range(-0.25, 0.25) * shake
 	safe = maxf(0.0, safe - delta)
 	if tagged > 0:
+		place_camera()
 		return # main.gd counts down and brings you back
 	hand.visible = safe <= 0 or int(safe * 8) % 2 == 0
 
 	# turning: keys turn a little faster than a joypad, which is easy to overshoot with
-	var turn := Input.get_axis("turn_right", "turn_left")
-	var turn_speed: float = Data.config.controls.padTurnSpeed if Controls.using_joypad else Data.config.player.turnSpeed
+	var turn := Input.get_axis(act("turn_right"), act("turn_left"))
+	var turn_speed: float = Data.config.controls.padTurnSpeed if Controls.using_joypad[index] else Data.config.player.turnSpeed
 	yaw += turn * turn_speed * delta
 	# walking: a bit slower backwards
-	var walk := Input.get_axis("walk_back", "walk_forward")
+	var walk := Input.get_axis(act("walk_back"), act("walk_forward"))
 	if walk < 0:
 		walk *= 0.7
 	if walk != 0:
@@ -247,15 +302,16 @@ func update(delta: float, zombies: Array) -> void:
 			position.z = z.position.z + d.y
 	rotation.y = yaw
 	# a little head bob
-	camera.position.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 else 0.0)
-	camera.position.y += randf_range(-0.25, 0.25) * shake
+	eye.y = Data.config.player.eyeHeight + (sin(walk_phase) * 0.05 if walk != 0 else 0.0)
+	eye.y += randf_range(-0.25, 0.25) * shake
+	place_camera()
 
 	update_attack(delta, zombies, walk != 0)
 
 
 # Presses are caught as they happen, so even a tap quicker than a frame isn't missed.
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("attack") and tagged <= 0 and not inside:
+	if event.is_action_pressed(act("attack")) and tagged <= 0 and not inside:
 		attack_queued = true
 
 
@@ -285,7 +341,7 @@ func update_aim(_delta: float, zombies: Array, kind: String) -> void:
 	var right := Vector3(-fwd.z, 0, fwd.x)
 	var muzzle := position + fwd * 0.9 + right * 0.3
 	muzzle.y = 1.2
-	var holding := Input.is_action_pressed("attack") # hold the button to keep shooting
+	var holding := Input.is_action_pressed(act("attack")) # hold the button to keep shooting
 	var target := find_target(zombies)
 	match kind:
 		"beam":

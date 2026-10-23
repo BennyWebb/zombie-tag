@@ -68,7 +68,7 @@ function addHair(head, style, colour) {
 }
 
 // The outfits from the shop, added on top.
-function addOutfits(parts, wearing) {
+export function addOutfits(parts, wearing) {
   const { root, head, torso } = parts;
   if (wearing.includes('superheroCape')) {
     const cape = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.1, 0.04), mat(0xe53935, { side: THREE.DoubleSide }));

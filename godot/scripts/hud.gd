@@ -5,12 +5,16 @@ extends CanvasLayer
 ## messages, the screen edges flashing when you're hurt, the TAGGED! screen and the Level done! screen.
 ## F3 (or Back / View / Select) shows the frame rate and how many things are drawn, for checking
 ## speed on the TV.
+## With two players each has her own, on her half of the screen, shrunk a bit to fit, with her name
+## at the top right.
 
 const YELLOW := Color("ffe066")
 const PURPLE := Color("4b1e8a")
 const PILL := Color(40 / 255.0, 20 / 255.0, 80 / 255.0, 0.55)
 
-var root := Control.new() # everything goes in here, filling the screen
+var player := 0 # 0 for Player 1, 1 for Player 2
+var root := Control.new() # everything goes in here, filling the screen (or your half of it)
+var who := Label.new() # your name, with two players
 var hearts_row := HBoxContainer.new()
 var hearts: Array[HudIcon] = []
 var shields: Array[HudIcon] = []
@@ -34,6 +38,10 @@ var level_done_go := Label.new()
 var speed := Label.new()
 var hearts_shown := -1
 var blink_time := 0.0
+
+
+func _init(for_player := 0) -> void:
+	player = for_player
 
 
 func _ready() -> void:
@@ -82,6 +90,14 @@ func _ready() -> void:
 	top_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_right.add_child(bux_pill)
 	root.add_child(top_right)
+	# under it, your name (with two players)
+	var who_pill := pill(style(who, 22), 999, Vector2(16, 4))
+	who_pill.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	who_pill.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	who_pill.position = Vector2(-18, 92)
+	who_pill.get_theme_stylebox("panel").bg_color = Color(Data.config.heroes[player].tagColour)
+	who_pill.visible = false
+	root.add_child(who_pill)
 
 	# bottom middle: the weapon you're holding
 	weapon_pill = pill(style(weapon, 30))
@@ -111,9 +127,11 @@ func _ready() -> void:
 	toast_label.add_theme_constant_override("shadow_offset_x", 3)
 	toast_label.add_theme_constant_override("shadow_offset_y", 3)
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # (long ones wrap on half a screen)
+	toast_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	toast_label.anchor_top = 0.28
-	toast_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	toast_label.offset_left = 30
+	toast_label.offset_right = -30
 	toast_label.modulate.a = 0
 	root.add_child(toast_label)
 
@@ -125,6 +143,16 @@ func _ready() -> void:
 	speed.position = Vector2(12, 120)
 	speed.visible = false
 	root.add_child(speed)
+
+
+## Puts the HUD on part of the screen: all of it with one player, or her half with two. zoom: how
+## big things are (the browser game shrinks them to 0.7 on half a screen).
+func set_view(rect: Rect2, zoom: float, show_name: bool) -> void:
+	root.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	root.position = rect.position
+	root.scale = Vector2.ONE * zoom
+	root.size = rect.size / zoom
+	who.get_parent().visible = show_name
 
 
 ## Sets a label's size, with a soft shadow like the browser game's text.
@@ -240,7 +268,7 @@ func make_level_done_screen() -> void:
 func show_level_done(place: String, tag_bux: int) -> void:
 	level_done_place.text = "%s is safe again!" % place
 	level_done_bux.text = "%d Tag Bux to spend" % tag_bux
-	level_done_go.text = "Press Space or fire to play again"
+	level_done_go.text = "Press %s to play again" % Controls.button()
 	toast_time = 0
 	level_done.visible = true
 
@@ -318,6 +346,7 @@ func update(hero: Hero) -> void:
 	var blinking := hero.safe > 0 and hero.tagged <= 0
 	hearts_row.modulate.a = 0.3 if blinking and fmod(blink_time, 0.25) < 0.125 else 1.0
 
+	who.text = hero.look.name
 	speed_badge.text = "Speed %d" % hero.speed_level
 	strength_badge.text = "Strength %d" % hero.strength_level
 	bux.text = str(hero.tag_bux)
@@ -352,7 +381,7 @@ func jump(icon: Control) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("show_speed"):
+	if event.is_action_pressed("show_speed") and player == 0:
 		speed.visible = not speed.visible
 
 

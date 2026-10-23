@@ -1,11 +1,12 @@
 class_name ShopMenu
 extends MenuScreen
 ## The shop (src/shop.js): weapons, Heart Medicine, armour and cool outfits. Walk in through the
-## door; choose with up and down, and buy with Space or fire.
+## door; choose with up and down, and buy with the attack button.
 
 const ROWS_SHOWN := 4 # the list scrolls to show this many rows at a time
 
 var cursor := 0
+var partner: Hero = null # your sister, in 2-player mode, so you can give her Tag Bux
 var first := 0 # the first row shown
 
 
@@ -13,10 +14,12 @@ func _init() -> void:
 	super(Color("ff6fae"), PURPLE, YELLOW, Color("ff4f8b"), Color("e05a00"))
 
 
-## Every row: weapons, then medicine, armour, outfits, and the way out.
+## Every row: weapons, then medicine, armour, outfits, giving Tag Bux to your sister (with two
+## players), and the way out.
 func ids() -> Array:
 	var c: Dictionary = Data.config
-	return c.weapons.keys() + c.items.keys() + c.armour.keys() + c.outfits.keys() + ["leave"]
+	var give := ["give"] if partner else []
+	return c.weapons.keys() + c.items.keys() + c.armour.keys() + c.outfits.keys() + give + ["leave"]
 
 
 static func thing(id: String) -> Dictionary:
@@ -57,6 +60,9 @@ func status(id: String) -> Dictionary:
 	var p := hero
 	if id == "leave":
 		return { label = "Back outside", kind = "leave" }
+	if id == "give":
+		var amount: int = Data.config.giveTagBux
+		return { price = amount, kind = "buy" if p.tag_bux >= amount else "dear" }
 	var w := thing(id)
 	var can := func(): return { price = int(w.price), kind = "buy" if p.tag_bux >= w.price else "dear" }
 	if w.has("hearts"):
@@ -88,13 +94,13 @@ func handle_input(event: InputEvent) -> bool:
 	if wait > 0:
 		return false
 	var n := ids().size()
-	if event.is_action_pressed("walk_forward"):
+	if event.is_action_pressed(hero.act("walk_forward")):
 		cursor = (cursor + n - 1) % n
 		Sound.play("tick")
-	elif event.is_action_pressed("walk_back"):
+	elif event.is_action_pressed(hero.act("walk_back")):
 		cursor = (cursor + 1) % n
 		Sound.play("tick")
-	elif event.is_action_pressed("attack"):
+	elif event.is_action_pressed(hero.act("attack")):
 		if choose():
 			return true
 	else:
@@ -110,6 +116,17 @@ func choose() -> bool:
 		return true
 	var s := status(id)
 	var w := thing(id)
+	if id == "give":
+		var amount: int = Data.config.giveTagBux
+		if s.kind == "dear":
+			Sound.play("nope")
+			say("You need %d Tag Bux to give" % amount, "bad")
+		else:
+			Sound.play("kaching")
+			p.tag_bux -= amount
+			partner.tag_bux += amount
+			say("You gave %d Tag Bux to %s! 🎁" % [amount, partner.look.name], "good")
+		return false
 	# a happy sound for anything that worked, a buzz for anything that didn't
 	Sound.play("nope" if s.kind in ["dear", "locked", "full"] else "kaching" if s.kind in ["buy", "free"] else "select")
 	match s.kind:
@@ -180,6 +197,12 @@ func draw() -> void:
 		if id == "leave":
 			rows.append({ icon = "🚪", name = "Leave", kind = "leave", label = s.label })
 			continue
+		if id == "give":
+			var row := { icon = "🎁", name = "Give %d Tag Bux to %s" % [Data.config.giveTagBux, partner.look.name],
+				about = "As many times as you like" }
+			row.merge(s)
+			rows.append(row)
+			continue
 		var w := thing(id)
 		var about: String = w.get("about", "")
 		if w.has("damage"):
@@ -187,11 +210,12 @@ func draw() -> void:
 		if w.has("blocks"):
 			about = "Blocks %d %s every level" % [w.blocks, "hit" if w.blocks == 1 else "hits"]
 		if w.has("covers"):
-			about = "Just for looks!" + (" (fire takes it off)" if s.kind == "wearing" else "")
+			about = ("Just for looks. %s will see it!" % partner.look.name if partner else "Just for looks!") \
+				+ (" (choose it again to take it off)" if s.kind == "wearing" else "")
 		var row := { icon = w.icon, name = w.name, about = about }
 		row.merge(s)
 		rows.append(row)
 	# scroll so the chosen row is always on screen
 	first = clampi(first, cursor - ROWS_SHOWN + 1, cursor)
 	show_rows(rows, cursor, first, ROWS_SHOWN)
-	help.text = "🡑 🡓 choose  ·  Space or fire: buy"
+	help.text = "🡑 🡓 choose  ·  %s: buy" % Controls.button()

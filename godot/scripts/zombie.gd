@@ -10,6 +10,7 @@ const GLOW_WHITE := Color(1, 1, 1)
 const GLOW_ICE := Color("3a78b0")
 const GLOW_SLIME := Color("2f7a10")
 const GLOW_NONE := Color(0, 0, 0)
+const HEALTH_BAR_SHADER := preload("res://scripts/health_bar.gdshader")
 
 var kind: String
 var type: Dictionary # this kind's numbers from config.json
@@ -45,8 +46,7 @@ var model: Node3D
 var stars: Node3D
 var bubble: Node3D
 var ice: Node3D
-var health_bar: Node3D
-var health_fill: Node3D
+var health_bar: MeshInstance3D
 var flash_materials: Array[StandardMaterial3D] = []
 
 
@@ -73,9 +73,13 @@ func _ready() -> void:
 	stars = model.find_child("stars", true, false)
 	bubble = model.find_child("bubble", true, false)
 	ice = model.find_child("ice", true, false)
-	health_bar = model.find_child("healthBar", true, false)
-	health_fill = model.find_child("healthFill", true, false)
-	for part in [bubble, ice, health_bar]: # (see-through, or floating above it)
+	# its health bar floats over its head (the one in the model is left hidden: this one turns to
+	# face each player's camera by itself, which matters with two players looking at once)
+	health_bar = make_health_bar(type.size)
+	health_bar.position.y = 2.5 * type.size
+	health_bar.visible = false
+	model.add_child(health_bar)
+	for part in [bubble, ice]: # (see-through)
 		for mesh in part.find_children("*", "GeometryInstance3D", true, false) + [part]:
 			if mesh is GeometryInstance3D:
 				mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -99,9 +103,7 @@ func hit(damage: float) -> bool:
 	squash = 1.0
 	# its health bar shows once it's been hit
 	health_bar.visible = true
-	var left := maxf(0.0, health / max_health)
-	health_fill.scale.x = left
-	health_fill.position.x = -0.47 * (1 - left)
+	health_bar.material_override.set_shader_parameter("fill", maxf(0.0, health / max_health))
 	if health <= 0.0001:
 		alive = false
 	return not alive
@@ -205,11 +207,11 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	position = level.resolve_collisions(position, radius)
 	position.y = 0
 	rotation.y = yaw
-	animate(delta, speed, heroes)
+	animate(delta, speed)
 
 
 ## The silly walk: a wobble, swinging legs, waving arms and googly eyes.
-func animate(delta: float, speed: float, heroes: Array) -> void:
+func animate(delta: float, speed: float) -> void:
 	bubble.visible = bubble_time > 0
 	ice.visible = frozen_time > 0
 	# a bubble floats it up, then it drops back down when the bubble pops
@@ -217,9 +219,6 @@ func animate(delta: float, speed: float, heroes: Array) -> void:
 	if bubble_time > 0:
 		bubble.scale = Vector3.ONE * (1 + sin(time * 4) * 0.04)
 	model.position.y = lift
-	# the health bar faces you
-	if health_bar.visible and heroes:
-		health_bar.global_basis = heroes[0].camera.global_basis.scaled(Vector3.ONE * type.size)
 	flash = maxf(0.0, flash - delta)
 	if frozen_time > 0:
 		# frozen solid: no wobbling at all
@@ -249,6 +248,20 @@ func animate(delta: float, speed: float, heroes: Array) -> void:
 	body.scale = Vector3(s, spawn_pop * (1.0 - squash * 0.2), s)
 	for m in flash_materials:
 		m.emission = GLOW_WHITE if flash > 0 else GLOW_SLIME if slow_time > 0 else GLOW_NONE
+
+
+## A health bar: a dark box with a green bar inside, as long as how much health is left ("fill",
+## 0 to 1). Its shader turns it to face whichever camera is drawing it.
+static func make_health_bar(size: float) -> MeshInstance3D:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.0, 0.14) * size
+	var m := ShaderMaterial.new()
+	m.shader = HEALTH_BAR_SHADER
+	var bar := MeshInstance3D.new()
+	bar.mesh = quad
+	bar.material_override = m
+	bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return bar
 
 
 ## Where it gets hit: the middle of its body (up in its bubble, if it's in one).

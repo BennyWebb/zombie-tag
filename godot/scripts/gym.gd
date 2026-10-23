@@ -101,13 +101,13 @@ func handle_input(event: InputEvent) -> bool:
 	match mode:
 		"menu", "pick":
 			var list := rows()
-			if event.is_action_pressed("walk_forward"):
+			if event.is_action_pressed(hero.act("walk_forward")):
 				cursor = (cursor + list.size() - 1) % list.size()
 				Sound.play("tick")
-			elif event.is_action_pressed("walk_back"):
+			elif event.is_action_pressed(hero.act("walk_back")):
 				cursor = (cursor + 1) % list.size()
 				Sound.play("tick")
-			elif event.is_action_pressed("attack"):
+			elif event.is_action_pressed(hero.act("attack")):
 				if choose(list[cursor]):
 					return true
 			else:
@@ -116,7 +116,7 @@ func handle_input(event: InputEvent) -> bool:
 				draw_list()
 		"treadmill":
 			# only a different key from last time counts
-			var key := "L" if event.is_action_pressed("turn_left") else "R" if event.is_action_pressed("turn_right") else ""
+			var key := "L" if event.is_action_pressed(hero.act("turn_left")) else "R" if event.is_action_pressed(hero.act("turn_right")) else ""
 			if key != "" and key != last_key:
 				last_key = key
 				started = true
@@ -125,14 +125,14 @@ func handle_input(event: InputEvent) -> bool:
 				tempo += 2
 				Sound.play("step", 1.0 if key == "L" else 1.25) # left, right, left, right...
 		"lift":
-			if event.is_action_pressed("attack"):
+			if event.is_action_pressed(hero.act("attack")):
 				started = true
 				fill += g.weights.dumbbells[weight_id].rise
 				Sound.play("lift", 1 + minf(1, fill)) # higher as it goes up
 				key_left.scale = Vector2.ONE * 1.25
 				create_tween().tween_property(key_left, "scale", Vector2.ONE, 0.2)
 		"result":
-			if event.is_action_pressed("attack"):
+			if event.is_action_pressed(hero.act("attack")):
 				menu("Want to train some more?")
 				cursor = last_row
 				draw_list()
@@ -174,7 +174,7 @@ func draw_list() -> void:
 	clear(top_right)
 	top_right.add_child(pill(label("🏃 %d   🏋️ %d" % [hero.speed_level, hero.strength_level], 40, YELLOW)))
 	show_rows(rows(), cursor)
-	help.text = "🡑 🡓 choose  ·  Space or fire: go"
+	help.text = "🡑 🡓 choose  ·  %s: go" % Controls.button()
 
 
 # ---------- the mini-games ----------
@@ -296,7 +296,7 @@ func start_lift(id: String) -> void:
 	trainee.add_theme_font_size_override("font_size", 110)
 	scene.add_child(trainee)
 	scene.add_child(sweat)
-	key_left = key_badge("Space or fire")
+	key_left = key_badge(Controls.button())
 	key_left.get_theme_stylebox("panel").bg_color = YELLOW
 	keys_row([label("Tap", 26, Color.WHITE), key_left, label("super fast to lift it!", 26, Color.WHITE)])
 	say("")
@@ -393,7 +393,7 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 		shadow(oh, 5)
 		add.call(oh)
 		add.call(label("Try again? It's free!", 34, Color.WHITE))
-		add.call(label("Press Space or fire", 34, YELLOW))
+		add.call(label("Press %s" % Controls.button(), 34, YELLOW))
 		return
 	var stat_name := stat.capitalize()
 	var level: int
@@ -429,7 +429,7 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 	add.call(up)
 	add.call(label("%s %d ➜ %d" % [stat_name, level - 1, level], 48, YELLOW))
 	add.call(label("You'll run faster now!" if stat == "speed" else "Your weapons hit harder now!", 34, Color.WHITE))
-	add.call(label("Press Space or fire", 34, YELLOW))
+	add.call(label("Press %s" % Controls.button(), 34, YELLOW))
 
 
 ## The treadmill's belt: grey stripes sliding along.

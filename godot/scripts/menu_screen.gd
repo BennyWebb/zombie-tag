@@ -66,6 +66,7 @@ func _init(inner: Color, outer: Color, border_colour: Color, arrow_colour: Color
 	help.add_theme_font_size_override("font_size", 26)
 	for label in [message, help]:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # long ones go onto two lines (on half a screen)
 		column.add_child(label)
 
 

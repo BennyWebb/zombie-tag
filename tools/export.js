@@ -16,7 +16,7 @@ import { CONFIG } from '../src/config.js';
 import { THEMES } from '../src/themes.js';
 import { BUILDING_SPOTS, GYM_LOOK, SHOP_LOOK, buildWorld, makeBuilding, makeGate } from '../src/world.js';
 import { LOOKS, SHIRTS, SKINS, makeZombieMesh } from '../src/zombie.js';
-import { makeHeroBody } from '../src/hero.js';
+import { addOutfits, makeHeroBody } from '../src/hero.js';
 import { Player } from '../src/player.js';
 import { SHOT_LOOKS, SPLASH_COLOURS } from '../src/weapons.js';
 import { coinGeo, coinMats } from '../src/coins.js';
@@ -370,7 +370,30 @@ async function exportHeroes() {
     return saveModel(`models/heroes/${file}.glb`, parts.root);
   };
   for (const { id } of CONFIG.creator.hairStyles) await hero(id, [], `hair-${id}`);
-  for (const id of Object.keys(CONFIG.outfits)) await hero(look.hairStyle, [id], `outfit-${id}`);
+  // each outfit on its own, so Godot can put any of them on any hero: the pieces that go on the
+  // head are in "head" and the ones on the body in "torso" (both where they are on a hero), and the
+  // rest (like the cape) are straight in the root
+  for (const id of Object.keys(CONFIG.outfits)) {
+    const root = new THREE.Group();
+    root.name = id;
+    const head = new THREE.Group();
+    head.name = 'head';
+    head.position.y = 1.68;
+    const torso = new THREE.Group();
+    torso.name = 'torso';
+    torso.position.y = 1.05;
+    root.add(head, torso);
+    const parts = { root, head, torso };
+    addOutfits(parts, [id]);
+    if (parts.cape) parts.cape.name = 'cape';
+    root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    models[`heroes/outfit-${id}`] = {
+      file: `models/heroes/outfit-${id}.glb`,
+      note: 'Just the outfit: put the children of "head" and "torso" on the hero\'s head and torso.',
+      hidden: [],
+    };
+    await saveModel(`models/heroes/outfit-${id}.glb`, root);
+  }
   log(`  heroes: ${CONFIG.creator.hairStyles.length} hair styles and ${Object.keys(CONFIG.outfits).length} outfits`);
 }
 
