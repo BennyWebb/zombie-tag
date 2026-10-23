@@ -20,9 +20,9 @@ const OPTIONS := {
 
 
 ## The usual settings: as good as the Shield managed at 60 fps with one player, and simpler
-## shadows with two.
+## shadows with two. Smooth edges start off: on a 1080p TV you can hardly see them from the sofa.
 static func defaults(players: int) -> Dictionary:
-	return { resolution = 0, shadows = 0 if players == 1 else 1, smoothing = 1, distance = 0, extras = 0 }
+	return { resolution = 0, shadows = 0 if players == 1 else 1, smoothing = 2, distance = 0, extras = 0 }
 
 
 static func resolution_scale(g: Dictionary) -> float:
