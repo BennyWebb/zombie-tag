@@ -78,6 +78,8 @@ func _notification(what: int) -> void:
 
 
 func toggle_pause() -> void:
+	if finished:
+		return # the Level done! screen is up
 	paused = not paused
 	hud.toast("Paused" if paused else "", 9999 if paused else 0)
 
@@ -85,20 +87,29 @@ func toggle_pause() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		toggle_pause()
+	elif event.is_action_pressed("attack") and finished:
+		play_again()
+
+
+## From the Level done! screen. The next level is made behind the screen, which goes a moment later,
+## so any stop while it's made isn't seen. (The other levels come in phase 6.)
+func play_again() -> void:
+	start_level(level.info.number)
+	get_tree().create_timer(0.2).timeout.connect(hud.hide_level_done)
 
 
 func _process(delta: float) -> void:
-	if paused:
+	if paused or finished:
 		return
 	time += delta
 
-	var alive := zombies.filter(func(z): return z.alive)
-	if to_spawn > 0 and alive.size() <= Data.config.arena.nextWaveWhenLeft:
+	# (popped zombies leave the list straight away, so it only holds ones still standing)
+	if to_spawn > 0 and zombies.size() <= Data.config.arena.nextWaveWhenLeft:
 		spawn_wave()
 	update_hero(delta)
 
 	# every zombie popped: the exit gate opens, and all the coins fly to you
-	var cleared := to_spawn == 0 and alive.is_empty()
+	var cleared := to_spawn == 0 and zombies.is_empty()
 	for got in coins.update(delta, [hero], level, cleared):
 		got[0].tag_bux += got[1]
 		hud.bump_bux()
@@ -119,12 +130,14 @@ func _process(delta: float) -> void:
 		level.open_gate()
 		Sound.play("gate")
 		hud.toast("All the zombies are popped!\nWalk through the glowing exit gate", 4)
-	if level.at_gate(hero.position) and hero.tagged <= 0 and not finished:
+	if level.at_gate(hero.position) and hero.tagged <= 0:
 		finished = true
+		# coins still on their way to you count too
+		hero.tag_bux += coins.total()
+		coins.clear()
 		Sound.play("fanfare")
-		hud.toast("Level done!", 3)
-		get_tree().create_timer(3.0).timeout.connect(func(): start_level(level.info.number))
-	hud.show_zombies_left(to_spawn + alive.size(), level.gate_open)
+		hud.show_level_done(level.info.name, hero.tag_bux)
+	hud.show_zombies_left(to_spawn + zombies.size(), level.gate_open)
 	hud.update(hero)
 
 

@@ -31,6 +31,14 @@ func burst(pos: Vector3, value: int) -> void:
 		})
 
 
+## How many Tag Bux are still lying about (or flying to you).
+func total() -> int:
+	var sum := 0
+	for c in list:
+		sum += c.value
+	return sum
+
+
 func clear() -> void:
 	for c in list:
 		c.node.queue_free()

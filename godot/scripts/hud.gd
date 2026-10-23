@@ -2,7 +2,7 @@ class_name Hud
 extends CanvasLayer
 ## What's drawn over the game (src/hud.js and the HUD part of src/style.css): hearts and armour
 ## shields, Speed and Strength, how many zombies are left, Tag Bux, the weapon you're holding,
-## messages, the screen edges flashing when you're hurt, and the TAGGED! screen.
+## messages, the screen edges flashing when you're hurt, the TAGGED! screen and the Level done! screen.
 ## F3 (or Back / View / Select) shows the frame rate and how many things are drawn, for checking
 ## speed on the TV.
 
@@ -27,6 +27,10 @@ var toast_time := 0.0
 var hurt := TextureRect.new()
 var tagged := ColorRect.new()
 var tagged_count := Label.new()
+var level_done := ColorRect.new()
+var level_done_place := Label.new()
+var level_done_bux := Label.new()
+var level_done_go := Label.new()
 var speed := Label.new()
 var hearts_shown := -1
 var blink_time := 0.0
@@ -114,6 +118,7 @@ func _ready() -> void:
 	root.add_child(toast_label)
 
 	make_tagged_screen()
+	make_level_done_screen()
 
 	speed.add_theme_font_size_override("font_size", 18)
 	speed.add_theme_color_override("font_shadow_color", PURPLE)
@@ -189,6 +194,59 @@ func make_tagged_screen() -> void:
 		lines.add_child(label)
 	for label in [tagged_count, keep]:
 		label.add_theme_font_size_override("font_size", 34)
+
+
+## "Level done!", like the browser game's screen between levels.
+func make_level_done_screen() -> void:
+	level_done.color = Color(60 / 255.0, 20 / 255.0, 110 / 255.0, 0.55)
+	level_done.set_anchors_preset(Control.PRESET_FULL_RECT)
+	level_done.visible = false
+	root.add_child(level_done)
+	var lines := VBoxContainer.new()
+	lines.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lines.alignment = BoxContainer.ALIGNMENT_CENTER
+	lines.add_theme_constant_override("separation", 14)
+	level_done.add_child(lines)
+	var title := Label.new()
+	title.text = "Level done!"
+	title.add_theme_font_size_override("font_size", 110)
+	title.add_theme_color_override("font_color", Color("9cff57"))
+	title.add_theme_color_override("font_shadow_color", PURPLE)
+	title.add_theme_constant_override("shadow_offset_x", 6)
+	title.add_theme_constant_override("shadow_offset_y", 6)
+	var bux_row := HBoxContainer.new()
+	bux_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	bux_row.add_theme_constant_override("separation", 10)
+	var you_have := Label.new()
+	you_have.text = "You've got"
+	bux_row.add_child(you_have)
+	bux_row.add_child(HudIcon.new(HudIcon.Kind.COIN, 32))
+	bux_row.add_child(level_done_bux)
+	level_done_go.add_theme_font_size_override("font_size", 38)
+	level_done_go.add_theme_color_override("font_color", YELLOW)
+	for line in [title, level_done_place, bux_row, level_done_go]:
+		if line is Label:
+			line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lines.add_child(line)
+	for label in [level_done_place, you_have, level_done_bux]:
+		label.add_theme_font_size_override("font_size", 34)
+	# "press fire" gently grows and shrinks, so it's clear what to do next (growing, rather than
+	# moving, because the column decides where each line goes)
+	var pulse := create_tween().set_loops()
+	pulse.tween_property(level_done_go, "scale", Vector2.ONE * 1.08, 0.5).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(level_done_go, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE)
+
+
+func show_level_done(place: String, tag_bux: int) -> void:
+	level_done_place.text = "%s is safe again!" % place
+	level_done_bux.text = "%d Tag Bux to spend" % tag_bux
+	level_done_go.text = "Press Space or fire to play again"
+	toast_time = 0
+	level_done.visible = true
+
+
+func hide_level_done() -> void:
+	level_done.visible = false
 
 
 func toast(text: String, seconds := 2.5) -> void:
@@ -283,6 +341,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	level_done_go.pivot_offset = level_done_go.size / 2 # it grows from its middle
 	# messages fade in and out
 	toast_time -= delta
 	toast_label.modulate.a = move_toward(toast_label.modulate.a, 1.0 if toast_time > 0 else 0.0, delta / 0.3)
