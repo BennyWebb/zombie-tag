@@ -160,7 +160,7 @@ export const CONFIG = {
       word: 'ZAP!', // what pops up when it hits
       kind: 'beam',
       damage: 8,
-      range: 16,
+      range: 80, // play-test: right across the play area
       aimAngle: 20,
       fireInterval: 0.25, // the beam hits this often while Space is held
       starsPerSecond: 40,

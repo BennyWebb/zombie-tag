@@ -458,12 +458,14 @@ export class Beam {
       const axis = new THREE.Vector3().subVectors(this.to, this.from);
       const side = new THREE.Vector3(0, 1, 0).cross(axis).normalize();
       const up = new THREE.Vector3().crossVectors(axis, side).normalize();
+      // (along the first 16 m, near you, so they're as thick on a long beam as a short one)
+      const reach = Math.min(1, 16 / Math.max(axis.length(), 0.01));
       while (this.toSpawn >= 1) {
         this.toSpawn -= 1;
         const sprite = new THREE.Sprite(starMats[Math.floor(Math.random() * starMats.length)]);
         this.scene.add(sprite);
         this.stars.push({
-          sprite, along: 0.15 + Math.random() * 0.85, angle: Math.random() * Math.PI * 2, radius: 0.08,
+          sprite, along: (0.15 + Math.random() * 0.85) * reach, angle: Math.random() * Math.PI * 2, radius: 0.08,
           life: 0.7, axis: axis.clone(), from: this.from.clone(), side: side.clone(), up: up.clone(),
           size: 0.12 + Math.random() * 0.16,
         });

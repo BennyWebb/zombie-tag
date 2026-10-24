@@ -6,6 +6,7 @@ extends Node3D
 
 const STAR_COLOURS := [0xffe066, 0xff6fd8, 0xb28dff, 0x9cfff0, 0xffffff]
 const MAX_STARS := 64
+const STARS_REACH := 16.0 # the stars swirl round this much of the beam, nearest you (metres)
 
 var glow := MeshInstance3D.new()
 var tube := Node3D.new() # the glow and the white core, stretched from the gun to what it's hitting
@@ -129,8 +130,10 @@ func update(delta: float, stars_per_second: float) -> void:
 		while to_spawn >= 1:
 			to_spawn -= 1
 			if stars.size() < MAX_STARS:
+				# (along the first 16 m, near you, so they're as thick on a long beam as a short one)
+				var reach := minf(1.0, STARS_REACH / maxf(axis.length(), 0.01))
 				stars.append({
-					along = randf_range(0.15, 1.0), angle = randf() * TAU, radius = 0.08, life = 0.7,
+					along = randf_range(0.15 * reach, reach), angle = randf() * TAU, radius = 0.08, life = 0.7,
 					axis = axis, from = from, side = side, up = up, size = randf_range(0.12, 0.28),
 					colour = Data.colour(STAR_COLOURS.pick_random()),
 				})

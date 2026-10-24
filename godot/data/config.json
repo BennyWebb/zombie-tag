@@ -154,7 +154,7 @@
       "word": "ZAP!",
       "kind": "beam",
       "damage": 8,
-      "range": 16,
+      "range": 80,
       "aimAngle": 20,
       "fireInterval": 0.25,
       "starsPerSecond": 40
