@@ -85,10 +85,11 @@ export const CONFIG = {
       word: 'SPLAT!', // what pops up when it hits
       kind: 'shoot',
       damage: 3,
-      range: 14,
+      range: 12, // further than the water, as it's stronger
       aimAngle: 25,
       fireInterval: 0.5,
-      shotSpeed: 18,
+      shotSpeed: 17,
+      gravity: 12, // the goo arcs down, like the water
       shot: 'slime',
       slowTime: 3,
       slowSpeed: 0.35, // slimed zombies move at this much of their speed
@@ -116,10 +117,11 @@ export const CONFIG = {
       word: 'BRRR!', // what pops up when it hits
       kind: 'shoot',
       damage: 5,
-      range: 15,
+      range: 16, // the strongest of the three goes furthest
       aimAngle: 25,
       fireInterval: 0.7,
       shotSpeed: 20,
+      gravity: 10, // the snowball arcs down too
       shot: 'snowball',
       freezeTime: 2,
     },
