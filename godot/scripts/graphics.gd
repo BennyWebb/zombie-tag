@@ -18,7 +18,7 @@ const OPTIONS := {
 	smoothing = { label = "✨ Smooth edges", choices = ["4x", "2x", "Off"] },
 	distance = { label = "🔭 View distance", choices = ["Far", "Medium", "Near"] },
 	extras = { label = "❄️ Snow and lamps", choices = ["On", "Off"] },
-	test = { label = "🧪 Test: leave out", choices = ["Nothing", "HUD", "Zombies", "Scenery", "World", "All 3D"] },
+	test = { label = "🧪 Test: leave out", choices = ["Nothing", "HUD", "Zombies", "Scenery", "Shop and gym", "Their signs", "World", "All 3D"] },
 }
 
 

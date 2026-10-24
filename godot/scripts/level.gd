@@ -27,6 +27,7 @@ var floaters: Array[Floaters] = []
 var carousel: Node3D # (the Funfair's rides, or null)
 var ferris_wheel: Node3D
 var solid: Array[Node3D] = [] # the scenery and the buildings (for the graphics test)
+var buildings: Array[Node3D] = [] # the shop and the gym
 
 
 func _init(number: int) -> void:
@@ -126,8 +127,11 @@ func set_graphics(g: Dictionary) -> float:
 		f.visible = g.extras == 0
 	for lamp in lamps:
 		lamp.visible = g.extras == 0
+	var leave_out: String = Graphics.OPTIONS.test.choices[g.test]
 	for part in solid:
-		part.visible = Graphics.OPTIONS.test.choices[g.test] != "Scenery"
+		part.visible = leave_out != "Scenery" and not (leave_out == "Shop and gym" and part in buildings)
+	for s in signs:
+		s.visible = leave_out != "Their signs"
 	return 300.0 if g.distance == 0 else fog_end + 5
 
 
@@ -146,6 +150,7 @@ func add_buildings() -> void:
 		building.position = Vector3(pair[1].x, 0, pair[1].z)
 		add_child(building)
 		solid.append(building)
+		buildings.append(building)
 		Data.remove_extra_shadows(building)
 		var sign: Node3D = building.find_child("sign", true, false)
 		signs.append(sign)
