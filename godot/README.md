@@ -87,6 +87,7 @@ for 2, since two players draw the world twice. Further down each list is quicker
 | --- | --- |
 | 🖼️ Sharpness | Draws the world with fewer dots and stretches it to fit (the HUD and menus stay sharp) |
 | 🌳 Shadows | The sun's shadows in four layers near to far, two, one, or none (each layer draws everything that casts a shadow again). The first two use a sharper shadow map, and all of them soften the shadows' edges |
+| 🌳 Shadows reach | How far from you things have shadows (they fade out before it): nearer is quicker, as fewer things cast them, and sharper |
 | ✨ Smooth edges | Smoothing jagged edges ("anti-aliasing"): 4x, 2x or off (off to start with: on a 1080p TV it hardly shows) |
 | 🔭 View distance | Brings the fog in, and doesn't draw anything past it (far things like the sun go too) |
 | ❄️ Snow and lamps | The snow, sparkles and fireflies, and the lamps and torches at night |

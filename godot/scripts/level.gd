@@ -118,7 +118,7 @@ func set_graphics(g: Dictionary) -> float:
 	sun.shadow_enabled = g.shadows < 3
 	sun.directional_shadow_mode = [DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS,
 		DirectionalLight3D.SHADOW_ORTHOGONAL, DirectionalLight3D.SHADOW_ORTHOGONAL][g.shadows]
-	sun.directional_shadow_max_distance = [60.0, 40.0, 30.0, 30.0][g.shadows]
+	sun.directional_shadow_max_distance = Graphics.OPTIONS.reach.choices[g.reach].to_float() # ("40 m": 40)
 	# the shadow map: bigger is sharper. (Godot's usual on Android is half the size of a computer's,
 	# with hard edges, which made big jagged steps along the shadows' edges, so it's set here.)
 	RenderingServer.directional_shadow_atlas_set_size(2048 if g.shadows >= 2 else 4096, true)

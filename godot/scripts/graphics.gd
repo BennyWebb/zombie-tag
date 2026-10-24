@@ -5,6 +5,8 @@ class_name Graphics
 ##   resolution  how many dots the world is drawn with, across and down (the HUD and menus stay sharp)
 ##   shadows     the sun's shadows: in four layers near to far (each layer draws everything that
 ##               casts a shadow again), two, one, or none
+##   reach       how far from you things have shadows: nearer is quicker (fewer things cast them)
+##               and sharper (the same shadow map covers less)
 ##   smoothing   smoothing the jagged edges of things ("multisample anti-aliasing")
 ##   distance    how far you can see: anything past it isn't drawn, and the fog comes in to hide it
 ##   extras      the snow, sparkles and fireflies, and the glowing lamps and torches at night
@@ -15,6 +17,7 @@ class_name Graphics
 const OPTIONS := {
 	resolution = { label = "🖼️ Sharpness", choices = ["100%", "90%", "80%", "70%", "60%", "50%"] },
 	shadows = { label = "🌳 Shadows", choices = ["Best", "Good", "Simple", "Off"] },
+	reach = { label = "🌳 Shadows reach", choices = ["60 m", "40 m", "30 m", "20 m", "12 m"] },
 	smoothing = { label = "✨ Smooth edges", choices = ["4x", "2x", "Off"] },
 	distance = { label = "🔭 View distance", choices = ["Far", "Medium", "Near"] },
 	extras = { label = "❄️ Snow and lamps", choices = ["On", "Off"] },
@@ -26,7 +29,7 @@ const OPTIONS := {
 ## shadows with two (with Good, two players still had a slow frame now and then). Smooth edges start
 ## off: on a 1080p TV you can hardly see them from the sofa.
 static func defaults(players: int) -> Dictionary:
-	return { resolution = 0, shadows = 0 if players == 1 else 2, smoothing = 2, distance = 0, extras = 0, test = 0 }
+	return { resolution = 0, shadows = 0 if players == 1 else 2, reach = 0 if players == 1 else 2, smoothing = 2, distance = 0, extras = 0, test = 0 }
 
 
 static func resolution_scale(g: Dictionary) -> float:

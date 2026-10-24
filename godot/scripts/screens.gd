@@ -525,9 +525,9 @@ func draw_graphics(column: VBoxContainer) -> void:
 	column.offset_left = 30
 	column.offset_right = 650
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", 4) # (closer together, to fit every setting)
 	var count: int = main.heroes.size()
-	box.add_child(heading("Graphics", 52))
+	box.add_child(heading("Graphics", 44))
 	box.add_child(line("For %s · they change straight away" % ("1 player" if count == 1 else "2 players"), 24, Color.WHITE))
 	box.add_child(speed_line)
 	var g: Dictionary = Save.graphics[str(count)]
@@ -536,15 +536,15 @@ func draw_graphics(column: VBoxContainer) -> void:
 		var row := HBoxContainer.new()
 		var chosen := i == choice
 		var name_text: String = Graphics.OPTIONS[keys[i]].label if i < keys.size() else "↩ Back"
-		var name_label := MenuScreen.label(name_text, 26, PURPLE if chosen else Color.WHITE)
+		var name_label := MenuScreen.label(name_text, 24, PURPLE if chosen else Color.WHITE)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
 		if i < keys.size():
 			var value: String = Graphics.OPTIONS[keys[i]].choices[g[keys[i]]]
-			row.add_child(MenuScreen.label("◀ %s ▶" % value, 26, PINK if chosen else YELLOW))
+			row.add_child(MenuScreen.label("◀ %s ▶" % value, 24, PINK if chosen else YELLOW))
 		var c := card(row, chosen)
-		c.get_theme_stylebox("panel").content_margin_top = 4
-		c.get_theme_stylebox("panel").content_margin_bottom = 4
+		c.get_theme_stylebox("panel").content_margin_top = 2
+		c.get_theme_stylebox("panel").content_margin_bottom = 2
 		box.add_child(c)
 	box.add_child(line("Further down the choices is quicker, but not as nice", 22, Color.WHITE))
 	box.add_child(line("%s choose  ·  🡐 🡒 change  ·  %s back" % ["🡑 🡓", back_name()], 24, YELLOW))
