@@ -200,8 +200,10 @@ func _ready() -> void:
 	make_tagged_screen()
 	make_level_done_screen()
 
-	speed.add_theme_font_size_override("font_size", 18)
+	speed.add_theme_font_size_override("font_size", 24) # (big enough to read on the TV from the sofa)
 	speed.add_theme_color_override("font_shadow_color", PURPLE)
+	speed.add_theme_constant_override("outline_size", 6)
+	speed.add_theme_color_override("font_outline_color", PURPLE)
 	speed.position = Vector2(12, 120)
 	speed.visible = false
 	add_child(speed) # (on top of the picture: it changes every frame)
