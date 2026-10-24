@@ -10,6 +10,8 @@ const STAND_UP := Basis(Vector3.RIGHT, PI / 2) # the coin model lies flat; coins
 var coin_scene: PackedScene = load("res://models/coin.glb")
 var list: Array = [] # each coin: { pos, spin, vel, value, age, landed }
 var drawers: Array[MultiMeshInstance3D] = [] # (one, or two if some of the coin casts no shadow)
+var warm_at := Vector3.ZERO # see warm_up
+var warm_frames := 0
 
 
 func _ready() -> void:
@@ -22,19 +24,20 @@ func _ready() -> void:
 			drawer.multimesh = MultiMesh.new()
 			drawer.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 			drawer.multimesh.mesh = joined.mesh
+			drawer.multimesh.instance_count = 128 # (room for plenty, so it never has to grow mid-fight)
 			drawer.cast_shadow = joined.cast_shadow
 			add_child(drawer)
 			drawers.append(drawer)
 	model.free()
 
 
-## A coin drawn the same way, for warming up (see main.gd's warm_up).
-func warm_up_coin() -> Node3D:
-	var drawer: MultiMeshInstance3D = drawers[0].duplicate()
-	drawer.multimesh = drawers[0].multimesh.duplicate()
-	drawer.multimesh.instance_count = 1
-	drawer.multimesh.set_instance_transform(0, Transform3D(STAND_UP, Vector3.ZERO))
-	return drawer
+## The first time the coins are drawn takes the graphics chip a moment to get ready for, which
+## made the first zombie pop stutter. (A copy drawn instead didn't help: it has to be these.) So at
+## the start of a level, one coin too small to see is drawn here for a few frames.
+func warm_up(at: Vector3) -> void:
+	warm_at = at
+	warm_frames = 10
+	draw()
 
 
 ## Scatters enough coins to add up to `value` Tag Bux.
@@ -78,6 +81,10 @@ func draw() -> void:
 		for i in list.size():
 			var c: Dictionary = list[i]
 			mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, c.spin) * STAND_UP, c.pos))
+		if warm_frames > 0 and list.size() < mm.instance_count:
+			mm.visible_instance_count += 1
+			mm.set_instance_transform(list.size(), Transform3D(STAND_UP.scaled(Vector3.ONE * 0.001), warm_at))
+	warm_frames -= 1
 
 
 ## Moves the coins and gives them to whoever touches them first. pull_all: every coin flies to

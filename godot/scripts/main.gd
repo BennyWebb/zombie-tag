@@ -360,10 +360,14 @@ func warm_up() -> void:
 		if Data.config.zombies[kind].has("splitsInto"):
 			kinds.append(Data.config.zombies[kind].splitsInto)
 	zombie_scenes = kinds.map(func(kind): return load("res://models/zombies/%s.glb" % kind))
+	# and make one of each (far away, and gone straight after), so their parts are joined up now too
+	for kind in kinds:
+		var spare := Zombie.new(kind, level, 1, 0, -1000)
+		add_child(spare)
+		spare.free()
 	var camera := heroes[0].camera
-	var coin := coins.warm_up_coin()
 	var zombie: Node3D = load("res://models/zombies/shuffler.glb").instantiate()
-	var hidden: Array[Node3D] = [level.gate.find_child("open", true, false), coin, Zombie.make_health_bar(1)]
+	var hidden: Array[Node3D] = [level.gate.find_child("open", true, false), Zombie.make_health_bar(1)]
 	for part in ["stars", "bubble", "ice"]:
 		hidden.append(zombie.find_child(part, true, false))
 	var flying := []
@@ -372,10 +376,10 @@ func warm_up() -> void:
 	hidden.append_array(flying)
 	hidden.append(heroes[0].beam.tube)
 	effects.warm_up(camera, hidden)
+	coins.warm_up(camera.global_position - camera.global_basis.z * 2.0)
 	heroes[0].beam.warm_up(camera.global_position - camera.global_basis.z * 2.0)
-	coin.free()
 	zombie.free()
-	hidden[2].free()
+	hidden[1].free()
 	for node in flying:
 		node.free()
 
