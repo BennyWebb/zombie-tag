@@ -6,8 +6,11 @@ extends MenuScreen
 const ROWS_SHOWN := 4 # the list scrolls to show this many rows at a time
 
 var cursor := 0
-var partner: Hero = null # your sister, in 2-player mode, so you can give her Tag Bux
+var partner: Hero = null # the other player, in 2-player mode, so you can give them Tag Bux
 var first := 0 # the first row shown
+var bux_pill: Control # your Tag Bux, at the top (the given coins fly from here: see main.gd)
+
+signal gave(giver: Hero, receiver: Hero)
 
 
 func _init() -> void:
@@ -128,6 +131,7 @@ func choose() -> bool:
 			p.tag_bux -= amount
 			partner.tag_bux += amount
 			say("You gave %d Tag Bux to %s! 🎁" % [amount, partner.look.name], "good")
+			gave.emit(p, partner)
 		return false
 	# a happy sound for anything that worked, a buzz for anything that didn't
 	Sound.play("nope" if s.kind in ["dear", "locked", "full"] else "kaching" if s.kind in ["buy", "free"] else "select")
@@ -191,7 +195,8 @@ func draw() -> void:
 		s.full = i < p.shields
 		hearts.add_child(s)
 	top_right.add_child(hearts)
-	top_right.add_child(pill(bux(p.tag_bux, 40)))
+	bux_pill = pill(bux(p.tag_bux, 40))
+	top_right.add_child(bux_pill)
 
 	var rows := []
 	for id in ids():

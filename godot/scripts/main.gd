@@ -32,6 +32,7 @@ var coins := Coins.new()
 var shots := Shots.new()
 # with two players, each half of the screen is drawn by its own SubViewport (with that hero's
 # camera in it), and shown by a TextureRect on view_layer, under the HUDs
+var fly_layer := CanvasLayer.new() # Tag Bux flying from one player to the other (see fly_coins)
 var view_layer := CanvasLayer.new()
 var sub_views: Array[SubViewport] = []
 var view_rects: Array[TextureRect] = []
@@ -65,6 +66,8 @@ func _ready() -> void:
 	add_child(zombie_holder)
 	view_layer.layer = -1
 	add_child(view_layer)
+	fly_layer.layer = 5 # (above the HUDs)
+	add_child(fly_layer)
 	menu_camera.fov = 70
 	add_child(menu_camera)
 	add_hero()
@@ -89,6 +92,7 @@ func add_hero() -> Hero:
 	add_child(hud)
 	huds.append(hud)
 	var shop := ShopMenu.new()
+	shop.gave.connect(fly_coins)
 	var gym := GymMenu.new()
 	hud.root.add_child(shop)
 	hud.root.add_child(gym)
@@ -661,6 +665,30 @@ func enter_building(hero: Hero, menu: MenuScreen) -> void:
 	huds[hero.index].toast_time = 0
 	menu.open(hero)
 	draw_views()
+
+
+## Given Tag Bux fly across the screen from the giver's total in the shop to the other player's
+## (on their HUD, or in the shop if they're in there too), and it jumps as each coin lands.
+func fly_coins(giver: Hero, receiver: Hero) -> void:
+	var from: Vector2 = shops[giver.index].bux_pill.get_global_rect().get_center()
+	var receiver_shop = receiver.inside if receiver.inside is ShopMenu else null
+	var target: Control = receiver_shop.bux_pill if receiver_shop else huds[receiver.index].bux_pill
+	var to: Vector2 = target.get_global_rect().get_center()
+	for i in 5:
+		var coin := HudIcon.new(HudIcon.Kind.COIN, 40)
+		coin.position = from - Vector2(20, 20)
+		coin.visible = false
+		fly_layer.add_child(coin)
+		var t := coin.create_tween()
+		t.tween_interval(0.03 + i * 0.09)
+		t.tween_callback(coin.show)
+		t.tween_property(coin, "position", to - Vector2(20, 20), 0.7).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		t.tween_callback(func():
+			coin.queue_free()
+			Sound.play("coin", 1 + i * 0.06)
+			huds[receiver.index].bump_bux()
+			if i == 4 and receiver.inside is ShopMenu:
+				receiver.inside.draw()) # (their total goes up as the last one lands)
 
 
 func leave_building(hero: Hero) -> void:
