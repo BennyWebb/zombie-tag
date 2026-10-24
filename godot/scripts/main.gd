@@ -18,6 +18,7 @@ extends Node3D
 ##
 ## Progress is saved (save.gd) at the start of each level, after shopping or training, when you're
 ## tagged and when a level's done.
+const BEHIND_WARNING := 6.0 # a zombie this close behind you (in metres) makes the HUD warn you
 const HUD_ZOOM_TWO_PLAYERS := 0.7 # with two players, everything on the HUD shrinks to fit half the screen
 # the sound a shot makes when it hits (swinging weapons go "bonk")
 const HIT_SOUNDS := { slime = "splat", bubble = "bloop", snowball = "poof", banana = "bonk" }
@@ -548,7 +549,34 @@ func update(delta: float) -> void:
 		huds[i].show_zombies_left(to_spawn + zombies.size() + (1 if boss_coming() else 0), level.gate_open)
 		huds[i].show_boss(boss if is_instance_valid(boss) and boss.alive else null)
 		huds[i].update(heroes[i])
+		var behind := zombie_behind(heroes[i])
+		huds[i].show_behind(behind[0], behind[1])
 		heroes[i].update_body(delta, two_players())
+
+
+## The nearest zombie close behind a hero (out of sight), as [danger, side] for Hud.show_behind:
+## danger 0 (none, or far enough) to 1 (right there), side -1 left, 1 right or 0 straight behind.
+func zombie_behind(hero: Hero) -> Array:
+	if hero.tagged > 0 or hero.inside or hero.through_gate:
+		return [0.0, 0]
+	var fwd := hero.forward()
+	var right := Vector3(-fwd.z, 0, fwd.x)
+	var nearest := BEHIND_WARNING
+	var side := 0
+	for z in zombies:
+		if not z.alive or z.spawn_pop < 1 or z.stuck():
+			continue
+		var to := Vector3(z.position.x - hero.position.x, 0, z.position.z - hero.position.z)
+		var d := to.length() - z.radius
+		if d >= nearest or to.length() < 0.001:
+			continue
+		var dir := to.normalized()
+		if dir.dot(fwd) > 0.2:
+			continue # in front, where you can see it
+		nearest = d
+		var across := dir.dot(right)
+		side = 0 if absf(across) < 0.5 else (1 if across > 0 else -1)
+	return [clampf(1.0 - nearest / BEHIND_WARNING, 0.0, 1.0), side]
 
 
 ## Through the gate: the player waits there (out of sight, and zombies leave them be) for the others.

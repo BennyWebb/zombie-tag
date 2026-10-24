@@ -2,7 +2,8 @@ class_name Hud
 extends CanvasLayer
 ## What's drawn over the game (src/hud.js and the HUD part of src/style.css): hearts and armour
 ## shields, Speed and Strength, how many zombies are left, Tag Bux, the weapon you're holding,
-## messages, the screen edges flashing when you're hurt, the TAGGED! screen and the Level done! screen.
+## messages, the screen edges flashing when you're hurt, a warning when a zombie's close behind you,
+## the TAGGED! screen and the Level done! screen.
 ## F3 (or Back / View / Select) shows the frame rate and how many things are drawn, for checking
 ## speed on the TV.
 ## With two players each has her own, on her half of the screen, shrunk a bit to fit, with her name
@@ -35,6 +36,9 @@ var bux_pill: PanelContainer
 var weapon := Label.new()
 var weapon_pill: PanelContainer
 var toast_label := Label.new()
+var behind_glow := TextureRect.new() # red along the bottom when a zombie's close behind you
+var behind_label := Label.new()
+var behind_shown := -1.0
 var toast_time := 0.0
 var hurt := TextureRect.new()
 var tagged := ColorRect.new()
@@ -173,6 +177,33 @@ func _ready() -> void:
 	crosshair.set_anchors_preset(Control.PRESET_CENTER)
 	crosshair.position -= Vector2(7, 7)
 	root.add_child(crosshair)
+
+	# a zombie close behind you: the bottom of the screen glows red, more as it gets closer
+	var g_behind := Gradient.new()
+	g_behind.colors = PackedColorArray([Color(1, 0.1, 0.25, 0), Color(1, 0.1, 0.25, 0.75)])
+	var behind_tex := GradientTexture2D.new()
+	behind_tex.gradient = g_behind
+	behind_tex.fill_from = Vector2(0, 0)
+	behind_tex.fill_to = Vector2(0, 1)
+	behind_glow.texture = behind_tex
+	behind_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	behind_glow.stretch_mode = TextureRect.STRETCH_SCALE
+	behind_glow.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	behind_glow.offset_top = -170
+	behind_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	behind_glow.visible = false
+	root.add_child(behind_glow)
+	style(behind_label, 30)
+	behind_label.add_theme_color_override("font_color", Color.WHITE)
+	behind_label.add_theme_color_override("font_outline_color", Color("b0103a"))
+	behind_label.add_theme_constant_override("outline_size", 8)
+	behind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	behind_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	behind_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	behind_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	behind_label.offset_bottom = -92 # (above the weapon you're holding)
+	behind_label.visible = false
+	root.add_child(behind_label)
 
 	# messages, a bit above the middle
 	toast_label.add_theme_font_size_override("font_size", 40)
@@ -437,6 +468,22 @@ func show_tagged(on: bool, difficulty := {}) -> void:
 
 func show_tagged_countdown(seconds_left: float) -> void:
 	tagged_count.text = "Back to the start in %d…" % maxi(1, ceili(seconds_left))
+
+
+## A zombie close behind you: danger 0 (none) to 1 (right behind you), and which side it's on
+## (-1 left, 1 right, 0 straight behind). Only changes what's shown when it changes enough to see,
+## so the HUD's picture isn't drawn again every frame.
+func show_behind(danger: float, side: int) -> void:
+	var shown := snappedf(danger, 0.1)
+	var text := "%s🧟 Behind you!%s" % ["◀ " if side < 0 else "", " ▶" if side > 0 else ""]
+	if shown == behind_shown and text == behind_label.text:
+		return
+	behind_shown = shown
+	behind_glow.visible = shown > 0
+	behind_glow.modulate.a = shown
+	behind_label.visible = shown > 0
+	behind_label.text = text
+	redraw()
 
 
 ## Makes the Tag Bux counter jump when coins go in.
