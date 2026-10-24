@@ -644,10 +644,10 @@ export const THEMES = {
     wall: { colour: 0x2e7d32, height: 2.2 },
     decorate(ctx) {
       parkCentre(ctx);
+      ctx.ring(() => makeBench(), 6, 15.5, { r: 1.2, small: true }); // (before the scatters, so nothing lands on a bench)
       ctx.scatter((r) => makeTree(r), 28, { gap: 3, r: 0.6 });
       ctx.scatter((r) => makeBush(r), 18, { gap: 1.5, r: 1.1, small: true });
       ctx.scatter(makeFlowers, 10, { gap: 1 });
-      ctx.ring(() => makeBench(), 6, 15.5, { r: 1.2, small: true });
       addClouds(ctx);
     },
   },
@@ -658,11 +658,11 @@ export const THEMES = {
     decorate(ctx) {
       schoolCentre(ctx);
       for (const [x, z] of [[-30, -31], [30, -31]]) ctx.add(makeHouse(ctx.rand, 0xe8c9a0, 0xb5523b), x, z, { box: [4, 4] });
+      ctx.ring(() => makeBench(0x4fc3f7), 6, 15.5, { r: 1.2, small: true }); // (before the scatters, so nothing lands on a bench)
       ctx.scatter(makeSwings, 4, { gap: 3, r: 1.8 });
       ctx.scatter(makeSlide, 4, { gap: 3, r: 1.6 });
       ctx.scatter((r) => makeTree(r), 14, { gap: 3, r: 0.6 });
       ctx.scatter(() => makeFence(0xffffff), 14, { gap: 1.5, r: 1.2, small: true });
-      ctx.ring(() => makeBench(0x4fc3f7), 6, 15.5, { r: 1.2, small: true });
       addClouds(ctx);
     },
   },
@@ -705,11 +705,11 @@ export const THEMES = {
     decorate(ctx) {
       funfairCentre(ctx);
       addFerrisWheel(ctx);
+      ctx.ring(() => makeBench(0xe53935), 6, 15.5, { r: 1.2, small: true }); // (before the scatters, so nothing lands on a bench)
       ctx.scatter(makeTent, 10, { gap: 3, r: 2.2 });
       ctx.scatter(makeBalloons, 12, { gap: 1.5, r: 0.4 });
       ctx.scatter(() => makeLamp(0xff6fd8), 10, { gap: 2, r: 0.3 });
       ctx.scatter((r) => makeTree(r), 10, { gap: 3, r: 0.6 });
-      ctx.ring(() => makeBench(0xe53935), 6, 15.5, { r: 1.2, small: true });
       addClouds(ctx, 6);
     },
   },
