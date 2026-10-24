@@ -370,9 +370,21 @@ func _notification(what: int) -> void:
 		if screens.active():
 			screens.remote_back = true
 		elif heroes.any(func(h): return h.inside) or Time.get_ticks_msec() - left_building_at < 500:
-			pass # (B leaves the shop or gym, and on some joypads Android sends "go back" for it too)
+			# B leaves the shop or gym. On some joypads Android sends "go back" for B as well, and on
+			# others only "go back"; a moment later (once any B has arrived), it's the leave button
+			# of whoever's inside with a joypad that's never sent a B.
+			get_tree().create_timer(0.1).timeout.connect(back_in_building)
 		else:
 			pause()
+
+
+func back_in_building() -> void:
+	var who := heroes.filter(func(h): return h.inside and not Controls.sends_b(h.index))
+	if who.size() == 1:
+		var leave := InputEventAction.new()
+		leave.action = who[0].act("leave")
+		leave.pressed = true
+		building_input(who[0], leave)
 
 
 func pause() -> void:
@@ -401,10 +413,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif not paused:
 		# a hero in the shop or gym uses it (each with her own buttons)
 		for hero in heroes:
-			if hero.inside and hero.inside.handle_input(event):
-				Sound.play("select")
-				leave_building(hero)
-				huds[hero.index].toast("See you soon! 👋", 1.5)
+			if hero.inside:
+				building_input(hero, event)
+
+
+## A button for the shop or gym a hero's in.
+func building_input(hero: Hero, event: InputEvent) -> void:
+	if hero.inside.handle_input(event):
+		Sound.play("select")
+		leave_building(hero)
+		huds[hero.index].toast("See you soon! 👋", 1.5)
 
 
 ## From the Level done! screen. The next level is made behind the screen, which goes a moment later,

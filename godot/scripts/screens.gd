@@ -259,10 +259,13 @@ func _process(delta: float) -> void:
 				Save.set_volumes(Save.music + (change if choice == 0 else 0), Save.sounds + (change if choice == 1 else 0))
 				draw()
 			if (change or go) and choice == 2:
-				Sound.play("tick")
-				Save.two_sticks = not Save.two_sticks
-				Controls.set_two_sticks(Save.two_sticks)
-				Save.write()
+				# (for the joypad that pressed it)
+				if Controls.last_pad >= 0:
+					Sound.play("tick")
+					Controls.set_two_sticks(Controls.last_pad, not Controls.two_sticks(Controls.last_pad))
+					Save.write()
+				else:
+					Sound.play("nope")
 				draw()
 			if go and choice == 3:
 				Sound.play("select")
@@ -363,7 +366,7 @@ func draw_title(column: VBoxContainer) -> void:
 	column.add_child(gap(10))
 	column.add_child(cards(["🧒 1 Player", "🧒🧒 2 Players"], choice, 300))
 	column.add_child(gap(10))
-	column.add_child(ButtonText.make("%s choose  ·  {go} to play" % arrows(), 30, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to play" % arrows("across"), 30, YELLOW))
 	if Save.graphics_were_reset:
 		column.add_child(line("The game stopped last time, so the graphics settings are back to normal", 24, Color("ffb3b3")))
 	column.add_child(line("%s: change how your hero looks" % ("Back / Select" if OS.has_feature("android") else "C (🎮 Back / Select)"), 24, Color.WHITE))
@@ -451,7 +454,7 @@ func draw_difficulty(column: VBoxContainer) -> void:
 		row.add_child(card(words, chosen))
 	column.add_child(row)
 	column.add_child(line("The Zombie King is tougher and faster on Hard and Hardcore, and tags you in one go!", 24, Color.WHITE))
-	column.add_child(ButtonText.make("%s choose  ·  {go} to go" % arrows(), 30, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to go" % arrows("across"), 30, YELLOW))
 
 
 func draw_levels(column: VBoxContainer) -> void:
@@ -482,7 +485,7 @@ func draw_levels(column: VBoxContainer) -> void:
 		if locked:
 			tile.modulate.a = 0.5
 		grid.add_child(card(tile, chosen))
-	column.add_child(ButtonText.make("%s choose  ·  {go} to play  ·  %s back" % [arrows(true), back_name()], 28, YELLOW))
+	column.add_child(ButtonText.make("%s choose  ·  {go} to play  ·  %s back" % [arrows("all"), back_name()], 28, YELLOW))
 
 
 func draw_paused(column: VBoxContainer) -> void:
@@ -491,7 +494,7 @@ func draw_paused(column: VBoxContainer) -> void:
 	var rows := [
 		["🎵 Music", bar.call(Save.music)],
 		["🔊 Sounds", bar.call(Save.sounds)],
-		["🎮 Joypads", "Two sticks" if Save.two_sticks else "Simple"],
+		["🎮 This joypad", "Two sticks" if Controls.two_sticks(Controls.last_pad) else "Simple" if Controls.last_pad >= 0 else "–"],
 		["✨ Graphics", "➜"],
 		["🏠 Start screen", "{go}"],
 	]
@@ -508,7 +511,9 @@ func draw_paused(column: VBoxContainer) -> void:
 		row.add_child(ButtonText.make(rows[i][1], 30, PINK if i == choice else YELLOW))
 		list.add_child(card(row, i == choice))
 	column.add_child(line("%s choose  ·  %s change" % ["🡑 🡓", "🡐 🡒"], 26, Color.WHITE))
-	column.add_child(line("🎮 Simple: the left stick walks and turns.  Two sticks: the left stick walks and steps sideways, the right one turns.", 20, Color.WHITE))
+	if Controls.last_pad >= 0:
+		column.add_child(line("🎮 This joypad: %s. Each joypad remembers its own." % Input.get_joy_name(Controls.last_pad), 20, Color.WHITE))
+	column.add_child(line("Simple: the left stick walks and turns.  Two sticks: the left stick walks and steps sideways, the right one turns.", 20, Color.WHITE))
 	column.add_child(line("Press %s to keep playing" % back_name(), 30, YELLOW))
 
 
@@ -616,8 +621,9 @@ static func badge(player: int) -> Control:
 	return p
 
 
-static func arrows(all_four := false) -> String:
-	return "🡐 🡑 🡒 🡓" if all_four else "🡑 🡓"
+## The arrows that choose on a screen: "down" for a list, "across" for a row, "all" for a grid.
+static func arrows(way := "down") -> String:
+	return { down = "🡑 🡓", across = "🡐 🡒", all = "🡐 🡑 🡒 🡓" }[way]
 
 
 static func back_name() -> String:

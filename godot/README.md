@@ -97,9 +97,14 @@ They're saved with the game. If the game stops while starting or just after a se
 calls while playing, how many dots the world is drawn with, and the slowest of the last 120 frames
 ("late" ones missed the TV's 60 a second).
 
-**Pause → 🎮 Joypads** chooses how joypads play: **Simple** (the left stick or d-pad walks and turns,
-for joypads with one stick or none) or **Two sticks** (the left stick walks and steps sideways and the
-right stick turns, like an Xbox controller in most games). The d-pad always walks and turns.
+**Pause → 🎮 This joypad** chooses how the joypad pressing it plays: **Simple** (the left stick or
+d-pad walks and turns, for joypads with one stick or none) or **Two sticks** (the left stick walks and
+steps sideways and the right stick turns, like an Xbox controller in most games). Each joypad
+remembers its own, so an Xbox pad can use Two sticks while a tiny pad plays Simple. The d-pad always
+walks and turns.
+
+On some joypads Android sends its "Back" for the right-hand button instead of the button itself;
+in the shop or gym that still leaves, for the player whose joypad it is.
 
 ## The scripts
 

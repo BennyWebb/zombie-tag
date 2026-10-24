@@ -11,6 +11,7 @@ extends Node
 ## Joypads have two ways to play (a setting in the pause menu): "Simple", where the left stick (or
 ## d-pad) walks and turns, for joypads with one stick or none; and "Two sticks", where the left
 ## stick walks and steps sideways and the right stick turns, like most games on a joypad with two.
+## Each joypad remembers its own, so a two-stick joypad and a tiny one can play together.
 ##
 ## The menus have their own actions ("menu_up", "menu_go" and so on) that anyone's keys or joypad
 ## work, and each player has "nav_up" and so on for her own menus (the shop, gym and character
@@ -62,11 +63,13 @@ var players := 1
 var pads := [ANY_PAD, NO_PAD] # each player's joypad (a device number), ANY_PAD or NO_PAD
 var keys := ["all", ""] # each player's keys: "all", "left", "right" or "" for none
 var using_joypad := [false, false] # whether each player last used a joypad (they turn a bit slower)
-var two_sticks := false # see above (save.gd sets it)
+var pad_modes := {} # the joypads set to "Two sticks": { joypad's id: true } (save.gd keeps it)
+var last_pad := -1 # the joypad that last pressed something (the pause menu's setting is for it)
 var stick_at := {} # where each joypad's left stick is: { device: Vector2 }
 var sticks := {} # each joypad's left stick, for the menus: { device: { "up": [held, time to repeat], ... } }
 var stick_pushes := {} # this frame's pushes: { device: ["up", ...] }
 var pictures := {} # the buttons' pictures, made the first time each is needed (see glyph)
+var pads_sending_b := {} # the joypads that have sent a B (the right-hand button), see sends_b
 
 
 func _ready() -> void:
@@ -119,21 +122,36 @@ func set_one_player() -> void:
 	set_devices([{ keys = "all", pad = ANY_PAD }])
 
 
-func set_two_sticks(on: bool) -> void:
-	two_sticks = on
+## A joypad's id, the same each time it's plugged in (its number can change).
+static func pad_id(device: int) -> String:
+	if device not in Input.get_connected_joypads():
+		return "joypad %d" % device # (not plugged in just now)
+	var guid := Input.get_joy_guid(device)
+	return guid if guid != "" else Input.get_joy_name(device)
+
+
+func two_sticks(device: int) -> bool:
+	return device >= 0 and pad_modes.get(pad_id(device), false)
+
+
+func set_two_sticks(device: int, on: bool) -> void:
+	if on:
+		pad_modes[pad_id(device)] = true
+	else:
+		pad_modes.erase(pad_id(device))
 	update_actions()
 
 
 ## The sticks that work an action, each [which stick axis, which way]. The right stick always turns
-## too, so a joypad with two sticks can turn with either in "Simple".
-func pad_sticks(a: String) -> Array:
+## too, so a joypad with two sticks can turn with either in "Simple". both: "Two sticks".
+func pad_sticks(a: String, both: bool) -> Array:
 	match a:
 		"walk_forward": return [[JOY_AXIS_LEFT_Y, -1.0]]
 		"walk_back": return [[JOY_AXIS_LEFT_Y, 1.0]]
-		"turn_left": return [[JOY_AXIS_RIGHT_X, -1.0]] + ([] if two_sticks else [[JOY_AXIS_LEFT_X, -1.0]])
-		"turn_right": return [[JOY_AXIS_RIGHT_X, 1.0]] + ([] if two_sticks else [[JOY_AXIS_LEFT_X, 1.0]])
-		"step_left": return [[JOY_AXIS_LEFT_X, -1.0]] if two_sticks else []
-		"step_right": return [[JOY_AXIS_LEFT_X, 1.0]] if two_sticks else []
+		"turn_left": return [[JOY_AXIS_RIGHT_X, -1.0]] + ([] if both else [[JOY_AXIS_LEFT_X, -1.0]])
+		"turn_right": return [[JOY_AXIS_RIGHT_X, 1.0]] + ([] if both else [[JOY_AXIS_LEFT_X, 1.0]])
+		"step_left": return [[JOY_AXIS_LEFT_X, -1.0]] if both else []
+		"step_right": return [[JOY_AXIS_LEFT_X, 1.0]] if both else []
 		"attack": return [[JOY_AXIS_TRIGGER_RIGHT, 1.0]]
 	return []
 
@@ -186,12 +204,15 @@ func update_actions() -> void:
 					e.button_index = button_index
 					e.device = pads[i]
 					InputMap.action_add_event(name, e)
-				for stick in pad_sticks(a):
-					var m := InputEventJoypadMotion.new()
-					m.axis = stick[0]
-					m.axis_value = stick[1]
-					m.device = pads[i]
-					InputMap.action_add_event(name, m)
+				# each joypad's sticks the way it's set ("any joypad" lists them all, as they can differ)
+				var devices: Array = [pads[i]] if pads[i] != ANY_PAD else Input.get_connected_joypads()
+				for device in devices if devices else [ANY_PAD]:
+					for stick in pad_sticks(a, two_sticks(device)):
+						var m := InputEventJoypadMotion.new()
+						m.axis = stick[0]
+						m.axis_value = stick[1]
+						m.device = device
+						InputMap.action_add_event(name, m)
 
 
 ## An action that's the same for everyone (any key or joypad). axis: [which stick axis, which way],
@@ -268,6 +289,9 @@ func _input(event: InputEvent) -> void:
 			if keys[i] != "":
 				using_joypad[i] = false
 	elif event is InputEventJoypadButton and event.pressed:
+		last_pad = event.device
+		if event.button_index == JOY_BUTTON_B:
+			pads_sending_b[event.device] = true
 		for i in players:
 			if pads[i] == ANY_PAD or pads[i] == event.device:
 				using_joypad[i] = true
@@ -279,9 +303,18 @@ func _input(event: InputEvent) -> void:
 			at.y = event.axis_value
 		stick_at[event.device] = at
 	if event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
+		last_pad = event.device
 		for i in players:
 			if pads[i] == ANY_PAD or pads[i] == event.device:
 				using_joypad[i] = true
+
+
+## Whether a player's joypad sends B for its right-hand button. Some joypads on Android send
+## "go back" instead, which main.gd then turns into her leave button.
+func sends_b(player: int) -> bool:
+	if pads[player] == ANY_PAD:
+		return not pads_sending_b.is_empty()
+	return pads_sending_b.has(pads[player])
 
 
 ## A joypad was plugged in or taken out. If Player 1's goes, any joypad works her again, or with
@@ -290,7 +323,8 @@ func _input(event: InputEvent) -> void:
 func joypad_plugged(device: int, connected: bool) -> void:
 	if not connected and pads[0] == device:
 		pads[0] = ANY_PAD if players == 1 else NO_PAD
-		update_actions()
 	elif connected and players == 2 and pads[0] == NO_PAD and device != pads[1]:
 		pads[0] = device
-		update_actions()
+	if not connected and last_pad == device:
+		last_pad = -1
+	update_actions() # (a joypad's sticks are set up for it as it arrives)
