@@ -8,6 +8,7 @@ extends Node3D
 # The browser game's light strengths, turned into Godot's. Measured by drawing the same view in both
 # and matching the colours: about 1 / (2 pi).
 const LIGHT_SCALE := 1.0 / TAU
+const SUN_DISTANCE := 200.0 # the sun and moon are 140 m from the middle, so up to 190 m from you
 
 var info: Dictionary # the level's settings and layout (see Data.level)
 var colliders: Array = [] # circles { x, z, r } and boxes { x, z, hw, hd }
@@ -49,7 +50,14 @@ func _ready() -> void:
 	gate.find_child("open", true, false).visible = false
 	carousel = scenery.find_child("carousel", true, false)
 	ferris_wheel = scenery.find_child("ferrisWheel", true, false)
-	Data.merge_meshes(scenery, [gate, carousel, ferris_wheel])
+	# (the scenery comes already joined up in squares of the level, which is best left as it is: the
+	# squares behind you aren't drawn, and nearer ones are drawn first, so the things behind them
+	# don't need colouring in)
+	# The ground, which stretches far past the walls, is drawn after everything else, so the parts
+	# hidden behind trees and buildings are skipped instead of coloured in and then covered.
+	for mesh in scenery.find_children("big*", "MeshInstance3D", true, false):
+		if not "see-through" in String(mesh.name):
+			mesh.sorting_offset = -1000.0
 	add_sky_and_light()
 	add_lamps()
 	for settings in info.floaters:
@@ -132,7 +140,8 @@ func set_graphics(g: Dictionary) -> float:
 		part.visible = leave_out != "Scenery" and not (leave_out == "Shop and gym" and part in buildings)
 	for s in signs:
 		s.visible = leave_out != "Their signs"
-	return 300.0 if g.distance == 0 else fog_end + 5
+	# (past the fog everything is the sky's colour anyway, but the sun or moon is a little further)
+	return maxf(fog_end + 5, SUN_DISTANCE) if g.distance == 0 else fog_end + 5
 
 
 ## The shop and the gym go at two of the six spots, at least 30 m apart, different every time.
