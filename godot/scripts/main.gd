@@ -231,9 +231,16 @@ func start_level(number: int) -> void:
 func apply_graphics() -> void:
 	var g: Dictionary = Save.graphics[str(heroes.size())]
 	if sub_views.size() == heroes.size():
+		# Once a view's had smooth edges, it stays slow after they're changed or turned off (on the
+		# Shield, anyway), so it's made again instead. (A new one starts without them, so this only
+		# happens once.)
+		var msaa := Graphics.msaa(g)
+		if sub_views.any(func(sub): return sub.msaa_3d != msaa and sub.msaa_3d != Viewport.MSAA_DISABLED):
+			make_views()
+			return
 		arrange_views()
 		for sub in sub_views:
-			sub.msaa_3d = Graphics.msaa(g)
+			sub.msaa_3d = msaa
 	var far := level.set_graphics(g) if level else 300.0
 	for hero in heroes:
 		hero.camera.far = far
