@@ -94,7 +94,8 @@ for 2, since two players draw the world twice. Further down each list is quicker
 They're saved with the game. If the game stops while starting or just after a setting changes
 (a crash), it starts next time with the graphics back to normal, and says so on the title screen.
 **F3** (Back / View / Select on a joypad) shows the frame rate and draw
-calls while playing.
+calls while playing, how many dots the world is drawn with, and the slowest of the last 120 frames
+("late" ones missed the TV's 60 a second).
 
 **Pause → 🎮 Joypads** chooses how joypads play: **Simple** (the left stick or d-pad walks and turns,
 for joypads with one stick or none) or **Two sticks** (the left stick walks and steps sideways and the

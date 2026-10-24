@@ -45,6 +45,8 @@ var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for ti
 # anyway, so on Android the overlay leaves those out
 var can_time_drawing := not OS.has_feature("android")
 var game_time := 0.0 # how long the game's own code took this frame, in ms (main.gd sets it)
+var drawn_at := Vector2i() # how many dots each hero's view of the world has (main.gd sets it)
+var frame_times := PackedFloat32Array() # the last 120 frames (2 seconds at 60 fps), in ms, to find the slow ones
 var hearts_shown := -1
 var blink_time := 0.0
 
@@ -465,8 +467,17 @@ func _process(delta: float) -> void:
 	# messages fade in and out
 	toast_time -= delta
 	toast_label.modulate.a = move_toward(toast_label.modulate.a, 1.0 if toast_time > 0 else 0.0, delta / 0.3)
+	# for 60 fps every frame has to be quick, not just most of them, so the slowest ones are kept too
+	frame_times.append(delta * 1000)
+	if frame_times.size() > 120:
+		frame_times.remove_at(0)
 	if speed.visible:
-		var size := get_viewport().get_visible_rect().size * get_viewport().get_final_transform().get_scale()
+		var slow := frame_times.duplicate()
+		slow.sort()
+		var late := 0 # frames that missed the TV's 60 a second
+		for t in frame_times:
+			if t > 18.0:
+				late += 1
 		# how long things take, in milliseconds (for 60 fps a whole frame has 16.7 ms): the whole
 		# frame, the game's own code, and the drawing: the processor getting it ready and the
 		# graphics chip doing it (or on Android, everything that isn't the game's code, which
@@ -481,9 +492,11 @@ func _process(delta: float) -> void:
 				cpu += RenderingServer.viewport_get_measured_render_time_cpu(rid)
 				gpu += RenderingServer.viewport_get_measured_render_time_gpu(rid)
 			drawing = "drawing: processor %.1f ms, graphics chip %.1f ms" % [cpu, gpu]
-		speed.text = "%d fps · %d draw calls · %d objects · drawn at %d x %d\nframe %.1f ms · game code %.1f ms · %s" % [
+		speed.text = ("%d fps · %d draw calls · %d objects · world drawn at %d x %d\nframe %.1f ms · game code %.1f ms · %s"
+			+ "\nlast 120 frames: slowest %.1f ms · 1 in 20 slower than %.1f ms · %d late") % [
 			Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
-			size.x, size.y, frame, game_time, drawing,
+			drawn_at.x, drawn_at.y, frame, game_time, drawing,
+			slow[-1], slow[int(slow.size() * 0.95)], late,
 		]

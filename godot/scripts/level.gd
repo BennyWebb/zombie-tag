@@ -46,6 +46,7 @@ func _ready() -> void:
 	gate.find_child("open", true, false).visible = false
 	carousel = scenery.find_child("carousel", true, false)
 	ferris_wheel = scenery.find_child("ferrisWheel", true, false)
+	Data.merge_meshes(scenery, [gate, carousel, ferris_wheel])
 	add_sky_and_light()
 	add_lamps()
 	for settings in info.floaters:
@@ -146,6 +147,7 @@ func add_buildings() -> void:
 		# the glowing sign shows above the trees from anywhere, so it isn't fogged
 		for mesh in sign.find_children("*", "MeshInstance3D", true, false):
 			no_fog(mesh)
+		Data.merge_meshes(building, [sign])
 		var size: Dictionary = info.buildingSize
 		colliders.append({ x = pair[1].x, z = pair[1].z, hw = size.halfWidth, hd = size.halfDepth })
 		# the door is on the +z side; you come back out a little way in front of it, facing away

@@ -3,7 +3,8 @@ extends Node3D
 ## Bursts of confetti, splashes where shots land, and words that float up, like "POP!"
 ## (src/effects.js).
 ## Each burst is a CPUParticles3D: one node draws all its bits at once, which is much quicker than
-## a node for every bit.
+## a node for every bit. Finished bursts and words are kept to use again, since making new ones
+## in the middle of a fight takes time.
 
 const CONFETTI_COLOURS := [0xff4f8b, 0xffe066, 0x4fc3f7, 0x9cff57, 0xb28dff, 0xff8a3d]
 
@@ -11,6 +12,8 @@ var confetti_mesh := QuadMesh.new()
 var confetti_colours := Gradient.new()
 var splash_colours := {} # each kind of shot's colours, as a Gradient (made when first needed)
 var texts: Array = [] # [Label3D, life left]
+var spare_bursts: Array[CPUParticles3D] = []
+var spare_labels: Array[Label3D] = []
 var font: Font = load("res://fonts/fredoka_bold.tres")
 
 
@@ -69,11 +72,8 @@ func warm_up(camera: Camera3D, hidden: Array[Node3D] = []) -> void:
 
 ## A burst of confetti when a zombie pops.
 func confetti(pos: Vector3, count := 70) -> void:
-	var p := CPUParticles3D.new()
-	p.mesh = confetti_mesh
+	var p := burst()
 	p.amount = count
-	p.one_shot = true
-	p.explosiveness = 1.0
 	p.lifetime = 2.4
 	p.lifetime_randomness = 0.33
 	p.direction = Vector3.UP
@@ -86,11 +86,11 @@ func confetti(pos: Vector3, count := 70) -> void:
 	p.angular_velocity_min = -600
 	p.angular_velocity_max = 600
 	p.particle_flag_rotate_y = true
+	p.scale_amount_min = 1.0
+	p.scale_amount_max = 1.0
 	p.color_initial_ramp = confetti_colours
 	p.position = pos
-	add_child(p)
-	p.emitting = true
-	p.finished.connect(p.queue_free)
+	p.restart()
 
 
 ## A little burst of drops (water, goo, snow, pumpkin...) where a shot lands. shot: which kind,
@@ -98,11 +98,8 @@ func confetti(pos: Vector3, count := 70) -> void:
 func splash(pos: Vector3, shot: String, count := 12, power := 1.0) -> void:
 	if not splash_colours.has(shot):
 		splash_colours[shot] = pick_one_of(Data.models.models["shots/" + shot].splashColours)
-	var p := CPUParticles3D.new()
-	p.mesh = confetti_mesh
+	var p := burst()
 	p.amount = count
-	p.one_shot = true
-	p.explosiveness = 1.0
 	p.lifetime = 0.7 * power
 	p.lifetime_randomness = 0.43
 	p.direction = Vector3.UP
@@ -116,27 +113,45 @@ func splash(pos: Vector3, shot: String, count := 12, power := 1.0) -> void:
 	p.angular_velocity_max = 600
 	p.scale_amount_min = power
 	p.scale_amount_max = power
+	p.particle_flag_rotate_y = false
 	p.color_initial_ramp = splash_colours[shot]
 	p.position = pos
+	p.restart()
+
+
+## A burst to use: a finished one, or a new one if they're all busy. (Each use sets everything it
+## needs, since the last use might have been something else.)
+func burst() -> CPUParticles3D:
+	if not spare_bursts.is_empty():
+		return spare_bursts.pop_back()
+	var p := CPUParticles3D.new()
+	p.mesh = confetti_mesh
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.emitting = false
 	add_child(p)
-	p.emitting = true
-	p.finished.connect(p.queue_free)
+	p.finished.connect(func(): spare_bursts.append(p))
+	return p
 
 
 ## A word that floats up and fades away, like "POP!".
 func float_text(pos: Vector3, text: String, colour: Color, size := 1.6) -> void:
-	var label := Label3D.new()
+	var label: Label3D = spare_labels.pop_back() if not spare_labels.is_empty() else null
+	if label == null:
+		label = Label3D.new()
+		label.font = font
+		label.outline_size = 24
+		label.font_size = 96
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true # it shows in front of everything, like the browser game's
+		add_child(label)
 	label.text = text
-	label.font = font
 	label.modulate = colour
 	label.outline_modulate = Color("4b1e8a")
-	label.outline_size = 24
-	label.font_size = 96
 	label.pixel_size = size / 300.0
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true # it shows in front of everything, like the browser game's
+	label.scale = Vector3.ONE
 	label.position = pos
-	add_child(label)
+	label.visible = true
 	texts.append([label, 1.0])
 
 
@@ -149,5 +164,6 @@ func _process(delta: float) -> void:
 		label.modulate.a = minf(1.0, t[1] * 2.0)
 		label.outline_modulate.a = label.modulate.a
 		if t[1] <= 0:
-			label.queue_free()
+			label.visible = false
+			spare_labels.append(label)
 			texts.erase(t)

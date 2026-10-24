@@ -181,6 +181,7 @@ func arrange_views() -> void:
 		huds[0].set_full_screen()
 	divider.size = Vector2(3, screen.y)
 	divider.position = Vector2(screen.x / 2 - 1.5, 0)
+	huds[0].drawn_at = sub_views[0].size # (for the F3 numbers)
 
 
 ## Where each hero begins: side by side with two players.
@@ -343,7 +344,7 @@ func warm_up() -> void:
 			kinds.append(Data.config.zombies[kind].splitsInto)
 	zombie_scenes = kinds.map(func(kind): return load("res://models/zombies/%s.glb" % kind))
 	var camera := heroes[0].camera
-	var coin: Node3D = coins.coin_scene.instantiate()
+	var coin := coins.warm_up_coin()
 	var zombie: Node3D = load("res://models/zombies/shuffler.glb").instantiate()
 	var hidden: Array[Node3D] = [level.gate.find_child("open", true, false), coin, Zombie.make_health_bar(1)]
 	for part in ["stars", "bubble", "ice"]:

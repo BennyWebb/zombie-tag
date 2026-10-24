@@ -2,9 +2,39 @@ class_name Coins
 extends Node3D
 ## Spinning Tag Bux coins that burst out of popped zombies; walk over them to collect them
 ## (src/coins.js). Close by, they fly to you, and once every zombie is popped they all do.
+## All the coins are drawn together, as one "MultiMesh": a list of where each one is, drawn in one
+## go, which is much quicker than a node for every coin (a popped zombie can drop 25).
+
+const STAND_UP := Basis(Vector3.RIGHT, PI / 2) # the coin model lies flat; coins stand on their edge
 
 var coin_scene: PackedScene = load("res://models/coin.glb")
-var list: Array = [] # each coin: { node, vel, value, age, landed }
+var list: Array = [] # each coin: { pos, spin, vel, value, age, landed }
+var drawers: Array[MultiMeshInstance3D] = [] # (one, or two if some of the coin casts no shadow)
+
+
+func _ready() -> void:
+	var model: Node3D = coin_scene.instantiate()
+	Data.remove_extra_shadows(model)
+	Data.merge_meshes(model, [])
+	for joined in model.get_children():
+		if joined.name.begins_with("joined"):
+			var drawer := MultiMeshInstance3D.new()
+			drawer.multimesh = MultiMesh.new()
+			drawer.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+			drawer.multimesh.mesh = joined.mesh
+			drawer.cast_shadow = joined.cast_shadow
+			add_child(drawer)
+			drawers.append(drawer)
+	model.free()
+
+
+## A coin drawn the same way, for warming up (see main.gd's warm_up).
+func warm_up_coin() -> Node3D:
+	var drawer: MultiMeshInstance3D = drawers[0].duplicate()
+	drawer.multimesh = drawers[0].multimesh.duplicate()
+	drawer.multimesh.instance_count = 1
+	drawer.multimesh.set_instance_transform(0, Transform3D(STAND_UP, Vector3.ZERO))
+	return drawer
 
 
 ## Scatters enough coins to add up to `value` Tag Bux.
@@ -12,23 +42,17 @@ func burst(pos: Vector3, value: int) -> void:
 	var coin_value: int = Data.config.tagBux.coinValue
 	var count := maxi(1, roundi(float(value) / coin_value))
 	for i in count:
-		var spinner := Node3D.new() # spins round; the coin inside stands on its edge
-		var coin: Node3D = coin_scene.instantiate()
-		coin.rotation.x = PI / 2
-		spinner.add_child(coin)
-		Data.remove_extra_shadows(coin)
-		spinner.position = pos
-		spinner.rotation.y = randf() * TAU
-		add_child(spinner)
 		var a := TAU * i / count + randf() * 0.5
 		var s := randf_range(1.5, 3.0)
 		list.append({
-			node = spinner,
+			pos = pos,
+			spin = randf() * TAU,
 			vel = Vector3(cos(a) * s, randf_range(4, 6), sin(a) * s),
 			value = value if count == 1 else coin_value,
 			age = 0.0,
 			landed = false,
 		})
+	draw()
 
 
 ## How many Tag Bux are still lying about (or flying to you).
@@ -40,9 +64,20 @@ func total() -> int:
 
 
 func clear() -> void:
-	for c in list:
-		c.node.queue_free()
 	list.clear()
+	draw()
+
+
+## Tells the MultiMesh where every coin is now.
+func draw() -> void:
+	for drawer in drawers:
+		var mm := drawer.multimesh
+		if mm.instance_count < list.size():
+			mm.instance_count = list.size() + 32 # (room for a few more)
+		mm.visible_instance_count = list.size()
+		for i in list.size():
+			var c: Dictionary = list[i]
+			mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, c.spin) * STAND_UP, c.pos))
 
 
 ## Moves the coins and gives them to whoever touches them first. pull_all: every coin flies to
@@ -53,9 +88,9 @@ func update(delta: float, heroes: Array, level: Level, pull_all: bool) -> Array:
 	var collected := []
 	for i in range(list.size() - 1, -1, -1):
 		var c: Dictionary = list[i]
-		var pos: Vector3 = c.node.position
+		var pos: Vector3 = c.pos
 		c.age += delta
-		c.node.rotate_y(delta * 4)
+		c.spin += delta * 4
 
 		var nearest = null
 		var nearest_dist := INF
@@ -87,10 +122,10 @@ func update(delta: float, heroes: Array, level: Level, pull_all: bool) -> Array:
 					c.landed = true
 		else:
 			pos.y = 0.5 + sin(c.age * 3 + i) * 0.08 # a gentle bob
-		c.node.position = pos
+		c.pos = pos
 
 		if nearest and ready and Vector2(nearest.position.x - pos.x, nearest.position.z - pos.z).length() < nearest.radius + t.pickupDistance:
 			collected.append([nearest, c.value])
-			c.node.queue_free()
 			list.remove_at(i)
+	draw()
 	return collected

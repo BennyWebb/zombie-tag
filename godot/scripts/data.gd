@@ -50,6 +50,63 @@ func remove_extra_shadows(node: Node) -> void:
 		remove_extra_shadows(child)
 
 
+## Joins up the parts of a model that never move into as few meshes as possible: one for each
+## look (colour, shine, glow...), since drawing each mesh costs the processor time, however small it
+## is. Parts under `keep` (things that move, spin or get hidden) and hidden parts stay as they are.
+## The joined-up parts keep their nodes, with no mesh, so anything inside them stays too.
+func merge_meshes(model: Node3D, keep: Array) -> void:
+	var groups := {} # [the look, whether it casts a shadow, the mesh's layout] -> [SurfaceTool, material]
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var m: MeshInstance3D = node
+		if m.mesh == null or keep.any(func(k): return k and (k == m or k.is_ancestor_of(m))):
+			continue
+		# where it is in the model (and whether it's hidden), from its own place in each part it's in
+		var place := Transform3D.IDENTITY
+		var shown := true
+		var part: Node = m
+		while part != model:
+			place = part.transform * place
+			shown = shown and part.visible
+			part = part.get_parent()
+		if not shown:
+			continue
+		if range(m.mesh.get_surface_count()).any(func(i): return m.mesh.surface_get_primitive_type(i) != Mesh.PRIMITIVE_TRIANGLES):
+			continue # (something unusual: left as it is)
+		for i in m.mesh.get_surface_count():
+			var material := m.get_active_material(i)
+			var key := [look(material), m.cast_shadow, m.mesh.surface_get_format(i) & Mesh.ARRAY_FORMAT_INDEX - 1]
+			if not groups.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				groups[key] = [st, material]
+			groups[key][0].append_from(m.mesh, i, place)
+		m.mesh = null
+	var by_shadow := {} # one mesh for the parts with shadows, and one for the ones without
+	for key in groups:
+		if not by_shadow.has(key[1]):
+			var joined := MeshInstance3D.new()
+			joined.name = "joined"
+			joined.mesh = ArrayMesh.new()
+			joined.cast_shadow = key[1]
+			model.add_child(joined)
+			by_shadow[key[1]] = joined
+		var mesh: ArrayMesh = by_shadow[key[1]].mesh
+		groups[key][0].commit(mesh)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, groups[key][1])
+
+
+## What a material looks like, as a list of its settings, so two materials that look the same (but
+## are separate copies) can share a mesh.
+static func look(material: Material) -> Array:
+	if not material is BaseMaterial3D:
+		return [material]
+	var settings := []
+	for p in material.get_property_list():
+		if p.usage & PROPERTY_USAGE_STORAGE and not p.name.begins_with("resource_") and p.name != "script":
+			settings.append(material.get(p.name))
+	return settings
+
+
 ## Every mesh in a model whose material has this name (like "skin"), with the surface it's on.
 func find_material_uses(model: Node, material_name: String) -> Array:
 	var found := []
