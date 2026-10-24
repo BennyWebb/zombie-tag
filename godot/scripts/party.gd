@@ -52,7 +52,9 @@ func _ready() -> void:
 		var h: Hero = heroes[i]
 		# in the middle, by the King, where the camera can see them over the ring of zombies
 		# all the way round (the browser game has them in the ring, where they're often hidden)
-		h.start_at({ x = -3.5 + i * 7 if heroes.size() > 1 else 3.5, z = -0.5, yaw = 0 }) # (either side of him)
+		var spot: Vector2 = [Vector2(-3.5, -0.5), Vector2(3.5, -0.5), Vector2(-6.5, 1.5), Vector2(6.5, 1.5)][i] \
+				if heroes.size() > 1 else Vector2(3.5, -0.5)
+		h.start_at({ x = spot.x, z = spot.y, yaw = 0 }) # (either side of him)
 		h.body.visible = true
 		h.hand.visible = false
 	camera.fov = 70

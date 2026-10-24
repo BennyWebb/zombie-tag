@@ -18,9 +18,9 @@ var music := 6 # the volumes, 0 to 10
 var sounds := 8
 var pad_modes := {} # how each joypad plays (see Controls.pad_modes)
 var swap_buttons := false # which button says yes in menus (see Controls.swap_buttons)
-# The graphics settings (see Graphics.OPTIONS), one set for 1 player and one for 2, since two
-# players draw the world twice and may need simpler settings.
-var graphics := { "1": Graphics.defaults(1), "2": Graphics.defaults(2) }
+# The graphics settings (see Graphics.OPTIONS), a set for each number of players, since more
+# players draw the world more times and may need simpler settings.
+var graphics := { "1": Graphics.defaults(1), "2": Graphics.defaults(2), "3": Graphics.defaults(3), "4": Graphics.defaults(4) }
 # A safety net for the graphics settings: "trying" is saved as true while the game starts and just
 # after a setting changes, and false once it's run for a few seconds. If it's still true when the
 # game starts, the game stopped (crashed) while trying, so the graphics go back to normal.
@@ -60,7 +60,7 @@ func read() -> void:
 		return # (the graphics stay at their usual settings)
 	if data.get("graphicsVersion") != GRAPHICS_VERSION:
 		return # (settings saved before "Sharpness" changed how it works start at their usual choices)
-	for count in ["1", "2"]:
+	for count in graphics:
 		# (only settings that still exist, and any new ones at their usual choice)
 		var saved: Dictionary = data.get("graphics", {}).get(count, {})
 		for key in graphics[count]:

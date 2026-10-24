@@ -15,7 +15,7 @@ to play.
 | 2 | ✅ | Tag Bux coins, hearts, getting tagged, and the HUD |
 | 3 | ✅ | The shop and gym |
 | 4 | ✅ | All the weapons: squirts, goo, bubbles, snowballs, the boomerang banana, pumpkins and the star laser |
-| 5 | ✅ | Two players, split screen |
+| 5 | ✅ | Two players, split screen (later three and four) |
 | 6 | ✅ | All ten levels and the Zombie King |
 | 7 | ✅ | Menus, the character creator, saving, sound settings |
 | 8 | ✅ | The Android TV app for the Shield, graphics settings, and joypads with two sticks |
@@ -28,16 +28,19 @@ an Xbox pad, A on a Nintendo-style one) or Space says yes, and the **bottom** on
 back or leaves; **Pause → 🎮 OK button** swaps them round. The pictures of the buttons show which. **F3** (or Back / View / Select) shows the frame rate and
 how many things are drawn, for checking speed on the TV.
 
-**The menus:** the title screen picks 1 or 2 players, then "Who's playing?" picks each player's saved
+**The menus:** the title screen picks 1 to 4 players, then "Who's playing?" picks each player's saved
 hero (or makes a new one in the character creator: a name, then skin, hair and clothes), then how
 hard (Easy, Hard or Hardcore) and which level. Back / Select on the title screen lets heroes change
 how they look; on "Who's playing?" it deletes one. The pause menu has the music and sound volumes,
 and the way back to the start screen.
 
-**Two players:** each sister plays with what she picked her hero with: her own joypad, or the
-keyboard (or half each: Player 1 on W A S D and Space, Player 2 on the arrows and Enter). The screen
-splits in two, each sister with her own half, and there are half as many zombies again. In the shop
-each can give the other Tag Bux, and outfits show on your body, which your sister sees. Messages on
+**More players:** each player plays with what they picked their hero with: their own joypad, or the
+keyboard (which two can share: one on W A S D and Space, the other on the arrows and Enter). With
+two the screen splits in half, and with three or four into quarters (the spare quarter with three
+shows how many zombies are left); there are half as many zombies again for each extra player, and
+with three or four the game runs at a steady 30 frames a second. Everyone has to go through the
+exit gate to finish a level. In the shop each can give the others Tag Bux, and outfits show on your
+body, which the others see. Messages on
 the Android version only talk about joypad buttons (the TV has no keyboard).
 
 **Saving:** each hero's progress is saved in `user://save.json`: on a computer that's in Godot's app
@@ -81,8 +84,8 @@ and banner from the game's own models (`godot --path godot -s ../tools/make-icon
 
 **Pause → ✨ Graphics** changes how the game is drawn while you watch, with the frame rate at the top
 (60 fps needs each frame to take 16.7 ms or less). While playing only the heroes' views draw the
-world; the menus' camera stops drawing it behind them. There's a set of settings for 1 player and another
-for 2, since two players draw the world twice. Further down each list is quicker but not as nice:
+world; the menus' camera stops drawing it behind them. There's a set of settings for each number of
+players, since more players draw the world more times (three and four start with no shadows). Further down each list is quicker but not as nice:
 
 | Setting | What it does |
 | --- | --- |
@@ -122,7 +125,7 @@ Everything is made in code, so you can read how it fits together, starting from 
 | `level.gd` | The scenery, sky, fog and sun, lamps, the Funfair's rides, the shop and gym, the gate, and what you can't walk through | `src/world.js` |
 | `hero.gd` | You: walking, turning, and swinging, shooting, throwing or zapping your weapon at the nearest zombie in front of you | `src/player.js` |
 | `zombie.gd` | A zombie: wandering, chasing, its silly walk, squashing and flashing when bonked, slimed, bubbled or frozen | `src/zombie.js` |
-| `screens.gd` | The start screens and menus: 1 or 2 players, who's playing, how hard, pick a level, paused, game over | `src/main.js`, `index.html` |
+| `screens.gd` | The start screens and menus: 1 to 4 players, who's playing, how hard, pick a level, paused, game over | `src/main.js`, `index.html` |
 | `creator.gd` | The character creator | `src/creator.js` |
 | `save.gd` | Saves each hero's progress, and the settings (an autoload: `Save`) | `src/save.js` |
 | `party.gd` | The party after beating the Zombie King | `src/main.js` |

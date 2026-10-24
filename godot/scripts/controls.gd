@@ -60,9 +60,9 @@ const ANY_PAD := -1
 const NO_PAD := -2
 
 var players := 1
-var pads := [ANY_PAD, NO_PAD] # each player's joypad (a device number), ANY_PAD or NO_PAD
-var keys := ["all", ""] # each player's keys: "all", "left", "right" or "" for none
-var using_joypad := [false, false] # whether each player last used a joypad (they turn a bit slower)
+var pads := [ANY_PAD, NO_PAD, NO_PAD, NO_PAD] # each player's joypad (a device number), ANY_PAD or NO_PAD
+var keys := ["all", "", "", ""] # each player's keys: "all", "left", "right" or "" for none
+var using_joypad := [false, false, false, false] # whether each player last used a joypad (they turn a bit slower)
 var pad_modes := {} # the joypads set to "Two sticks": { joypad's id: true } (save.gd keeps it)
 var last_pad := -1 # the joypad that last pressed something (the pause menu's setting is for it)
 var swap_buttons := false # the bottom button says yes in menus, and the right-hand one goes back (save.gd sets it)
@@ -74,7 +74,7 @@ var pads_sending_b := {} # the joypads that have sent a B (the right-hand button
 
 
 func _ready() -> void:
-	for i in 2:
+	for i in Data.MAX_PLAYERS:
 		for a in PLAYER_ACTIONS:
 			InputMap.add_action(action(a, i), DEADZONE)
 	update_actions()
@@ -110,7 +110,7 @@ func is_anyones(event: InputEvent, name: String) -> bool:
 ## number, ANY_PAD or NO_PAD }.
 func set_devices(devices: Array) -> void:
 	players = devices.size()
-	for i in 2:
+	for i in Data.MAX_PLAYERS:
 		keys[i] = devices[i].keys if i < players else ""
 		pads[i] = devices[i].pad if i < players else NO_PAD
 		if keys[i] == "":
@@ -213,7 +213,7 @@ func glyph(kind: String) -> ImageTexture:
 
 ## Sets each player's actions to their keys and joypad.
 func update_actions() -> void:
-	for i in 2:
+	for i in Data.MAX_PLAYERS:
 		for a in PLAYER_ACTIONS:
 			var name := action(a, i)
 			InputMap.action_erase_events(name)
@@ -343,14 +343,21 @@ func sends_b(player: int) -> bool:
 	return pads_sending_b.has(pads[player])
 
 
-## A joypad was plugged in or taken out. If Player 1's goes, any joypad works her again, or with
-## two players, the next one plugged in that isn't Player 2's. (Player 2 keeps hers, in case it
-## comes back.)
+## A joypad was plugged in or taken out. If Player 1's goes with one player, any joypad works her
+## again. With more players, a player whose joypad goes (and who has no keys) gets the next one
+## plugged in that isn't someone else's.
 func joypad_plugged(device: int, connected: bool) -> void:
-	if not connected and pads[0] == device:
-		pads[0] = ANY_PAD if players == 1 else NO_PAD
-	elif connected and players == 2 and pads[0] == NO_PAD and device != pads[1]:
-		pads[0] = device
+	if not connected and players == 1 and pads[0] == device:
+		pads[0] = ANY_PAD
+	elif not connected:
+		for i in players:
+			if pads[i] == device:
+				pads[i] = NO_PAD
+	elif players > 1 and device not in pads:
+		for i in players:
+			if pads[i] == NO_PAD and keys[i] == "":
+				pads[i] = device
+				break
 	if not connected and last_pad == device:
 		last_pad = -1
 	update_actions() # (a joypad's sticks are set up for it as it arrives)

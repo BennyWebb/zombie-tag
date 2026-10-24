@@ -20,6 +20,7 @@ extends Node3D
 ## tagged and when a level's done.
 const BEHIND_WARNING := 6.0 # a zombie this close behind you (in metres) makes the HUD warn you
 const HUD_ZOOM_TWO_PLAYERS := 0.7 # with two players, everything on the HUD shrinks to fit half the screen
+const HUD_ZOOM_FOUR_PLAYERS := 0.5 # and with three or four, to fit a quarter
 # the sound a shot makes when it hits (swinging weapons go "bonk")
 const HIT_SOUNDS := { slime = "splat", bubble = "bloop", snowball = "poof", banana = "bonk" }
 
@@ -37,7 +38,10 @@ var fly_layer := CanvasLayer.new() # Tag Bux flying from one player to the other
 var view_layer := CanvasLayer.new()
 var sub_views: Array[SubViewport] = []
 var view_rects: Array[TextureRect] = []
-var divider := ColorRect.new()
+var divider := ColorRect.new() # the white line between the views (down the middle)
+var divider_across := ColorRect.new() # (and across, with three or four players)
+var spare_corner := PanelContainer.new() # the fourth quarter of the screen, with three players
+var spare_left := Label.new() # (it says how many zombies are left)
 var zombies: Array[Zombie] = []
 var zombie_holder := Node3D.new() # all the zombies go in here
 var boss: Zombie = null # the Zombie King, once he arrives
@@ -102,8 +106,9 @@ func add_hero() -> Hero:
 	return hero
 
 
+## More than one player: the screen's split, and everyone sees everyone else.
 func two_players() -> bool:
-	return heroes.size() == 2
+	return heroes.size() >= 2
 
 
 ## A hero leaves, with her HUD, shop and gym (going back to 1 player).
@@ -115,19 +120,21 @@ func remove_hero() -> void:
 	gyms.pop_back()
 
 
-## 1 or 2 players, chosen on the title screen: with two the screen splits in two.
+## 1 to 4 players, chosen on the title screen: with two the screen splits in two, and with three or
+## four into quarters.
 func set_player_count(count: int) -> void:
 	while heroes.size() > count:
 		remove_hero()
 	while heroes.size() < count:
 		add_hero()
 	for hero in heroes:
-		# with 2 players you wait longer, while your sister carries on
-		hero.tagged_time = Data.config.player.taggedTimeTwoPlayers if count == 2 else Data.config.player.taggedTime
-	# each can give the other Tag Bux in the shop
-	shops[0].partner = heroes[1] if count == 2 else null
-	if count == 2:
-		shops[1].partner = heroes[0]
+		# with more players you wait longer, while the others carry on
+		hero.tagged_time = Data.config.player.taggedTimeTwoPlayers if count >= 2 else Data.config.player.taggedTime
+		# each can give the others Tag Bux in the shop
+		shops[hero.index].partners.assign(heroes.filter(func(other): return other != hero))
+	# with three or four, the game goes at 30 frames a second (drawing four views at 60 is too much
+	# for the TV box), steadily rather than jumping between 30 and 60
+	Engine.max_fps = 30 if count >= 3 else 0
 	make_views()
 
 
@@ -145,8 +152,9 @@ func make_views() -> void:
 		rect.queue_free()
 	sub_views.clear()
 	view_rects.clear()
-	if divider.get_parent():
-		view_layer.remove_child(divider)
+	for line in [divider, divider_across, spare_corner]:
+		if line.get_parent():
+			view_layer.remove_child(line)
 	for hero in heroes:
 		var sub := SubViewport.new()
 		sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS if view_layer.visible else SubViewport.UPDATE_DISABLED
@@ -163,6 +171,12 @@ func make_views() -> void:
 	if two_players():
 		divider.color = Color.WHITE
 		view_layer.add_child(divider)
+	if heroes.size() >= 3:
+		divider_across.color = Color.WHITE
+		view_layer.add_child(divider_across)
+	if heroes.size() == 3:
+		make_spare_corner()
+		view_layer.add_child(spare_corner)
 	apply_graphics()
 	huds[0].views.assign(sub_views.map(func(v): return v.get_viewport_rid()) + [get_viewport().get_viewport_rid()])
 	huds[0].time_views()
@@ -176,23 +190,50 @@ func arrange_views() -> void:
 	var screen := get_viewport().get_visible_rect().size # (in the HUD's units, 1280 x 720 or so)
 	var pixels := Vector2(get_window().size)
 	var n := heroes.size()
+	# side by side with one or two players, and in quarters with three or four (Player 1 top left,
+	# 2 top right, 3 bottom left, 4 bottom right)
+	var across := 1 if n == 1 else 2
+	var down := 2 if n >= 3 else 1
+	var part := Vector2(screen.x / across, screen.y / down)
 	for i in n:
-		sub_views[i].size = Vector2i(maxi(1, roundi(pixels.x / n * sharpness)), maxi(1, roundi(pixels.y * sharpness)))
-		view_rects[i].position = Vector2(screen.x / n * i, 0)
-		view_rects[i].size = Vector2(screen.x / n, screen.y)
-		if n == 2:
-			huds[i].set_view(Rect2(view_rects[i].position, view_rects[i].size), HUD_ZOOM_TWO_PLAYERS, true)
+		var corner := Vector2(i % across, i / across)
+		sub_views[i].size = Vector2i(maxi(1, roundi(pixels.x / across * sharpness)), maxi(1, roundi(pixels.y / down * sharpness)))
+		view_rects[i].position = corner * part
+		view_rects[i].size = part
+		if n >= 2:
+			huds[i].set_view(Rect2(view_rects[i].position, part), HUD_ZOOM_TWO_PLAYERS if n == 2 else HUD_ZOOM_FOUR_PLAYERS, true)
 	if n == 1:
 		huds[0].set_full_screen()
 	divider.size = Vector2(3, screen.y)
 	divider.position = Vector2(screen.x / 2 - 1.5, 0)
+	divider_across.size = Vector2(screen.x, 3)
+	divider_across.position = Vector2(0, screen.y / 2 - 1.5)
+	spare_corner.position = part
+	spare_corner.size = part
 	huds[0].drawn_at = sub_views[0].size # (for the F3 numbers)
 
 
-## Where each hero begins: side by side with two players.
+## The fourth quarter of the screen with three players: the game's name, and the zombies left.
+func make_spare_corner() -> void:
+	if spare_corner.get_child_count() > 0:
+		return
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(40 / 255.0, 15 / 255.0, 80 / 255.0)
+	spare_corner.add_theme_stylebox_override("panel", box)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	spare_corner.add_child(column)
+	var title := Screens.heading("ZOMBIE TAG", 60)
+	column.add_child(title)
+	spare_left.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	spare_left.add_theme_font_size_override("font_size", 30)
+	column.add_child(spare_left)
+
+
+## Where each hero begins: side by side, 3 m apart.
 func start_for(hero: Hero) -> Dictionary:
 	var s: Dictionary = level.info.playerStart
-	var side := 0.0 if not two_players() else -1.5 if hero.index == 0 else 1.5
+	var side := (hero.index - (heroes.size() - 1) / 2.0) * 3.0
 	return { x = s.x + side, z = s.z, yaw = s.yaw }
 
 
@@ -221,7 +262,8 @@ func start_level(number: int) -> void:
 		if heroes[i].weapon == null:
 			heroes[i].give_stick()
 	warm_up()
-	var more: float = (Data.config.twoPlayerZombies if two_players() else 1.0) * Save.current_difficulty().get("zombies", 1)
+	# more zombies with more players: half as many again for each extra player (twoPlayerZombies)
+	var more: float = (1.0 + (Data.config.twoPlayerZombies - 1.0) * (heroes.size() - 1)) * Save.current_difficulty().get("zombies", 1)
 	to_spawn = roundi(level.info.zombies * more)
 	popped = 0
 	finished = false
@@ -501,7 +543,7 @@ func update(delta: float) -> void:
 		spawn_boss()
 	for hero in heroes:
 		update_hero(hero, delta)
-	keep_sisters_apart()
+	keep_players_apart()
 	for hit in shots.update(delta, zombies):
 		if hit.has("landed"):
 			effects.splash(hit.at, hit.weapon.shot, 5, 0.6) # water landing on the ground
@@ -545,8 +587,13 @@ func update(delta: float) -> void:
 			go_through_gate(hero)
 	if heroes.any(func(h): return h.through_gate) and heroes.all(func(h): return h.through_gate or h.out):
 		level_done()
+	var left := to_spawn + zombies.size() + (1 if boss_coming() else 0)
+	if heroes.size() == 3:
+		var text := "Go to the exit gate!" if level.gate_open else "🧟 %d left" % left
+		if spare_left.text != text:
+			spare_left.text = text
 	for i in heroes.size():
-		huds[i].show_zombies_left(to_spawn + zombies.size() + (1 if boss_coming() else 0), level.gate_open)
+		huds[i].show_zombies_left(left, level.gate_open)
 		huds[i].show_boss(boss if is_instance_valid(boss) and boss.alive else null)
 		huds[i].update(heroes[i])
 		var behind := zombie_behind(heroes[i])
@@ -672,18 +719,19 @@ func update_hero(hero: Hero, delta: float) -> void:
 			enter_building(hero, shops[hero.index] if kind == "shop" else gyms[hero.index])
 
 
-## Sisters can't walk through each other.
-func keep_sisters_apart() -> void:
-	if not two_players() or heroes.any(func(h): return h.inside or h.tagged > 0 or h.through_gate):
-		return
-	var a := heroes[0]
-	var b := heroes[1]
-	var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
-	var min_dist := a.radius + b.radius
-	if d.length() < min_dist and d.length() > 0.0001:
-		var push := d.normalized() * (min_dist - d.length()) / 2
-		a.position -= Vector3(push.x, 0, push.y)
-		b.position += Vector3(push.x, 0, push.y)
+## Players can't walk through each other.
+func keep_players_apart() -> void:
+	var here := heroes.filter(func(h): return not (h.inside or h.tagged > 0 or h.through_gate))
+	for i in here.size():
+		for j in range(i + 1, here.size()):
+			var a: Hero = here[i]
+			var b: Hero = here[j]
+			var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
+			var min_dist := a.radius + b.radius
+			if d.length() < min_dist and d.length() > 0.0001:
+				var push := d.normalized() * (min_dist - d.length()) / 2
+				a.position -= Vector3(push.x, 0, push.y)
+				b.position += Vector3(push.x, 0, push.y)
 
 
 func enter_building(hero: Hero, menu: MenuScreen) -> void:

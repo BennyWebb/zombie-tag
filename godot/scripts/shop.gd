@@ -6,7 +6,7 @@ extends MenuScreen
 const ROWS_SHOWN := 4 # the list scrolls to show this many rows at a time
 
 var cursor := 0
-var partner: Hero = null # the other player, in 2-player mode, so you can give them Tag Bux
+var partners: Array[Hero] = [] # the other players, so you can give them Tag Bux (main.gd sets them)
 var first := 0 # the first row shown
 var bux_pill: Control # your Tag Bux, at the top (the given coins fly from here: see main.gd)
 
@@ -17,12 +17,18 @@ func _init() -> void:
 	super(Color("ff6fae"), PURPLE, YELLOW, Color("ff4f8b"), Color("e05a00"))
 
 
-## Every row: weapons, then medicine, armour, outfits, giving Tag Bux to your sister (with two
-## players), and the way out.
+## Every row: weapons, then medicine, armour, outfits, giving Tag Bux to each of the other players
+## ("give 1" for Player 2 and so on), and the way out.
 func ids() -> Array:
 	var c: Dictionary = Data.config
-	var give := ["give"] if partner else []
+	var give := partners.map(func(other): return "give %d" % other.index)
 	return c.weapons.keys() + c.items.keys() + c.armour.keys() + c.outfits.keys() + give + ["leave"]
+
+
+## Who a "give" row gives to.
+func given_to(id: String) -> Hero:
+	var index := int(id.get_slice(" ", 1))
+	return partners.filter(func(other): return other.index == index)[0]
 
 
 static func thing(id: String) -> Dictionary:
@@ -63,7 +69,7 @@ func status(id: String) -> Dictionary:
 	var p := hero
 	if id == "leave":
 		return { label = "Back outside", kind = "leave" }
-	if id == "give":
+	if id.begins_with("give"):
 		var amount: int = Data.config.giveTagBux
 		return { price = amount, kind = "buy" if p.tag_bux >= amount else "dear" }
 	var w := thing(id)
@@ -121,7 +127,8 @@ func choose() -> bool:
 		return true
 	var s := status(id)
 	var w := thing(id)
-	if id == "give":
+	if id.begins_with("give"):
+		var partner := given_to(id)
 		var amount: int = Data.config.giveTagBux
 		if s.kind == "dear":
 			Sound.play("nope")
@@ -204,8 +211,8 @@ func draw() -> void:
 		if id == "leave":
 			rows.append({ icon = "🚪", name = "Leave", kind = "leave", label = s.label })
 			continue
-		if id == "give":
-			var row := { icon = "🎁", name = "Give %d Tag Bux to %s" % [Data.config.giveTagBux, partner.look.name],
+		if id.begins_with("give"):
+			var row := { icon = "🎁", name = "Give %d Tag Bux to %s" % [Data.config.giveTagBux, given_to(id).look.name],
 				about = "As many times as you like" }
 			row.merge(s)
 			rows.append(row)
@@ -217,7 +224,7 @@ func draw() -> void:
 		if w.has("blocks"):
 			about = "Blocks %d %s every level" % [w.blocks, "hit" if w.blocks == 1 else "hits"]
 		if w.has("covers"):
-			about = ("Just for looks. %s will see it!" % partner.look.name if partner else "Just for looks!") \
+			about = ("Just for looks. %s will see it!" % (partners[0].look.name if partners.size() == 1 else "Everyone") if partners else "Just for looks!") \
 				+ (" (choose it again to take it off)" if s.kind == "wearing" else "")
 		var row := { icon = w.icon, name = w.name, about = about }
 		row.merge(s)

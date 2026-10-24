@@ -288,13 +288,14 @@ func take_off(id: String) -> void:
 	rebuild_body()
 
 
-## The visual layers for each player's hand and body (see WORLD_LAYER).
+## The visual layers for each player's hand and body (see WORLD_LAYER): hands on layers 2 to 5,
+## bodies on 6 to 9.
 static func hand_layer(player: int) -> int:
 	return 1 << (1 + player)
 
 
 static func body_layer(player: int) -> int:
-	return 1 << (3 + player)
+	return 1 << (5 + player)
 
 
 ## Makes your body (and the hand you see) match your look and outfits.
@@ -341,9 +342,13 @@ func start_at(spot: Dictionary) -> void:
 
 ## The camera goes where your eyes are. (It isn't simply a child of yours, because with two players
 ## it has to be inside your half of the screen.)
-## What her camera draws: the world, her own hand, and the other hero's body.
+## What their camera draws: the world, their own hand, and everyone else's body.
 func camera_layers() -> int:
-	return WORLD_LAYER | hand_layer(index) | body_layer(1 - index)
+	var layers := WORLD_LAYER | hand_layer(index)
+	for other in Data.MAX_PLAYERS:
+		if other != index:
+			layers |= body_layer(other)
+	return layers
 
 
 func place_camera() -> void:

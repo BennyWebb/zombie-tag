@@ -69,7 +69,7 @@ func to_title() -> void:
 	show_screen("title")
 
 
-## 1 or 2 players chosen: each picks her hero in turn.
+## 1 to 4 players chosen: each picks their hero in turn.
 func begin(count: int, looks: bool) -> void:
 	player_count = count
 	edit_looks = looks
@@ -122,7 +122,7 @@ func choose_who(device: Dictionary) -> void:
 	if slot + 1 < player_count:
 		start_who(slot + 1)
 		return
-	Controls.set_devices(devices if player_count == 2 else [{ keys = "all", pad = Controls.ANY_PAD }])
+	Controls.set_devices(devices if player_count >= 2 else [{ keys = "all", pad = Controls.ANY_PAD }])
 	# make any new heroes (or let everyone change how they look), then pick how hard
 	var making: Array = main.heroes.filter(func(h): return edit_looks or not h.created)
 	if making.is_empty():
@@ -172,9 +172,9 @@ func _process(delta: float) -> void:
 	match screen:
 		"title":
 			if up or left:
-				choice = 0
+				choice = maxi(0, choice - 1)
 			if down or right:
-				choice = 1
+				choice = mini(Data.MAX_PLAYERS - 1, choice + 1)
 			if go or extra:
 				Sound.play("select")
 				begin(choice + 1, extra)
@@ -317,24 +317,25 @@ func _process(delta: float) -> void:
 		draw()
 
 
-## On "Who's playing?", the button you pick with decides what you play with (with two players).
+## On "Who's playing?", the button you pick with decides what you play with (with more than one
+## player): a joypad nobody's picked with yet, or the keyboard (which two can share).
 func _input(event: InputEvent) -> void:
 	if screen != "who" or wait > 0 or not event.is_pressed() or event.is_echo():
 		return
-	var mine: Dictionary = devices[0] if slot == 1 else {}
 	if event is InputEventJoypadButton and event.button_index == Controls.go_button():
-		if mine.get("pad") == event.device:
-			Sound.play("nope") # that's Player 1's joypad
+		if devices.any(func(d): return d.pad == event.device):
+			Sound.play("nope") # someone's already playing with that joypad
 		else:
 			choose_who({ keys = "", pad = event.device })
 	elif event is InputEventKey and event.physical_keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
-		if mine.get("keys", "") == "":
+		var on_keys := devices.find_custom(func(d): return d.keys == "all")
+		if not devices.any(func(d): return d.keys != ""):
 			choose_who({ keys = "all", pad = Controls.NO_PAD })
-		elif event.physical_keycode == KEY_SPACE:
-			Sound.play("nope") # Player 1 has the keyboard; Player 2 can share it with Enter
+		elif on_keys < 0 or event.physical_keycode == KEY_SPACE:
+			Sound.play("nope") # someone has the keyboard; one more can share it with Enter
 		else:
-			# sharing: Player 1 moves over to W A S D, Player 2 has the arrows
-			devices[0] = { keys = "left", pad = Controls.NO_PAD }
+			# sharing: whoever had it moves over to W A S D, and this player has the arrows
+			devices[on_keys] = { keys = "left", pad = Controls.NO_PAD }
 			choose_who({ keys = "right", pad = Controls.NO_PAD })
 
 
@@ -369,9 +370,11 @@ func draw_title(column: VBoxContainer) -> void:
 		var d := Save.profile(id)
 		if d:
 			names.append(d.look.name)
-	column.add_child(line("Welcome back, %s!" % " and ".join(names) if names else "10 levels of silly zombies", 34, Color.WHITE))
+	# ("Lily", "Lily and Rose", or "Lily, Rose and Daisy")
+	var who := " and ".join(names) if names.size() <= 2 else ", ".join(names.slice(0, -1)) + " and " + names[-1]
+	column.add_child(line("Welcome back, %s!" % who if names else "10 levels of silly zombies", 34, Color.WHITE))
 	column.add_child(gap(10))
-	column.add_child(cards(["🧒 1 Player", "🧒🧒 2 Players"], choice, 300))
+	column.add_child(cards(["1 Player", "2 Players", "3 Players", "4 Players"], choice, 220))
 	column.add_child(gap(10))
 	column.add_child(ButtonText.make("%s choose  ·  {go} to play" % arrows("across"), 30, YELLOW))
 	if Save.graphics_were_reset:
@@ -380,7 +383,7 @@ func draw_title(column: VBoxContainer) -> void:
 
 
 func draw_who(column: VBoxContainer) -> void:
-	if player_count == 2:
+	if player_count >= 2:
 		column.add_child(badge(slot))
 	column.add_child(heading("Who's playing?", 80))
 	var list := VBoxContainer.new()
@@ -421,11 +424,11 @@ func draw_who(column: VBoxContainer) -> void:
 		list.add_child(card(row, chosen))
 	# the button you pick with decides what you play with
 	var how := "%s choose  ·  {go} to play" % arrows()
-	if player_count == 2 and not OS.has_feature("android"):
-		var keyboard_free: bool = slot == 0 or devices[0].keys == ""
+	if player_count >= 2 and not OS.has_feature("android"):
+		var keyboard_free: bool = not devices.any(func(d): return d.keys != "")
 		how = "%s choose  ·  Space to play on the ⌨️ keyboard, or {*go} on your joypad" % arrows() if keyboard_free \
 			else "%s choose  ·  {*go} on your joypad, or Enter to share the ⌨️ keyboard (arrows and Enter)" % arrows()
-	elif player_count == 2:
+	elif player_count >= 2:
 		how = "%s choose  ·  {go} on your own controller to play" % arrows()
 	column.add_child(gap(6))
 	column.add_child(ButtonText.make(how, 26, YELLOW))
@@ -627,7 +630,7 @@ static func cards(texts: Array, chosen: int, width: float) -> HBoxContainer:
 ## "Player 1" or "Player 2", in her colour.
 static func badge(player: int) -> Control:
 	var l := MenuScreen.label("Player %d" % (player + 1), 28, Color.WHITE)
-	var p := MenuScreen.pill(l, PINK if player == 0 else BLUE)
+	var p := MenuScreen.pill(l, Color(Data.config.heroes[player].tagColour))
 	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	return p
 

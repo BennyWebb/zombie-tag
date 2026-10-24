@@ -6,11 +6,21 @@ var config: Dictionary # data/config.json: everything in the browser game's src/
 var models: Dictionary # data/models.json: part names, recolourable materials, hidden parts
 var joined_before := {} # meshes already joined up, to use again (see merge_meshes)
 
+const MAX_PLAYERS := 4
+# Players 3 and 4's looks (the browser game has only two players, so config.json has only two)
+const MORE_HEROES := [
+	{ name = "Player 3", skin = 13010498, hairStyle = "curly", hair = 13784363, outfit = 5025616, trousers = 3824266, tagColour = "#2e9e4f" },
+	{ name = "Player 4", skin = 16767940, hairStyle = "bun", hair = 13011514, outfit = 16765503, trousers = 5917322, tagColour = "#ff8a1f" },
+]
+
 
 # (loaded straight away, rather than in _ready, so other scripts' variables can use it as they're
 # made)
 func _init() -> void:
 	config = load_json("res://data/config.json")
+	for more in MORE_HEROES:
+		if config.heroes.size() < MAX_PLAYERS:
+			config.heroes.append(more.duplicate())
 	models = load_json("res://data/models.json")
 
 

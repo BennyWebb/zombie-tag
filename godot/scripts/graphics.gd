@@ -29,6 +29,9 @@ const OPTIONS := {
 ## shadows with two (with Good, two players still had a slow frame now and then). Smooth edges start
 ## off: on a 1080p TV you can hardly see them from the sofa.
 static func defaults(players: int) -> Dictionary:
+	if players >= 3:
+		# four views to draw (at 30 fps): no shadows to start with
+		return { resolution = 0, shadows = 3, reach = 3, smoothing = 2, distance = 0, extras = 0, test = 0 }
 	return { resolution = 0, shadows = 0 if players == 1 else 2, reach = 0 if players == 1 else 2, smoothing = 2, distance = 0, extras = 0, test = 0 }
 
 
