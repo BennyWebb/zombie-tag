@@ -91,6 +91,10 @@ for 2, since two players draw the world twice. Further down each list is quicker
 | 🔭 View distance | Brings the fog in, and doesn't draw anything past it (far things like the sun go too) |
 | ❄️ Snow and lamps | The snow, sparkles and fireflies, and the lamps and torches at night |
 
+The light is worked out at the corners of each shape rather than at every dot on the screen
+("vertex shading", a project setting): with the game's flat colours it looks the same, and the Shield
+spends most of its time colouring dots in.
+
 They're saved with the game. If the game stops while starting or just after a setting changes
 (a crash), it starts next time with the graphics back to normal, and says so on the title screen.
 **F3** (Back / View / Select on a joypad) shows the frame rate and draw
