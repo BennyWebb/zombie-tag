@@ -521,10 +521,13 @@ func update(delta: float) -> void:
 		level.open_gate()
 		Sound.play("gate")
 		toast_all("All the zombies are popped!\nWalk through the glowing exit gate", 4)
+	# each hero walking through the open gate waits there; once everyone has (except anyone out on
+	# Hardcore), the level's done
 	for hero in heroes:
-		if level.at_gate(hero.position) and hero.tagged <= 0 and not hero.inside:
-			level_done()
-			break
+		if not hero.through_gate and level.at_gate(hero.position) and hero.tagged <= 0 and not hero.inside and not hero.out:
+			go_through_gate(hero)
+	if heroes.any(func(h): return h.through_gate) and heroes.all(func(h): return h.through_gate or h.out):
+		level_done()
 	for i in heroes.size():
 		huds[i].show_zombies_left(to_spawn + zombies.size() + (1 if boss_coming() else 0), level.gate_open)
 		huds[i].show_boss(boss if is_instance_valid(boss) and boss.alive else null)
@@ -532,7 +535,21 @@ func update(delta: float) -> void:
 		heroes[i].update_body(delta, two_players())
 
 
-## Either sister walking through the gate finishes the level for both. After the Zombie King's
+## Through the gate: the player waits there (out of sight, and zombies leave them be) for the others.
+func go_through_gate(hero: Hero) -> void:
+	hero.through_gate = true
+	hero.body.visible = false
+	hero.hand.visible = false
+	hero.beam.hide_beam()
+	var waiting_for := heroes.filter(func(h): return not h.through_gate and not h.out)
+	if waiting_for:
+		Sound.play("select")
+		huds[hero.index].toast("You're through! 🚪\nWaiting for %s…" % waiting_for[0].look.name, 9999)
+		for h in waiting_for:
+			huds[h.index].toast("%s is through the gate!\nCome and join %s 🚪" % [hero.look.name, hero.look.name], 3)
+
+
+## Once every player is through the gate, the level's done. After the Zombie King's
 ## castle, there's a party.
 func level_done() -> void:
 	# coins still on their way count too, shared out
@@ -589,6 +606,8 @@ func start_party(hardcore_won: bool) -> void:
 
 func update_hero(hero: Hero, delta: float) -> void:
 	var hud := huds[hero.index]
+	if hero.through_gate:
+		return # waiting at the gate
 	if hero.tagged > 0:
 		hero.update(delta, zombies) # (just the camera)
 		if hero.out:
@@ -611,7 +630,7 @@ func update_hero(hero: Hero, delta: float) -> void:
 
 ## Sisters can't walk through each other.
 func keep_sisters_apart() -> void:
-	if not two_players() or heroes.any(func(h): return h.inside or h.tagged > 0):
+	if not two_players() or heroes.any(func(h): return h.inside or h.tagged > 0 or h.through_gate):
 		return
 	var a := heroes[0]
 	var b := heroes[1]

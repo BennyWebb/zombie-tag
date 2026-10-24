@@ -164,10 +164,10 @@ func update(delta: float, heroes: Array, others: Array) -> void:
 	bubble_time = maxf(0.0, bubble_time - delta)
 	frozen_time = maxf(0.0, frozen_time - delta)
 
-	# go for the nearest hero who isn't tagged
+	# go for the nearest hero who isn't tagged (or gone through the exit gate)
 	var hero = null
 	for h in heroes:
-		if h.tagged > 0:
+		if h.tagged > 0 or h.through_gate:
 			continue
 		if hero == null or position.distance_to(h.position) < position.distance_to(hero.position):
 			hero = h

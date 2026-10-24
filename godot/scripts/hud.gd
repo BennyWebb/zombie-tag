@@ -29,7 +29,7 @@ var strength_badge := Label.new()
 var zombies_left := Label.new()
 var zombies_pill: PanelContainer
 var boss_box := VBoxContainer.new() # the Zombie King's health, while he's about
-var boss_fill := TextureRect.new()
+var boss_fill := BossFill.new()
 var bux := Label.new()
 var bux_pill: PanelContainer
 var weapon := Label.new()
@@ -124,15 +124,7 @@ func _ready() -> void:
 	var bar := Panel.new()
 	bar.add_theme_stylebox_override("panel", bar_box)
 	bar.custom_minimum_size.y = 22
-	bar.clip_contents = true
 	boss_box.add_child(bar)
-	var g := Gradient.new()
-	g.colors = PackedColorArray([Color("ff4f8b"), Color("ffd23f")])
-	var fill_texture := GradientTexture2D.new()
-	fill_texture.gradient = g
-	boss_fill.texture = fill_texture
-	boss_fill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	boss_fill.stretch_mode = TextureRect.STRETCH_SCALE
 	boss_fill.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bar.add_child(boss_fill)
 
@@ -432,7 +424,7 @@ func bump(node: Control, scale_to: float, seconds: float) -> void:
 func show_boss(boss: Zombie) -> void:
 	boss_box.visible = boss != null
 	if boss:
-		boss_fill.anchor_right = maxf(0.0, boss.health / boss.max_health)
+		boss_fill.set_amount(maxf(0.0, boss.health / boss.max_health))
 
 
 func show_zombies_left(n: int, gate_open: bool) -> void:
@@ -580,3 +572,32 @@ func _process(delta: float) -> void:
 			drawn_at.x, drawn_at.y, frame, game_time, drawing,
 			slow[-1], slow[int(slow.size() * 0.95)], late,
 		]
+
+
+## The Zombie King's health: pink to yellow, rounded at both ends, inside the bar's white border.
+class BossFill extends Control:
+	const BORDER := 3.0
+	var amount := 1.0
+
+	func set_amount(a: float) -> void:
+		if a != amount:
+			amount = a
+			queue_redraw()
+
+	func _draw() -> void:
+		var full := size.x - BORDER * 2
+		var w := full * amount
+		var h := size.y - BORDER * 2
+		if w <= 0.5:
+			return
+		var r := minf(h / 2, w / 2)
+		# round the corners: a quarter circle at each, going round clockwise from the top left
+		var points := PackedVector2Array()
+		var colours := PackedColorArray()
+		for corner in [[r, r, PI], [w - r, r, PI * 1.5], [w - r, h - r, 0.0], [r, h - r, PI * 0.5]]:
+			for step in 7:
+				var a: float = corner[2] + step * PI / 12
+				var p := Vector2(corner[0] + cos(a) * r, corner[1] + sin(a) * r)
+				points.append(p + Vector2(BORDER, BORDER))
+				colours.append(Color("ff4f8b").lerp(Color("ffd23f"), p.x / full))
+		draw_polygon(points, colours)

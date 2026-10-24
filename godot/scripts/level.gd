@@ -8,6 +8,13 @@ extends Node3D
 # The browser game's light strengths, turned into Godot's. Measured by drawing the same view in both
 # and matching the colours: about 1 / (2 pi).
 const LIGHT_SCALE := 1.0 / TAU
+# Changes to some levels' look on the TV (on top of what's exported from the browser game): the
+# fog's start and end (metres), and how bright the light is (times the browser game's)
+const MOODS := {
+	snow = { fog = [12, 70] }, # snowing hard
+	forest = { fog = [10, 55], light = 0.65 }, # dark and spooky
+	graveyard = { fog = [12, 60], light = 0.6 },
+}
 const SUN_DISTANCE := 200.0 # the sun and moon are 140 m from the middle, so up to 190 m from you
 
 var info: Dictionary # the level's settings and layout (see Data.level)
@@ -33,6 +40,13 @@ var buildings: Array[Node3D] = [] # the shop and the gym
 
 func _init(number: int) -> void:
 	info = Data.level(number)
+	var mood: Dictionary = MOODS.get(info.theme, {})
+	if mood.has("fog"):
+		info.fog = { start = mood.fog[0], end = mood.fog[1] }
+	if mood.has("light"):
+		info.light = info.light.duplicate()
+		info.light.amount *= mood.light
+		info.light.sunAmount *= mood.light
 	name = "Level%d" % number
 	colliders = info.colliders.duplicate()
 	bounds = info.bounds
@@ -163,9 +177,8 @@ func add_buildings() -> void:
 		Data.remove_extra_shadows(building)
 		var sign: Node3D = building.find_child("sign", true, false)
 		signs.append(sign)
-		# the glowing sign shows above the trees from anywhere, so it isn't fogged
-		for mesh in sign.find_children("*", "MeshInstance3D", true, false):
-			no_fog(mesh)
+		# (the sign fades into the fog like everything else, so on the foggy levels you have to look
+		# for the shop and gym)
 		Data.merge_meshes(building, [sign])
 		var size: Dictionary = info.buildingSize
 		colliders.append({ x = pair[1].x, z = pair[1].z, hw = size.halfWidth, hd = size.halfDepth })

@@ -45,6 +45,7 @@ var finished: Array[int] = [] # the levels she's finished (their numbers)
 var run := "normal" # which game is loaded: "normal" (Easy and Hard) or "hardcore"
 var other_run = null # the other game, put aside (see use_run), or null if she's never played it
 var out := false # Hardcore: tagged, so out until the level ends
+var through_gate := false # through the open exit gate, waiting for the other player
 var picked_with_pad := false # whether she picked her hero with a joypad (so she spells her name with one)
 
 var tag_bux := 0
@@ -363,7 +364,7 @@ func damage_multiplier() -> float:
 ## or "heart" if it cost you hearts (and then `tagged` says whether that was your last).
 ## ignore_armour: the Zombie King on Hard and Hardcore, who tags you in one go.
 func hurt(amount: int, ignore_armour := false) -> String:
-	if safe > 0 or tagged > 0 or inside:
+	if safe > 0 or tagged > 0 or inside or through_gate:
 		return ""
 	safe = Data.config.player.safeTime
 	shake = 0.3
@@ -381,6 +382,8 @@ func hurt(amount: int, ignore_armour := false) -> String:
 ## Back at the start with full hearts, after being tagged.
 func respawn(spot: Dictionary) -> void:
 	out = false
+	through_gate = false
+	body.visible = true
 	start_at(spot)
 	hearts = Data.config.player.hearts
 	refill_shields()

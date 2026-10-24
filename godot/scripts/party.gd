@@ -50,7 +50,9 @@ func _ready() -> void:
 	friends.append(king)
 	for i in heroes.size():
 		var h: Hero = heroes[i]
-		h.start_at({ x = -1.5 + i * 3, z = 7, yaw = 0 })
+		# in the middle, by the King, where the camera can see them over the ring of zombies
+		# all the way round (the browser game has them in the ring, where they're often hidden)
+		h.start_at({ x = -3.5 + i * 7 if heroes.size() > 1 else 3.5, z = -0.5, yaw = 0 }) # (either side of him)
 		h.body.visible = true
 		h.hand.visible = false
 	camera.fov = 70
@@ -110,12 +112,14 @@ func _process(delta: float) -> void:
 		h.body.position.y = absf(sin(t * 6 + h.index)) * 0.5
 		h.body.arms[0].rotation.x = PI
 		h.body.arms[1].rotation.x = PI
+		# facing the camera as it goes round
+		h.rotation.y = atan2(camera.position.x - h.position.x, camera.position.z - h.position.z) + PI
 	if randf() < delta * 3:
 		var f: Zombie = friends.pick_random()
 		effects.confetti(f.centre() + Vector3(0, 2, 0), 40)
 		if randf() < 0.4:
 			Sound.play("yay", randf_range(0.8, 1.4), 0.5)
-	camera.position = Vector3(sin(t * 0.15) * 20, 8, cos(t * 0.15) * 20)
+	camera.position = Vector3(sin(t * 0.15) * 16, 7, cos(t * 0.15) * 16)
 	camera.look_at(Vector3(0, 1.5, 0))
 
 
