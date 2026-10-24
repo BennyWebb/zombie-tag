@@ -166,6 +166,8 @@ export const CONFIG = {
       aimAngle: 20,
       fireInterval: 0.25, // the beam hits this often while Space is held
       starsPerSecond: 40,
+      battery: 6, // zaps in a full battery (Godot version: one goes each hit, and it refills while not zapping)
+      rechargeTime: 3, // seconds from empty to full; once it's run out it can't zap till it's full
     },
   },
 

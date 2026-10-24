@@ -554,10 +554,14 @@ func update(hero: Hero) -> void:
 		text = "%s %s" % [w.icon, w.name]
 		if w.has("hitsLeft"):
 			text += " · %d %s left" % [w.hitsLeft, "hit" if w.hitsLeft == 1 else "hits"]
+		if w.has("battery"):
+			# the laser's battery: a bar for each zap left
+			var full := mini(int(hero.battery), int(w.battery))
+			text += " · %s%s" % ["recharging " if hero.battery_flat else "", "▮".repeat(full) + "▯".repeat(int(w.battery) - full)]
 	if text != weapon.text:
 		weapon.text = text
 		var box: StyleBoxFlat = weapon_pill.get_theme_stylebox("panel")
-		box.bg_color = PILL if w else Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.75)
+		box.bg_color = PILL if w and not hero.battery_flat else Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.75)
 	weapon_pill.visible = hero.tagged <= 0
 	# the badge for the stat you just trained does a little jump
 	if hero.stat_up != "" and not hero.inside:

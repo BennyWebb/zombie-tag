@@ -33,6 +33,9 @@ var swing := 0.0 # counts down while swinging
 var swing_hit := false
 var attack_queued := false # a press during a swing is remembered, so mashing never feels ignored
 var cooldown := 0.0 # time until a shooting weapon can fire again
+var battery := 99.0 # the laser's zaps left (it fills up to its battery size: see update_attack)
+var battery_flat := false # it's run out, so it won't zap till it's full again
+var zapping := false # the laser zapped this frame (so its battery doesn't refill)
 var recoil := 0.0 # the gun kicks back when it fires
 var shots: Shots # where shots fly (main.gd sets it)
 var thrown = null # the boomerang banana while it's flying (one of shots.list)
@@ -310,7 +313,7 @@ func rebuild_body() -> void:
 ## Moves and animates your body for your sister to see. show: whether there's a sister to see it.
 func update_body(delta: float, show: bool) -> void:
 	time += delta
-	body.visible = show and not inside and tagged <= 0
+	body.visible = show and not inside and tagged <= 0 and not through_gate
 	if not body.visible:
 		return
 	var moved := Vector2(position.x - last_position.x, position.z - last_position.z).length() / maxf(delta, 0.001)
@@ -452,6 +455,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func update_attack(delta: float, zombies: Array, moving: bool) -> void:
 	cooldown -= delta
 	recoil = maxf(0.0, recoil - delta * 8)
+	# the laser's battery refills while it isn't zapping
+	if weapon and weapon.has("battery") and not zapping:
+		battery = minf(weapon.battery, battery + weapon.battery / weapon.rechargeTime * delta)
+		if battery >= weapon.battery:
+			battery_flat = false
+	zapping = false
 	var kind: String = weapon.kind if weapon else ""
 	if kind != "beam":
 		beam.hide_beam()
@@ -479,17 +488,24 @@ func update_aim(_delta: float, zombies: Array, kind: String) -> void:
 	var target := find_target(zombies)
 	match kind:
 		"beam":
-			# a laser that hits whatever it's pointing at, again and again
-			if holding or attack_queued:
+			# a laser that hits whatever it's pointing at, again and again, while its battery lasts
+			# (each zap uses one; once it's run out, it can't zap again till it's full)
+			if (holding or attack_queued) and not battery_flat:
 				attack_queued = false
+				zapping = true
 				beam.show_beam(muzzle, target.centre() if target else muzzle + fwd * weapon.range)
 				if cooldown <= 0:
 					cooldown = weapon.fireInterval
 					Sound.play("pew")
 					if target:
 						bonked.emit(target, weapon, fwd, target.centre())
+					battery -= 1
+					if battery < 1:
+						battery_flat = true
+						Sound.play("nope")
 				recoil = 0.4
 			else:
+				attack_queued = false
 				beam.hide_beam()
 		"throw":
 			# the banana leaves your hand until it comes back
@@ -504,7 +520,12 @@ func update_aim(_delta: float, zombies: Array, kind: String) -> void:
 				Sound.play("whoosh")
 				attack_queued = false
 		"shoot":
-			if (attack_queued or holding) and cooldown <= 0:
+			# a press long before the gun's ready again doesn't count (it fired a second pumpkin after
+			# the first had splatted), and only the quick guns keep firing while the button's held
+			if attack_queued and cooldown > 0.25:
+				attack_queued = false
+			var repeat: bool = holding and weapon.fireInterval < 1.0
+			if (attack_queued or repeat) and cooldown <= 0:
 				attack_queued = false
 				cooldown = weapon.fireInterval
 				recoil = 1

@@ -159,7 +159,9 @@
       "range": 80,
       "aimAngle": 20,
       "fireInterval": 0.25,
-      "starsPerSecond": 40
+      "starsPerSecond": 40,
+      "battery": 6,
+      "rechargeTime": 3
     }
   },
   "items": {
