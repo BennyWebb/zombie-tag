@@ -253,8 +253,17 @@ func apply_graphics() -> void:
 	for hero in heroes:
 		hero.camera.cull_mask = 0 if leave_out == "World" else hero.camera_layers() # (draws nothing)
 	if in_game:
-		for sub in sub_views:
-			sub.render_target_update_mode = SubViewport.UPDATE_DISABLED if leave_out == "All 3D" else SubViewport.UPDATE_ALWAYS
+		draw_views()
+
+
+## Each hero's view is drawn every frame, except while she's in the shop or gym (which covers it),
+## or while the graphics test leaves all 3D out.
+func draw_views() -> void:
+	var g: Dictionary = Save.graphics[str(heroes.size())]
+	var all_3d_out: bool = Graphics.OPTIONS.test.choices[g.test] == "All 3D"
+	for i in sub_views.size():
+		var off: bool = all_3d_out or (i < heroes.size() and heroes[i].inside != null)
+		sub_views[i].render_target_update_mode = SubViewport.UPDATE_DISABLED if off else SubViewport.UPDATE_ALWAYS
 
 
 ## Starts playing a level (from "Pick a level").
@@ -648,6 +657,7 @@ func enter_building(hero: Hero, menu: MenuScreen) -> void:
 	hero.beam.hide_beam()
 	huds[hero.index].toast_time = 0
 	menu.open(hero)
+	draw_views()
 
 
 func leave_building(hero: Hero) -> void:
@@ -655,6 +665,7 @@ func leave_building(hero: Hero) -> void:
 	var menu: MenuScreen = hero.inside
 	menu.visible = false
 	hero.inside = null
+	draw_views()
 	hero.hand.visible = true
 	hero.start_at(level.doors["shop" if menu is ShopMenu else "gym"].outside)
 	hero.safe = Data.config.player.leaveShopSafeTime # a moment to get past zombies waiting at the door

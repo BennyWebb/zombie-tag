@@ -18,6 +18,7 @@ var body := VBoxContainer.new() # the list, or a mini-game
 var message := Label.new()
 var help := RichTextLabel.new() # (so it can show the leave button's picture: see set_help)
 var wait := 0.0 # ignores the button you were holding as you walked in
+var moving_until := 0.0 # something's moving till then, in seconds (see busy)
 
 
 ## inner and outer: the background's colours. The chosen row has a border, an arrow by it and its
@@ -133,6 +134,17 @@ static func bux(amount: int, font_size: int, colour := YELLOW) -> HBoxContainer:
 	return row
 
 
+## Something on the screen moves for this long (the HUD's picture is drawn every frame till then).
+func moving(seconds: float) -> void:
+	moving_until = maxf(moving_until, Time.get_ticks_msec() / 1000.0 + seconds + 0.05)
+
+
+## Whether something's moving just now, so the HUD draws its picture every frame (anything that
+## changes otherwise, like a row being chosen, has it drawn again by itself: see Hud.watch).
+func busy() -> bool:
+	return Time.get_ticks_msec() / 1000.0 < moving_until
+
+
 func clear(node: Node) -> void:
 	for child in node.get_children():
 		node.remove_child(child)
@@ -145,6 +157,7 @@ func say(text: String, kind := "") -> void:
 	message.add_theme_color_override("font_color",
 		Color("9cff57") if kind == "good" else Color("ffb3b3") if kind == "bad" else Color.WHITE)
 	message.scale = Vector2.ONE * 0.6
+	moving(0.4 if kind != "bad" else 0.5)
 	var t := create_tween()
 	t.tween_property(message, "scale", Vector2.ONE * 1.1, 0.25)
 	t.tween_property(message, "scale", Vector2.ONE, 0.1)

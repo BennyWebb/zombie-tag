@@ -139,6 +139,7 @@ func handle_input(event: InputEvent) -> bool:
 				Sound.play("lift", 1 + minf(1, fill)) # higher as it goes up
 				key_left.scale = Vector2.ONE * 1.25
 				create_tween().tween_property(key_left, "scale", Vector2.ONE, 0.2)
+				moving(0.2)
 		"result":
 			if event.is_action_pressed(hero.act("attack")):
 				menu("Want to train some more?")
@@ -310,6 +311,11 @@ func start_lift(id: String) -> void:
 	set_help("Get it to the top before the time runs out. It sinks if you stop!")
 
 
+## (the mini-games move all the time, and so does the result: the arm flexing)
+func busy() -> bool:
+	return super() or mode in ["treadmill", "lift", "result"]
+
+
 func _process(delta: float) -> void:
 	super(delta)
 	if not visible or not hero:
@@ -418,10 +424,10 @@ func finish(won: bool, stat: String, what := "", seconds := 0.0) -> void:
 		p.bests[what] = seconds
 	title.text = ""
 	if is_best:
+		# (up by the title, so the result still fits on half a screen)
 		var best := label("PERSONAL BEST!", 40, Color.WHITE)
 		var badge := pill(best, Color("ff4f8b"))
-		badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		lines.add_child(badge)
+		top_right.add_child(badge)
 		var blink := badge.create_tween().set_loops()
 		blink.tween_property(badge, "modulate:a", 0.3, 0.3)
 		blink.tween_property(badge, "modulate:a", 1.0, 0.3)

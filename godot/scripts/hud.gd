@@ -206,6 +206,38 @@ func _ready() -> void:
 		watch(node)
 	get_tree().node_added.connect(watch)
 	visibility_changed.connect(redraw)
+	warm_up_emoji()
+
+
+## The first time an emoji is drawn it's made into a picture, which made the gym stop for a moment
+## when its big faces first showed. So every emoji the shop and gym show is drawn once here, too
+## faint to see, as the game starts.
+func warm_up_emoji() -> void:
+	var text := "🏃🏋😐😣😤💪😅💦⏱✔⭐🚪↩➜👑💀🎉🛍👋🪵💥🔒"
+	var icons := []
+	find_icons(Data.config, icons)
+	text += "".join(icons)
+	var warm := Label.new()
+	warm.text = text
+	warm.add_theme_font_size_override("font_size", 64)
+	warm.modulate.a = 0.01
+	warm.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	warm.size = Vector2(600, 0)
+	root.add_child(warm)
+	get_tree().create_timer(1.0).timeout.connect(warm.queue_free)
+
+
+## Every "icon" in the game's settings (the weapons', outfits' and so on).
+static func find_icons(value, found: Array) -> void:
+	if value is Dictionary:
+		for key in value:
+			if key == "icon" and value[key] is String:
+				found.append(value[key])
+			else:
+				find_icons(value[key], found)
+	elif value is Array:
+		for v in value:
+			find_icons(v, found)
 
 
 ## The picture is as big as the screen, in dots, with the HUD laid out on it as on the screen.
@@ -534,10 +566,10 @@ func _process(delta: float) -> void:
 	if fade != toast_label.modulate.a:
 		toast_label.modulate.a = fade
 		redraw()
-	# the picture's drawn every frame while things move, the Level done! screen pulses, or the
-	# shop or gym is open (they have their own moving bits)
+	# the picture's drawn every frame while things move, the Level done! screen pulses, or
+	# something moves in the shop or gym
 	if Time.get_ticks_msec() / 1000.0 < moving_until or level_done.visible \
-			or root.get_children().any(func(c): return c is MenuScreen and c.visible):
+			or root.get_children().any(func(c): return c is MenuScreen and c.visible and c.busy()):
 		redraw()
 	# for 60 fps every frame has to be quick, not just most of them, so the slowest ones are kept too
 	frame_times.append(delta * 1000)
