@@ -55,6 +55,7 @@ func _ready() -> void:
 		var spot: Vector2 = [Vector2(-3.5, -0.5), Vector2(3.5, -0.5), Vector2(-6.5, 1.5), Vector2(6.5, 1.5)][i] \
 				if heroes.size() > 1 else Vector2(3.5, -0.5)
 		h.start_at({ x = spot.x, z = spot.y, yaw = 0 }) # (either side of him)
+		h.through_gate = false # (the gate hid everyone)
 		h.body.visible = true
 		h.hand.visible = false
 	camera.fov = 70

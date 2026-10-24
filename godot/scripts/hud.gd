@@ -256,6 +256,28 @@ func warm_up_emoji() -> void:
 	warm.size = Vector2(600, 0)
 	root.add_child(warm)
 	get_tree().create_timer(1.0).timeout.connect(warm.queue_free)
+	# and the same for the letters, at each size the HUD, shop and gym use (each size's letters are
+	# made into pictures the first time they're drawn, which stopped the game for a moment when the
+	# shop or gym first opened). They're shared, so the first HUD does it for everyone.
+	if player > 0:
+		return
+	var letters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?.,'’…:·+-%()➜✔⭐◀▶▮▯"
+	for size in [18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 44, 48, 54, 60, 110, 120]:
+		var line := Label.new()
+		line.text = letters
+		line.add_theme_font_size_override("font_size", size)
+		line.modulate.a = 0.01
+		root.add_child(line)
+		get_tree().create_timer(1.0).timeout.connect(line.queue_free)
+	# (letters with an outline are made into pictures of their own)
+	for outlined in [[behind_label, 30, 8], [speed, 24, 6]]:
+		var line := Label.new()
+		line.text = letters
+		line.add_theme_font_size_override("font_size", outlined[1])
+		line.add_theme_constant_override("outline_size", outlined[2])
+		line.modulate.a = 0.01
+		root.add_child(line)
+		get_tree().create_timer(1.0).timeout.connect(line.queue_free)
 
 
 ## Every "icon" in the game's settings (the weapons', outfits' and so on).

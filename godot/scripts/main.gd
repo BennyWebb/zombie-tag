@@ -433,6 +433,24 @@ func warm_up() -> void:
 	hidden.append(heroes[0].beam.tube)
 	effects.warm_up(camera, hidden)
 	coins.warm_up(camera.global_position - camera.global_basis.z * 2.0)
+	# the shop and gym are drawn once too, too faint to see, so they open straight away later
+	for i in heroes.size():
+		for menu: MenuScreen in [shops[i], gyms[i]]:
+			if heroes[i].inside:
+				continue
+			menu.hero = heroes[i]
+			if menu is ShopMenu:
+				(menu as ShopMenu).draw()
+			else:
+				(menu as GymMenu).draw_list()
+			menu.modulate.a = 0.01
+			menu.visible = true
+			get_tree().create_timer(0.5).timeout.connect(func():
+				if not is_instance_valid(menu):
+					return # (gone back to the start screen meanwhile)
+				menu.modulate.a = 1.0
+				if i >= heroes.size() or heroes[i].inside != menu:
+					menu.visible = false)
 	heroes[0].beam.warm_up(camera.global_position - camera.global_basis.z * 2.0)
 	zombie.free()
 	hidden[1].free()
@@ -587,6 +605,7 @@ func update(delta: float) -> void:
 			go_through_gate(hero)
 	if heroes.any(func(h): return h.through_gate) and heroes.all(func(h): return h.through_gate or h.out):
 		level_done()
+		return # (the rest is for while playing: it would hide everyone at the party, for one)
 	var left := to_spawn + zombies.size() + (1 if boss_coming() else 0)
 	if heroes.size() == 3:
 		var text := "Go to the exit gate!" if level.gate_open else "🧟 %d left" % left
