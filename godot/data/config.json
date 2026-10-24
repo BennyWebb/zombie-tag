@@ -49,10 +49,11 @@
       "word": "SPLOSH!",
       "kind": "shoot",
       "damage": 0.3333333333333333,
-      "range": 14,
+      "range": 9,
       "aimAngle": 25,
       "fireInterval": 0.13,
-      "shotSpeed": 26,
+      "shotSpeed": 16,
+      "gravity": 14,
       "shot": "water",
       "knockback": 4
     },

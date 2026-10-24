@@ -55,10 +55,11 @@ export const CONFIG = {
       word: 'SPLOSH!', // what pops up when it hits
       kind: 'shoot',
       damage: 1 / 3, // play-test: it takes 3 squirts to pop a Shuffler
-      range: 14,
+      range: 9, // play-test: it reached too far
       aimAngle: 25,
       fireInterval: 0.13, // seconds between squirts while Space is held
-      shotSpeed: 26,
+      shotSpeed: 16,
+      gravity: 14, // the water arcs down to the ground (or the zombie it's aimed at)
       shot: 'water', // what flies out (see weapons.js)
       knockback: 4, // every squirt pushes a bit
     },

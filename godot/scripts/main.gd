@@ -498,7 +498,9 @@ func update(delta: float) -> void:
 		update_hero(hero, delta)
 	keep_sisters_apart()
 	for hit in shots.update(delta, zombies):
-		if hit.has("splat"):
+		if hit.has("landed"):
+			effects.splash(hit.at, hit.weapon.shot, 5, 0.6) # water landing on the ground
+		elif hit.has("splat"):
 			# a pumpkin landed: a big orange splat
 			effects.splash(hit.at, "pumpkin", 60, 2.5)
 			Sound.play("splat", 2)

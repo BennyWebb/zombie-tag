@@ -47,7 +47,8 @@ func clear() -> void:
 
 
 ## Moves every shot. Returns the hits this frame, each { zombie, weapon, by, push, at }, or for a
-## pumpkin landing { splat = true, weapon, by, at } as well as a hit for each zombie it splats.
+## pumpkin landing { splat = true, weapon, by, at } as well as a hit for each zombie it splats, or
+## for water landing on the ground { landed = true, weapon, by, at }.
 func update(delta: float, zombies: Array) -> Array:
 	var hits := []
 	for i in range(list.size() - 1, -1, -1):
@@ -76,6 +77,8 @@ func update(delta: float, zombies: Array) -> Array:
 			node.scale = Vector3.ONE * (1 + sin(s.travelled * 3) * 0.08)
 		elif w.shot == "pumpkin":
 			node.rotate_x(delta * 5)
+		elif w.shot == "water":
+			node.look_at(p + s.vel) # (the drop points the way it's going, round the arc)
 
 		var hit: Zombie = null
 		for z in zombies:
@@ -101,6 +104,8 @@ func update(delta: float, zombies: Array) -> Array:
 				done = true
 		if w.kind != "throw" and (s.travelled > w.range + 4 or p.y < 0):
 			done = true
+			if p.y < 0 and w.has("gravity") and not w.has("splashRadius"):
+				hits.append({ landed = true, weapon = w, by = s.by, at = Vector3(p.x, 0.05, p.z) }) # a little splash
 		if done:
 			node.queue_free()
 			list.remove_at(i)
