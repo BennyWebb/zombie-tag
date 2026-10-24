@@ -14,14 +14,16 @@ extends Node
 ## Each joypad remembers its own, so a two-stick joypad and a tiny one can play together.
 ##
 ## The menus have their own actions ("menu_up", "menu_go" and so on) that anyone's keys or joypad
-## work, and each player has "nav_up" and so on for her own menus (the shop, gym and character
-## creator). Menus ask nav() whether to move: a key or d-pad press, or a push of a stick. A stick
+## work, and each player has "nav_up", "go" and so on for her own menus (the shop, gym and character
+## creator). In menus the right-hand face button says yes ("go") and the bottom one goes back
+## ("leave"), or the other way round with the pause menu's "OK button" setting (swap_buttons).
+## In the game, any face button bonks. Menus ask nav() whether to move: a key or d-pad press, or a push of a stick. A stick
 ## counts as pushed once it's well over, and not again until it's back near the middle (an analogue
 ## stick wobbles as it moves, which would otherwise count as many pushes); held over, it repeats.
 
 const DEADZONE := 0.2 # joypad sticks ignore tiny wobbles below this
 const PLAYER_ACTIONS := ["walk_forward", "walk_back", "turn_left", "turn_right", "step_left", "step_right", "attack",
-	"nav_up", "nav_down", "nav_left", "nav_right", "leave"]
+	"nav_up", "nav_down", "nav_left", "nav_right", "go", "leave"]
 # the menu moves use the same keys as walking and turning
 const NAV_KEYS := { nav_up = "walk_forward", nav_down = "walk_back", nav_left = "turn_left", nav_right = "turn_right" }
 const STICK_PUSHED := 0.6 # a stick counts as pushed past this...
@@ -52,9 +54,7 @@ const PAD := {
 	nav_up = [JOY_BUTTON_DPAD_UP], nav_down = [JOY_BUTTON_DPAD_DOWN],
 	nav_left = [JOY_BUTTON_DPAD_LEFT], nav_right = [JOY_BUTTON_DPAD_RIGHT],
 	attack = [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y],
-	# leaving the shop or gym: the right-hand button (B on an Xbox pad, A on a Nintendo-style one;
-	# Godot names the buttons by where they are). In the game it still bonks, like the others.
-	leave = [JOY_BUTTON_B],
+	# (go and leave are go_button and back_button: they swap round)
 }
 const ANY_PAD := -1
 const NO_PAD := -2
@@ -65,6 +65,7 @@ var keys := ["all", ""] # each player's keys: "all", "left", "right" or "" for n
 var using_joypad := [false, false] # whether each player last used a joypad (they turn a bit slower)
 var pad_modes := {} # the joypads set to "Two sticks": { joypad's id: true } (save.gd keeps it)
 var last_pad := -1 # the joypad that last pressed something (the pause menu's setting is for it)
+var swap_buttons := false # the bottom button says yes in menus, and the right-hand one goes back (save.gd sets it)
 var stick_at := {} # where each joypad's left stick is: { device: Vector2 }
 var sticks := {} # each joypad's left stick, for the menus: { device: { "up": [held, time to repeat], ... } }
 var stick_pushes := {} # this frame's pushes: { device: ["up", ...] }
@@ -85,8 +86,8 @@ func _ready() -> void:
 	add_action("menu_down", [KEY_S, KEY_DOWN], [JOY_BUTTON_DPAD_DOWN])
 	add_action("menu_left", [KEY_A, KEY_LEFT], [JOY_BUTTON_DPAD_LEFT])
 	add_action("menu_right", [KEY_D, KEY_RIGHT], [JOY_BUTTON_DPAD_RIGHT])
-	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], PAD.attack)
-	add_action("menu_back", [KEY_ESCAPE], [JOY_BUTTON_START])
+	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], [go_button()])
+	add_action("menu_back", [KEY_ESCAPE], [JOY_BUTTON_START, back_button()])
 	# changing how your hero looks, or deleting one (Back / View / Select)
 	add_action("menu_extra", [KEY_C, KEY_X, KEY_DELETE], [JOY_BUTTON_BACK])
 	Input.joy_connection_changed.connect(joypad_plugged)
@@ -120,6 +121,26 @@ func set_devices(devices: Array) -> void:
 ## One player, with everything.
 func set_one_player() -> void:
 	set_devices([{ keys = "all", pad = ANY_PAD }])
+
+
+## The button that says yes in menus: the right-hand face button (B on an Xbox pad, A on a
+## Nintendo-style one: Godot names the buttons by where they are), or the bottom one if swapped.
+func go_button() -> JoyButton:
+	return JOY_BUTTON_A if swap_buttons else JOY_BUTTON_B
+
+
+## The button that goes back (or leaves the shop or gym): the other one of the two.
+func back_button() -> JoyButton:
+	return JOY_BUTTON_B if swap_buttons else JOY_BUTTON_A
+
+
+func set_swap_buttons(on: bool) -> void:
+	swap_buttons = on
+	for a in ["menu_go", "menu_back"]:
+		InputMap.erase_action(a)
+	add_action("menu_go", [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER], [go_button()])
+	add_action("menu_back", [KEY_ESCAPE], [JOY_BUTTON_START, back_button()])
+	update_actions()
 
 
 ## A joypad's id, the same each time it's plugged in (its number can change).
@@ -156,12 +177,15 @@ func pad_sticks(a: String, both: bool) -> Array:
 	return []
 
 
-## A little picture of a joypad's four face buttons in a diamond, with some lit up: "go" (all
-## four: any of them does it) or "leave" (the right-hand one, which is B on an Xbox pad but A on a
-## Nintendo-style one, so a picture of where it is says it better than a letter).
+## A little picture of a joypad's four face buttons in a diamond, with one lit up: "go" or "leave"
+## (see go_button: B on an Xbox pad is A on a Nintendo-style one, so a picture of where the button
+## is says it better than a letter).
 func glyph(kind: String) -> ImageTexture:
-	if pictures.has(kind):
-		return pictures[kind]
+	# (which one's lit: 1 is the right-hand button, 2 the bottom one)
+	var lit_button := 1 if (kind == "go") != swap_buttons else 2
+	var picture_name := "%s %d" % [kind, lit_button]
+	if pictures.has(picture_name):
+		return pictures[picture_name]
 	const SIZE := 72
 	var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	var lit := Color("ffe066")
@@ -175,7 +199,7 @@ func glyph(kind: String) -> ImageTexture:
 			var colour := Color(0, 0, 0, 0)
 			for i in centres.size():
 				# each button: a purple ring round it, filled yellow (lit) or see-through white
-				var on := kind == "go" or i == 1
+				var on := i == lit_button
 				var d: float = p.distance_to(centres[i])
 				var edge := clampf(14.5 - d, 0, 1)
 				if edge > 0:
@@ -183,8 +207,8 @@ func glyph(kind: String) -> ImageTexture:
 					colour = Color(ring, 0.9).lerp(lit, inside) if on or inside < 1 else dim
 					colour.a *= edge
 			img.set_pixel(x, y, colour)
-	pictures[kind] = ImageTexture.create_from_image(img)
-	return pictures[kind]
+	pictures[picture_name] = ImageTexture.create_from_image(img)
+	return pictures[picture_name]
 
 
 ## Sets each player's actions to their keys and joypad.
@@ -194,12 +218,14 @@ func update_actions() -> void:
 			var name := action(a, i)
 			InputMap.action_erase_events(name)
 			if keys[i] != "":
-				for key in KEYS[keys[i]].get(NAV_KEYS.get(a, a), []): # (stepping sideways is joypad only)
+				# (menus' "go" uses the bonk keys; stepping sideways is joypad only)
+				for key in KEYS[keys[i]].get(NAV_KEYS.get(a, "attack" if a == "go" else a), []):
 					var e := InputEventKey.new()
 					e.physical_keycode = key
 					InputMap.action_add_event(name, e)
 			if pads[i] != NO_PAD:
-				for button_index in PAD[a]:
+				var buttons: Array = [go_button()] if a == "go" else [back_button()] if a == "leave" else PAD[a]
+				for button_index in buttons:
 					var e := InputEventJoypadButton.new()
 					e.button_index = button_index
 					e.device = pads[i]

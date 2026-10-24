@@ -23,8 +23,9 @@ to play.
 **Controls:** on a joypad, the left stick or d-pad walks and turns, and any face button or the right
 trigger bonks (hold it to keep shooting). Start pauses. On a keyboard: W / S or ↑ / ↓ walk, A / D or
 ← / → turn, Space or Enter bonks, Esc pauses. Walk in through the shop's or gym's door to go in;
-inside, up and down choose, bonk picks, and **B** (the right-hand button: B on an Xbox pad, A on a
-Nintendo-style one) or Backspace leaves. **F3** (or Back / View / Select) shows the frame rate and
+inside, up and down choose. In the shop, the gym and the menus the **right-hand** face button (B on
+an Xbox pad, A on a Nintendo-style one) or Space says yes, and the **bottom** one or Backspace goes
+back or leaves; **Pause → 🎮 OK button** swaps them round. The pictures of the buttons show which. **F3** (or Back / View / Select) shows the frame rate and
 how many things are drawn, for checking speed on the TV.
 
 **The menus:** the title screen picks 1 or 2 players, then "Who's playing?" picks each player's saved
@@ -109,7 +110,7 @@ remembers its own, so an Xbox pad can use Two sticks while a tiny pad plays Simp
 walks and turns.
 
 On some joypads Android sends its "Back" for the right-hand button instead of the button itself;
-in the shop or gym that still leaves, for the player whose joypad it is.
+in the shop or gym that still counts as the right-hand button, for the player whose joypad it is.
 
 ## The scripts
 

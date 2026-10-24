@@ -115,7 +115,7 @@ func handle_input(event: InputEvent) -> bool:
 			elif event.is_action_pressed(hero.act("walk_back")):
 				cursor = (cursor + 1) % list.size()
 				Sound.play("tick")
-			elif event.is_action_pressed(hero.act("attack")):
+			elif event.is_action_pressed(hero.act("go")):
 				if choose(list[cursor]):
 					return true
 			else:
@@ -133,7 +133,7 @@ func handle_input(event: InputEvent) -> bool:
 				tempo += 2
 				Sound.play("step", 1.0 if key == "L" else 1.25) # left, right, left, right...
 		"lift":
-			if event.is_action_pressed(hero.act("attack")):
+			if event.is_action_pressed(hero.act("go")):
 				started = true
 				fill += g.weights.dumbbells[weight_id].rise
 				Sound.play("lift", 1 + minf(1, fill)) # higher as it goes up
@@ -141,7 +141,7 @@ func handle_input(event: InputEvent) -> bool:
 				create_tween().tween_property(key_left, "scale", Vector2.ONE, 0.2)
 				moving(0.2)
 		"result":
-			if event.is_action_pressed(hero.act("attack")):
+			if event.is_action_pressed(hero.act("go")):
 				menu("Want to train some more?")
 				cursor = last_row
 				draw_list()

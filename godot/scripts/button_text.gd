@@ -1,7 +1,7 @@
 class_name ButtonText
 ## Words with pictures of the joypad's buttons in them, so the same help works whatever letters a
-## joypad has on its buttons. In the text, "{go}" shows the four face buttons all lit (any of them
-## does it) and "{leave}" the right-hand one lit (B on an Xbox pad, A on a Nintendo-style one). On a
+## joypad has on its buttons. In the text, "{go}" shows the four face buttons with the one that says
+## yes lit, and "{leave}" the one that goes back (see Controls.go_button). On a
 ## computer, the key goes in front ("Space or ...", "Backspace or ..."), unless there's a * in
 ## front ("{*go}"), for when the words say which key already.
 

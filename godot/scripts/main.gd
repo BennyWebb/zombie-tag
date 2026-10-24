@@ -400,9 +400,9 @@ func _notification(what: int) -> void:
 		if screens.active():
 			screens.remote_back = true
 		elif heroes.any(func(h): return h.inside) or Time.get_ticks_msec() - left_building_at < 500:
-			# B leaves the shop or gym. On some joypads Android sends "go back" for B as well, and on
-			# others only "go back"; a moment later (once any B has arrived), it's the leave button
-			# of whoever's inside with a joypad that's never sent a B.
+			# On some joypads Android sends "go back" for B (the right-hand button) as well, and on
+			# others only "go back"; a moment later (once any B has arrived), it's the right-hand
+			# button of whoever's inside with a joypad that's never sent a B.
 			get_tree().create_timer(0.1).timeout.connect(back_in_building)
 		else:
 			pause()
@@ -411,8 +411,9 @@ func _notification(what: int) -> void:
 func back_in_building() -> void:
 	var who := heroes.filter(func(h): return h.inside and not Controls.sends_b(h.index))
 	if who.size() == 1:
+		# (whatever the right-hand button does: yes, or leave if the buttons are swapped)
 		var leave := InputEventAction.new()
-		leave.action = who[0].act("leave")
+		leave.action = who[0].act("leave" if Controls.swap_buttons else "go")
 		leave.pressed = true
 		building_input(who[0], leave)
 

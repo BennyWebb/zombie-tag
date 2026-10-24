@@ -135,7 +135,7 @@ func _process(delta: float) -> void:
 	var down := Controls.nav("down", hero.index)
 	var left := Controls.nav("left", hero.index)
 	var right := Controls.nav("right", hero.index)
-	var go := Input.is_action_just_pressed(hero.act("attack"))
+	var go := Input.is_action_just_pressed(hero.act("go"))
 	if step == "letters":
 		update_letters(up, down, left, right, go)
 	else:

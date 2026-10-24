@@ -102,7 +102,7 @@ func handle_input(event: InputEvent) -> bool:
 	elif event.is_action_pressed(hero.act("walk_back")):
 		cursor = (cursor + 1) % n
 		Sound.play("tick")
-	elif event.is_action_pressed(hero.act("attack")):
+	elif event.is_action_pressed(hero.act("go")):
 		if choose():
 			return true
 	else:

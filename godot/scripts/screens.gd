@@ -248,11 +248,11 @@ func _process(delta: float) -> void:
 				to_difficulty()
 				return
 		"paused":
-			# music, sounds, joypads, graphics, start screen
+			# music, sounds, joypads, OK button, graphics, start screen
 			if up:
 				choice = maxi(0, choice - 1)
 			if down:
-				choice = mini(4, choice + 1)
+				choice = mini(5, choice + 1)
 			var change := (1 if right else 0) - (1 if left else 0)
 			if change and choice < 2:
 				Sound.play("tick")
@@ -267,12 +267,19 @@ func _process(delta: float) -> void:
 				else:
 					Sound.play("nope")
 				draw()
-			if go and choice == 3:
+			if (change or go) and choice == 3:
+				Sound.play("tick")
+				Save.swap_buttons = not Save.swap_buttons
+				Controls.set_swap_buttons(Save.swap_buttons)
+				Save.write()
+				draw()
+				return # (the button that pressed it has just changed what it does)
+			if go and choice == 4:
 				Sound.play("select")
 				choice = 0
 				show_screen("graphics")
 				return
-			if go and choice == 4:
+			if go and choice == 5:
 				Sound.play("select")
 				main.quit_to_title()
 				return
@@ -298,7 +305,7 @@ func _process(delta: float) -> void:
 				draw()
 			if back or (go and choice == keys.size()):
 				Sound.play("select")
-				choice = 3
+				choice = 4
 				show_screen("paused")
 				return
 		"gameover":
@@ -315,7 +322,7 @@ func _input(event: InputEvent) -> void:
 	if screen != "who" or wait > 0 or not event.is_pressed() or event.is_echo():
 		return
 	var mine: Dictionary = devices[0] if slot == 1 else {}
-	if event is InputEventJoypadButton and event.button_index in Controls.PAD.attack:
+	if event is InputEventJoypadButton and event.button_index == Controls.go_button():
 		if mine.get("pad") == event.device:
 			Sound.play("nope") # that's Player 1's joypad
 		else:
@@ -489,27 +496,31 @@ func draw_levels(column: VBoxContainer) -> void:
 
 
 func draw_paused(column: VBoxContainer) -> void:
-	column.add_child(heading("Paused", 100))
+	column.add_child(heading("Paused", 76))
 	var bar := func(n: int) -> String: return "▮".repeat(n) + "▯".repeat(10 - n)
 	var rows := [
 		["🎵 Music", bar.call(Save.music)],
 		["🔊 Sounds", bar.call(Save.sounds)],
 		["🎮 This joypad", "Two sticks" if Controls.two_sticks(Controls.last_pad) else "Simple" if Controls.last_pad >= 0 else "–"],
+		["🎮 OK button", "{*go} the %s one" % ("bottom" if Save.swap_buttons else "right-hand")],
 		["✨ Graphics", "➜"],
 		["🏠 Start screen", "{go}"],
 	]
 	var list := VBoxContainer.new()
-	list.add_theme_constant_override("separation", 8)
+	list.add_theme_constant_override("separation", 4) # (close together, to fit every row)
 	list.custom_minimum_size.x = 600
 	list.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(list)
 	for i in rows.size():
 		var row := HBoxContainer.new()
-		var name_label := MenuScreen.label(rows[i][0], 32, PURPLE if i == choice else Color.WHITE)
+		var name_label := MenuScreen.label(rows[i][0], 28, PURPLE if i == choice else Color.WHITE)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
-		row.add_child(ButtonText.make(rows[i][1], 30, PINK if i == choice else YELLOW))
-		list.add_child(card(row, i == choice))
+		row.add_child(ButtonText.make(rows[i][1], 26, PINK if i == choice else YELLOW))
+		var c := card(row, i == choice)
+		c.get_theme_stylebox("panel").content_margin_top = 3
+		c.get_theme_stylebox("panel").content_margin_bottom = 3
+		list.add_child(c)
 	column.add_child(line("%s choose  ·  %s change" % ["🡑 🡓", "🡐 🡒"], 26, Color.WHITE))
 	if Controls.last_pad >= 0:
 		column.add_child(line("🎮 This joypad: %s. Each joypad remembers its own." % Input.get_joy_name(Controls.last_pad), 20, Color.WHITE))
