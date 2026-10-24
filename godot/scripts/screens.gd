@@ -371,7 +371,7 @@ func draw_title(column: VBoxContainer) -> void:
 		if d:
 			names.append(d.look.name)
 	# ("Lily", "Lily and Rose", or "Lily, Rose and Daisy")
-	var who := " and ".join(names) if names.size() <= 2 else ", ".join(names.slice(0, -1)) + " and " + names[-1]
+	var who: String = " and ".join(names) if names.size() <= 2 else ", ".join(names.slice(0, -1)) + " and " + names[-1]
 	column.add_child(line("Welcome back, %s!" % who if names else "10 levels of silly zombies", 34, Color.WHITE))
 	column.add_child(gap(10))
 	column.add_child(cards(["1 Player", "2 Players", "3 Players", "4 Players"], choice, 220))
