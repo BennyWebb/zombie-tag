@@ -46,6 +46,7 @@ var views: Array[RID] = [] # the screens being drawn (main.gd sets them), for ti
 var can_time_drawing := not OS.has_feature("android")
 var game_time := 0.0 # how long the game's own code took this frame, in ms (main.gd sets it)
 var drawn_at := Vector2i() # how many dots each hero's view of the world has (main.gd sets it)
+var test_hidden: Array[CanvasItem] = [] # what the graphics test hid
 var frame_times := PackedFloat32Array() # the last 120 frames (2 seconds at 60 fps), in ms, to find the slow ones
 var hearts_shown := -1
 var blink_time := 0.0
@@ -455,6 +456,19 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Starts (or stops) timing how long the screens take to draw, for the F3 numbers.
+## For the graphics test: everything but the F3 numbers hidden (and back as it was after).
+func hide_for_test(hide: bool) -> void:
+	if hide and test_hidden.is_empty():
+		for child in root.get_children():
+			if child != speed and child.visible:
+				child.visible = false
+				test_hidden.append(child)
+	elif not hide:
+		for child in test_hidden:
+			child.visible = true
+		test_hidden.clear()
+
+
 func time_views() -> void:
 	if not can_time_drawing:
 		return

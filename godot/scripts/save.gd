@@ -63,6 +63,7 @@ func read() -> void:
 		for key in graphics[count]:
 			if saved.has(str(key)) and int(saved[str(key)]) < Graphics.OPTIONS[key].choices.size():
 				graphics[count][key] = int(saved[str(key)])
+		graphics[count].test = 0 # (the test always starts off)
 
 
 func write() -> void:

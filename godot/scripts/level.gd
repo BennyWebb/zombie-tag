@@ -26,6 +26,7 @@ var lamps: Array[OmniLight3D] = []
 var floaters: Array[Floaters] = []
 var carousel: Node3D # (the Funfair's rides, or null)
 var ferris_wheel: Node3D
+var solid: Array[Node3D] = [] # the scenery and the buildings (for the graphics test)
 
 
 func _init(number: int) -> void:
@@ -38,6 +39,7 @@ func _init(number: int) -> void:
 func _ready() -> void:
 	var scenery: Node3D = load("res://" + info.model).instantiate()
 	add_child(scenery)
+	solid.append(scenery)
 	Data.remove_extra_shadows(scenery)
 	# the sun or moon shines through the fog, like the browser game's
 	for mesh in scenery.find_children("*no fog*", "MeshInstance3D", true, false):
@@ -124,6 +126,8 @@ func set_graphics(g: Dictionary) -> float:
 		f.visible = g.extras == 0
 	for lamp in lamps:
 		lamp.visible = g.extras == 0
+	for part in solid:
+		part.visible = Graphics.OPTIONS.test.choices[g.test] != "Scenery"
 	return 300.0 if g.distance == 0 else fog_end + 5
 
 
@@ -141,6 +145,7 @@ func add_buildings() -> void:
 		var building: Node3D = load("res://models/%s.glb" % pair[0]).instantiate()
 		building.position = Vector3(pair[1].x, 0, pair[1].z)
 		add_child(building)
+		solid.append(building)
 		Data.remove_extra_shadows(building)
 		var sign: Node3D = building.find_child("sign", true, false)
 		signs.append(sign)

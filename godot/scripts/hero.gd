@@ -89,7 +89,7 @@ func _ready() -> void:
 	camera.near = 0.05
 	camera.far = 300
 	camera.top_level = true # it follows you (see place_camera), wherever it is
-	camera.cull_mask = WORLD_LAYER | hand_layer(index) | body_layer(1 - index)
+	camera.cull_mask = camera_layers()
 	add_child(camera)
 	eye.y = Data.config.player.eyeHeight
 	# the first-person hand, holding every weapon; only the one you're holding shows
@@ -337,6 +337,11 @@ func start_at(spot: Dictionary) -> void:
 
 ## The camera goes where your eyes are. (It isn't simply a child of yours, because with two players
 ## it has to be inside your half of the screen.)
+## What her camera draws: the world, her own hand, and the other hero's body.
+func camera_layers() -> int:
+	return WORLD_LAYER | hand_layer(index) | body_layer(1 - index)
+
+
 func place_camera() -> void:
 	camera.global_transform = Transform3D(Basis(Vector3.UP, yaw), position + Basis(Vector3.UP, yaw) * eye)
 

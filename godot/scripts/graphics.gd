@@ -8,6 +8,8 @@ class_name Graphics
 ##   smoothing   smoothing the jagged edges of things ("multisample anti-aliasing")
 ##   distance    how far you can see: anything past it isn't drawn, and the fog comes in to hide it
 ##   extras      the snow, sparkles and fireflies, and the glowing lamps and torches at night
+##   test        for finding what takes the time on the TV box: leaves a part of the game out
+##               (never saved: the game always starts with everything)
 ## main.gd uses them (apply_graphics), and level.gd does the shadows, distance and extras.
 
 const OPTIONS := {
@@ -16,13 +18,14 @@ const OPTIONS := {
 	smoothing = { label = "✨ Smooth edges", choices = ["4x", "2x", "Off"] },
 	distance = { label = "🔭 View distance", choices = ["Far", "Medium", "Near"] },
 	extras = { label = "❄️ Snow and lamps", choices = ["On", "Off"] },
+	test = { label = "🧪 Test: leave out", choices = ["Nothing", "HUD", "Zombies", "Scenery", "World", "All 3D"] },
 }
 
 
 ## The usual settings: as good as the Shield managed at 60 fps with one player, and simpler
 ## shadows with two. Smooth edges start off: on a 1080p TV you can hardly see them from the sofa.
 static func defaults(players: int) -> Dictionary:
-	return { resolution = 0, shadows = 0 if players == 1 else 1, smoothing = 2, distance = 0, extras = 0 }
+	return { resolution = 0, shadows = 0 if players == 1 else 1, smoothing = 2, distance = 0, extras = 0, test = 0 }
 
 
 static func resolution_scale(g: Dictionary) -> float:

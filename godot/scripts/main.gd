@@ -238,6 +238,16 @@ func apply_graphics() -> void:
 	for hero in heroes:
 		hero.camera.far = far
 	menu_camera.far = far
+	# the test: leaves a part of the game out, to see how much quicker it goes without it
+	var leave_out: String = Graphics.OPTIONS.test.choices[g.test]
+	for hud in huds:
+		hud.hide_for_test(leave_out == "HUD")
+	zombie_holder.visible = leave_out != "Zombies"
+	for hero in heroes:
+		hero.camera.cull_mask = 0 if leave_out == "World" else hero.camera_layers() # (draws nothing)
+	if in_game:
+		for sub in sub_views:
+			sub.render_target_update_mode = SubViewport.UPDATE_DISABLED if leave_out == "All 3D" else SubViewport.UPDATE_ALWAYS
 
 
 ## Starts playing a level (from "Pick a level").
