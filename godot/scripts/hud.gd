@@ -7,6 +7,9 @@ extends CanvasLayer
 ## speed on the TV.
 ## With two players each has her own, on her half of the screen, shrunk a bit to fit, with her name
 ## at the top right.
+## It's drawn into a picture of its own (a SubViewport), which is only drawn again when something on
+## it changes or moves: most of the time nothing does, and showing the picture is much quicker than
+## drawing every label, box and heart again each frame.
 
 const YELLOW := Color("ffe066")
 const PURPLE := Color("4b1e8a")
@@ -14,6 +17,9 @@ const PILL := Color(40 / 255.0, 20 / 255.0, 80 / 255.0, 0.55)
 
 var player := 0 # 0 for Player 1, 1 for Player 2
 var root := Control.new() # everything goes in here, filling the screen (or your half of it)
+var canvas := SubViewport.new() # root is drawn into this, when something changes (see redraw)
+var picture := TextureRect.new() # and this shows it
+var moving_until := 0.0 # something's moving (like a heart jumping) until then, in seconds
 var who := Label.new() # your name, with two players
 var hearts_row := HBoxContainer.new()
 var hearts: Array[HudIcon] = []
@@ -57,9 +63,21 @@ func _init(for_player := 0) -> void:
 
 
 func _ready() -> void:
+	canvas.transparent_bg = true
+	canvas.disable_3d = true
+	canvas.size_2d_override_stretch = true
+	add_child(canvas)
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
+	canvas.add_child(root)
+	picture.texture = canvas.get_texture()
+	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	add_child(picture)
+	fit()
+	get_tree().root.size_changed.connect(fit)
 	make_hurt_flash()
 
 	# top left: hearts (and armour shields), and Speed and Strength underneath
@@ -186,7 +204,39 @@ func _ready() -> void:
 	speed.add_theme_color_override("font_shadow_color", PURPLE)
 	speed.position = Vector2(12, 120)
 	speed.visible = false
-	root.add_child(speed)
+	add_child(speed) # (on top of the picture: it changes every frame)
+
+	# anything in the HUD that changes (its words, its size or place, or showing or hiding) has it
+	# drawn again; things added later too, like the shop and gym
+	for node in [root] + root.find_children("*", "", true, false):
+		watch(node)
+	get_tree().node_added.connect(watch)
+	visibility_changed.connect(redraw)
+
+
+## The picture is as big as the screen, in dots, with the HUD laid out on it as on the screen.
+func fit() -> void:
+	var screen := get_viewport()
+	canvas.size_2d_override = Vector2i(screen.get_visible_rect().size)
+	canvas.size = Vector2i(screen.get_visible_rect().size * screen.get_final_transform().get_scale())
+	redraw()
+
+
+func watch(node: Node) -> void:
+	# (by name: the shop and gym have a draw() of their own)
+	if node is CanvasItem and (node == root or root.is_ancestor_of(node)) and not node.is_connected("draw", redraw):
+		for change in ["draw", "item_rect_changed", "visibility_changed"]:
+			node.connect(change, redraw)
+
+
+## Draws the HUD's picture again this frame.
+func redraw() -> void:
+	canvas.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Something's moving for this long, so the picture's drawn every frame till then.
+func moving(seconds: float) -> void:
+	moving_until = maxf(moving_until, Time.get_ticks_msec() / 1000.0 + seconds + 0.05)
 
 
 ## Puts the HUD on part of the screen: all of it with one player, or her half with two. zoom: how
@@ -340,6 +390,7 @@ func flash(kind: String) -> void:
 	g.colors = PackedColorArray([Color(colour, 0), Color(colour, 0.65)])
 	hurt.modulate.a = 1
 	create_tween().tween_property(hurt, "modulate:a", 0.0, 0.5)
+	moving(0.5)
 
 
 ## difficulty: how hard it is (see config.json), which decides what you lose.
@@ -369,6 +420,7 @@ func bump_bux() -> void:
 
 func bump(node: Control, scale_to: float, seconds: float) -> void:
 	node.pivot_offset = node.size / 2
+	moving(seconds)
 	var t := create_tween()
 	t.tween_property(node, "scale", Vector2.ONE * scale_to, seconds * 0.4)
 	t.tween_property(node, "scale", Vector2.ONE, seconds * 0.6)
@@ -413,7 +465,10 @@ func update(hero: Hero) -> void:
 	# hearts blink while you can't be hurt
 	blink_time += get_process_delta_time()
 	var blinking := hero.safe > 0 and hero.tagged <= 0
-	hearts_row.modulate.a = 0.3 if blinking and fmod(blink_time, 0.25) < 0.125 else 1.0
+	var blink := 0.3 if blinking and fmod(blink_time, 0.25) < 0.125 else 1.0
+	if blink != hearts_row.modulate.a:
+		hearts_row.modulate.a = blink
+		redraw()
 
 	who.text = hero.look.name
 	speed_badge.text = "Speed %d" % hero.speed_level
@@ -442,6 +497,7 @@ func update(hero: Hero) -> void:
 
 
 func jump(icon: Control) -> void:
+	moving(0.6)
 	icon.scale = Vector2.ONE * 1.8
 	icon.rotation = deg_to_rad(-15)
 	var t := create_tween().set_parallel()
@@ -455,7 +511,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		time_views()
 
 
-## Starts (or stops) timing how long the screens take to draw, for the F3 numbers.
 ## For the graphics test: everything but the F3 numbers hidden (and back as it was after).
 func hide_for_test(hide: bool) -> void:
 	if hide and test_hidden.is_empty():
@@ -469,6 +524,7 @@ func hide_for_test(hide: bool) -> void:
 		test_hidden.clear()
 
 
+## Starts (or stops) timing how long the screens take to draw, for the F3 numbers.
 func time_views() -> void:
 	if not can_time_drawing:
 		return
@@ -480,7 +536,15 @@ func _process(delta: float) -> void:
 	level_done_go.pivot_offset = level_done_go.size / 2 # it grows from its middle
 	# messages fade in and out
 	toast_time -= delta
-	toast_label.modulate.a = move_toward(toast_label.modulate.a, 1.0 if toast_time > 0 else 0.0, delta / 0.3)
+	var fade := move_toward(toast_label.modulate.a, 1.0 if toast_time > 0 else 0.0, delta / 0.3)
+	if fade != toast_label.modulate.a:
+		toast_label.modulate.a = fade
+		redraw()
+	# the picture's drawn every frame while things move, the Level done! screen pulses, or the
+	# shop or gym is open (they have their own moving bits)
+	if Time.get_ticks_msec() / 1000.0 < moving_until or level_done.visible \
+			or root.get_children().any(func(c): return c is MenuScreen and c.visible):
+		redraw()
 	# for 60 fps every frame has to be quick, not just most of them, so the slowest ones are kept too
 	frame_times.append(delta * 1000)
 	if frame_times.size() > 120:

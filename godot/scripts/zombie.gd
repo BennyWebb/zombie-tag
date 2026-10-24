@@ -111,6 +111,8 @@ func _ready() -> void:
 			m.emission_enabled = true
 			m.emission = GLOW_NONE
 			flash_materials.append(m)
+	# the parts that never move on their own (its torso, head, eyes and mouth) joined up, to draw quicker
+	Data.merge_meshes(body, arms + legs + pupils + [stars, tongue, bubble, ice, health_bar], flash_materials, "zombie " + kind)
 
 
 ## Bonked: returns true if that popped it.
