@@ -33,6 +33,7 @@ function textMaterial(text, width, height, bg, fg) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = height * 0.1;
+  ctx.lineJoin = 'round'; // (sharp corners stick out as spikes on letters like M)
   ctx.strokeStyle = '#4b1e8a';
   ctx.strokeText(text, width / 2, height / 2);
   ctx.fillStyle = fg;
